@@ -26,14 +26,20 @@ class ROI(tuple):
         """Apply to an array"""
         return arr[..., self.x, self.y]
 
-    def save(self, fname): #TODO allow saving to ascii as well
+    def save(self, fname):
         """Store as numpy file"""
-        return self.data.dump(fname)
+        if fname.endswith(".npy"):
+            return np.save(fname, self.data)
+        else:
+            return np.savetxt(fname, self.data, fmt="%i")
 
     @classmethod
-    def load(cls, fname): #TODO allow loading from ascii as well
+    def load(cls, fname):
         """Load data from numpy file and construct ROI"""
-        arr = np.load(fname)
+        if fname.endswith(".npy"):
+            arr = np.load(fname)
+        else:
+            arr = np.loadtxt(fname, dtype=int)
         return cls(arr)
 
     def __str__(self):
