@@ -1,5 +1,5 @@
 import h5py
-from channels_raw import detector_name
+from .channels_raw import detector_name
 
 
 def save_JF_data_cropped(fn, img_roi1, img_roi2, pulse_ids, roi1=None, roi2=None, det_name=detector_name):
