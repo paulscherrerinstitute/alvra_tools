@@ -1,13 +1,14 @@
 import h5py
 import numpy as np
 
+import jungfrau_utils as ju
+
 #from .channels_raw import *
 from .channels_res import *
 from .utils import crop_roi
 
 
 def load_JF_data(fname, max_num_frames=None):
-    print(fname)
     with h5py.File(fname, "r") as f:
         pulse_ids = f[channel_JF_pulse_ids][:max_num_frames].T[0] # pulse_ids comes in a weird shape
         images    = f[channel_JF_images][:max_num_frames]
@@ -15,10 +16,14 @@ def load_JF_data(fname, max_num_frames=None):
 
 
 def load_crop_JF_data(fname, roi1, roi2, max_num_frames=None):
-    r10 = slice(*roi1[0])
-    r11 = slice(*roi1[1])
-    r20 = slice(*roi2[0])
-    r21 = slice(*roi2[1])
+    roi1 = np.array(roi1).ravel()
+    roi2 = np.array(roi2).ravel()
+
+    r10 = slice(*roi1[:2])
+    r11 = slice(*roi1[2:])
+
+    r20 = slice(*roi2[:2])
+    r21 = slice(*roi2[2:])
 
     with h5py.File(fname, "r") as f:
         pulse_ids = f[channel_JF_pulse_ids][:max_num_frames].T[0] # pulse_ids comes in a weird shape
@@ -31,6 +36,19 @@ def load_crop_JF_data(fname, roi1, roi2, max_num_frames=None):
 
 #    images_roi1 = crop_roi(images, roi1)
 #    images_roi2 = crop_roi(images, roi2)
+
+    return images_roi1, images_roi2, pulse_ids
+
+
+
+def load_crop_JF_data_v02(fname, roi1, roi2, max_num_frames=None):
+    with h5py.File(fname, "r") as f:
+        pulse_ids = f[channel_JF_pulse_ids][:max_num_frames].T[0] # pulse_ids comes in a weird shape
+        images = f[channel_JF_images][:max_num_frames]
+
+    images = np.stack(ju.apply_geometry(img, "JF02T09V02") for img in images)
+    images_roi1 = crop_roi(images, roi1)
+    images_roi2 = crop_roi(images, roi2)
 
     return images_roi1, images_roi2, pulse_ids
 

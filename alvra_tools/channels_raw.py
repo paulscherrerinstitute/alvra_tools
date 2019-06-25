@@ -1,6 +1,7 @@
+detector_name = "JF02T09V02"
 
-channel_JF_images      = "data/JF02T09V01/data"
-channel_JF_pulse_ids   = "data/JF02T09V01/pulse_id"
+channel_JF_images      = "data/{}/data".format(detector_name)
+channel_JF_pulse_ids   = "data/{}/pulse_id".format(detector_name)
 
 channel_Events         = "data/SAR-CVME-TIFALL5:EvtSet/data"                  #Event code channel
 
