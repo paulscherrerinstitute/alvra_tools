@@ -35,13 +35,14 @@ def convert_to_photon_num_mean(image, photon_range):
 def crop_roi(arr, roi):
     if roi is None:
         return arr
-#    return arr[..., roi[0][0]:roi[0][1], roi[1][0]:roi[1][1]]
-#    r0 = slice(*roi[0])
-#    r1 = slice(*roi[1])
+    r0, r1 = make_roi(roi)
+    return arr[..., r0, r1]
+
+def make_roi(roi):
     roi = np.array(roi).ravel()
     r0 = slice(*roi[2:])
     r1 = slice(*roi[:2])
-    return arr[..., r0, r1]
+    return r0, r1
 
 
 def errfunc_fwhm(x, a, b, c, d):
