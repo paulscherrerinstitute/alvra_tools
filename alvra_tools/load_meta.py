@@ -25,7 +25,7 @@ def load_pede_data(fn):
 def load_scan_data(fn):
     with open(fn) as f:
         data = json.load(f)
-    return np.array(data["scan_files"])
+    return data["scan_files"]
 
 
 

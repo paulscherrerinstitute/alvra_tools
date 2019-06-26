@@ -36,8 +36,11 @@ def crop_roi(arr, roi):
     if roi is None:
         return arr
 #    return arr[..., roi[0][0]:roi[0][1], roi[1][0]:roi[1][1]]
-    r0 = slice(*roi[0])
-    r1 = slice(*roi[1])
+#    r0 = slice(*roi[0])
+#    r1 = slice(*roi[1])
+    roi = np.array(roi).ravel()
+    r0 = slice(*roi[2:])
+    r1 = slice(*roi[:2])
     return arr[..., r0, r1]
 
 
