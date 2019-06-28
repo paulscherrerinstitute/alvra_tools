@@ -95,7 +95,10 @@ def load_JF_data_crop_lolo(filename, roi1, roi2):
     return image_roi1_ON, image_roi1_OFF, image_roi2_ON, image_roi2_OFF, pulse_ids_ON, pulse_ids_OFF
 
 
-def load_YAG_events(filename):
+###    Next: 2 functions to load pump-probe YAG data (events/pulseIDs)
+
+
+def load_YAG(filename):
     with h5py.File(filename, 'r') as BS_file:
         BS_file = _get_data(BS_file)
 
@@ -145,6 +148,58 @@ def load_YAG_pulseID(filename, reprateFEL, repratelaser):
         #BAM = BS_file[channel_BAM][:][reprate_FEL]
 
     return LaserDiode_pump, LaserDiode_unpump, LaserRefDiode_pump, LaserRefDiode_unpump, IzeroFEL, PIPS, Delay, pulse_ids
+
+
+###    Next: 2 functions to load pump-probe XAS data (energy-delay) (events/pulseIDs)
+
+def load_XAS(filename, channel_variable):
+    with h5py.File(filename, 'r') as BS_file:
+        BS_file = _get_data(BS_file)
+        
+        pulse_ids = BS_file[channel_BS_pulse_ids][:]
+        
+        FEL = BS_file[channel_Events][:,48]
+        Laser = BS_file[channel_Events][:,18]
+        Darkshot = BS_file[channel_Events][:,21]
+        
+        index_pump = np.logical_and(FEL, Laser, np.logical_not(Darkshot))
+        index_unpump = np.logical_and(FEL, np.logical_not(Laser), np.logical_not(Darkshot))
+                
+        DataFluo_pump = BS_file[channel_PIPS_fluo][:][index_pump]
+        DataFluo_unpump = BS_file[channel_PIPS_fluo][:][index_unpump]
+        
+        DataTrans_pump = BS_file[channel_PIPS_trans][:][index_pump]
+        DataTrans_unpump = BS_file[channel_PIPS_trans][:][index_unpump]
+        
+        IzeroFEL_pump = BS_file[channel_Izero][:][index_pump]
+        IzeroFEL_unpump = BS_file[channel_Izero][:][index_unpump]
+        
+        Variable = BS_file[channel_variable][:][index_unpump]
+             
+    return DataFluo_pump, DataFluo_unpump, IzeroFEL_pump, IzeroFEL_unpump, Variable, DataTrans_pump, DataTrans_unpump
+
+
+def load_XAS_pulseID(filename, channel_variable, reprateFEL, repratelaser):
+    with h5py.File(filename, 'r') as BS_file:
+        BS_file = _get_data(BS_file)
+        
+        pulse_ids = BS_file[channel_BS_pulse_ids][:]
+        
+        reprate_FEL = np.logical_and((pulse_ids%(100 / reprateFEL) == 0), (pulse_ids%(100 / repratelaser) != 0))
+        reprate_laser = pulse_ids%(100 / repratelaser) == 0
+        
+        DataFluo_pump = BS_file[channel_PIPS_fluo][:][reprate_laser]
+        DataFluo_unpump = BS_file[channel_PIPS_fluo][:][reprate_FEL]
+        
+        DataTrans_pump = BS_file[channel_PIPS_trans][:][reprate_laser]
+        DataTrans_unpump = BS_file[channel_PIPS_trans][:][reprate_FEL]
+        
+        IzeroFEL_pump = BS_file[channel_Izero][:][reprate_laser]
+        IzeroFEL_unpump = BS_file[channel_Izero][:][reprate_FEL]
+        
+        Variable = BS_file[channel_variable][:][reprate_FEL]
+        
+    return DataFluo_pump, DataFluo_unpump, IzeroFEL_pump, IzeroFEL_unpump, Variable, DataTrans_pump, DataTrans_unpump
 
 
 def load_laserIntensity(filename):
