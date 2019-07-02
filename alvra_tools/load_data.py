@@ -14,6 +14,25 @@ def _get_data(f):
         return f
 
 
+def _make_reprates_on_off(pulse_ids, reprate_FEL, reprate_laser):
+    #reprate_off = ((pulse_ids%10 == 0) & (pulse_ids%20 != 0))            #This is for 10 Hz
+    #reprate_on  = pulse_ids%20 == 0                                      #This is for 5 Hz
+    #reprate_off = ((pulse_ids%4 == 0) & (pulse_ids%8 != 0))              #This is for 25 Hz
+    #reprate_on  = pulse_ids%8 == 0                                       #This is for 12.5 Hz
+    reprate_on  = _make_reprates_off(pulse_ids, reprate_laser)
+    reprate_off = _make_reprates_FEL_on_laser_off(pulse_ids, reprate_FEL, reprate_laser)
+    return reprate_on, reprate_off
+
+def _make_reprates_on(pulse_ids, reprate):
+    return pulse_ids % (100 / reprate) == 0
+
+def _make_reprates_off(pulse_ids, reprate):
+    return np.logical_not(_make_reprates_on(pulse_ids, reprate))
+
+def _make_reprates_FEL_on_laser_off(pulse_ids, reprate_FEL, reprate_laser):
+    return np.logical_and(_make_reprates_on(pulse_ids, reprate_FEL), _make_reprates_off(pulse_ids, reprate_laser))
+
+
 
 def load_JF_data(fname, max_num_frames=None):
     with h5py.File(fname, "r") as f:
@@ -21,6 +40,29 @@ def load_JF_data(fname, max_num_frames=None):
         pulse_ids = data[channel_JF_pulse_ids][:max_num_frames].T[0] # pulse_ids comes in a weird shape
         images    = data[channel_JF_images][:max_num_frames]
     return images, pulse_ids
+
+
+def load_JF_data_on_off(fname, reprate_FEL, reprate_laser, max_num_frames=None):
+    images, pulse_ids = load_JF_data(fname, max_num_frames=max_num_frames)
+
+    reprate_on, reprate_off = _make_reprates_on_off(pulse_ids, reprate_FEL, reprate_laser)
+
+    images_on  = images[reprate_on]
+    images_off = images[reprate_off]
+
+    return images_on, images_off, pulse_ids
+
+
+def load_crop_JF_data(fname, roi1, roi2, max_num_frames=None):
+    with h5py.File(fname, "r") as f:
+        detector_name = f["general/detector_name"].value.decode()
+
+    if detector_name == "JF02T09V01":
+        #print(f"got {detector_name} assuming v01")
+        return load_crop_JF_data_v01(fname, roi1, roi2, max_num_frames=max_num_frames)
+    else:
+        #print(f"got {detector_name} assuming v02")
+        return load_crop_JF_data_v02(fname, roi1, roi2, max_num_frames=max_num_frames, detector_name=detector_name)
 
 
 def load_crop_JF_data_v01(fname, roi1, roi2, max_num_frames=None):
@@ -39,60 +81,38 @@ def load_crop_JF_data_v01(fname, roi1, roi2, max_num_frames=None):
     return images_roi1, images_roi2, pulse_ids
 
 
-load_crop_JF_data = load_crop_JF_data_v01 #TODO should actually switch between versions based on f["general/detector_name"], default to v01 for now
-
-
-def load_crop_JF_data_v02(fname, roi1, roi2, max_num_frames=None):
+def load_crop_JF_data_v02(fname, roi1, roi2, max_num_frames=None, detector_name="JF02T09V02"):
     # v02 needs geometry correction, cannot load lazily
     images, pulse_ids = load_JF_data(fname, max_num_frames=max_num_frames)
 
-    images = np.stack(ju.apply_geometry(img, "JF02T09V02") for img in images)
+    images = np.stack(ju.apply_geometry(img, detector_name) for img in images)
     images_roi1 = crop_roi(images, roi1)
     images_roi2 = crop_roi(images, roi2)
 
     return images_roi1, images_roi2, pulse_ids
 
 
-#TODO: delete? replaced by load_crop_JF_data_v01
-#def load_JF_data_crop1(filename, roi1, roi2):
-#    with h5py.File(filename, 'r') as JF_file:
-#        pulse_ids = JF_file[channel_pulse_idsJF][:]
-#        pulse_ids = np.reshape(pulse_ids, (pulse_ids.size,)) # .ravel()
-#        # ^what is this doing?!
+def load_crop_JF_data_on_off(fname, roi1, roi2, reprate_FEL, reprate_laser, G=None, P=None, pixel_mask=None, max_num_frames=None):
+    images_roi1, images_roi2, pulse_ids = load_crop_JF_data(fname, roi1, roi2, max_num_frames=max_num_frames)
 
-#        image_JF = JF_file[channel_JFimages]
+    reprate_on, reprate_off = _make_reprates_on_off(pulse_ids, reprate_FEL, reprate_laser)
 
-#        image_roi1 = image_JF[:, roi1[0][0]:roi1[0][1], roi1[1][0]:roi1[1][1]]
-#        image_roi2 = image_JF[:, roi2[0][0]:roi2[0][1], roi2[1][0]:roi2[1][1]]
+    if any((G, P, pixel_mask)):
+        G_roi1 = crop_roi(G, roi1)
+        G_roi2 = crop_roi(G, roi2)
+        P_roi1 = crop_roi(P, roi1)
+        P_roi2 = crop_roi(P, roi2)
+        pixel_mask_roi1 = crop_roi(pixel_mask, roi1)
+        pixel_mask_roi2 = crop_roi(pixel_mask, roi2)
+        images_roi1 = ju.apply_gain_pede(images_roi1, G=G_roi1, P=P_roi1, pixel_mask=pixel_mask_roi1, highgain=False)
+        images_roi2 = ju.apply_gain_pede(images_roi2, G=G_roi2, P=P_roi2, pixel_mask=pixel_mask_roi2, highgain=False)
 
-#    return image_roi1, image_roi2, pulse_ids
+    images_on_roi1  = images_roi1[reprate_on]
+    images_on_roi2  = images_roi2[reprate_on]
+    images_off_roi1 = images_roi1[reprate_off]
+    images_off_roi2 = images_roi2[reprate_off]
 
-
-def load_JF_data_crop_lolo(filename, roi1, roi2):
-    with h5py.File(filename, 'r') as JF_file:
-        JF_file = _get_data(JF_file)
-
-        pulse_ids = JF_file[channel_pulse_idsJF][:]
-        pulse_ids = np.reshape(pulse_ids, (pulse_ids.size,))
-
-        #reprate_FEL = ((pulse_ids%10 == 0) & (pulse_ids%20 != 0))              #This is for 10 Hz
-        #reprate_laser = pulse_ids%20 == 0                                      #This is for 5 Hz
-        reprate_FEL = ((pulse_ids%4 == 0) & (pulse_ids%8 != 0))                #This is for 25 Hz
-        reprate_laser = pulse_ids%8 == 0                                       #This is for 12.5 Hz
-
-        image_JF_ON = JF_file[channel_JFimages][reprate_laser,:,:][...]
-        image_JF_OFF = JF_file[channel_JFimages][:,:,:][reprate_FEL]
-
-        pulse_ids_ON = pulse_ids[reprate_laser]
-        pulse_ids_OFF = pulse_ids[reprate_FEL]
-
-        image_roi1_ON = image_JF_ON[:, roi1[0][0]:roi1[0][1], roi1[1][0]:roi1[1][1]]
-        image_roi2_ON = image_JF_ON[:, roi2[0][0]:roi2[0][1], roi2[1][0]:roi2[1][1]]
-
-        image_roi1_OFF = image_JF_OFF[:, roi1[0][0]:roi1[0][1], roi1[1][0]:roi1[1][1]]
-        image_roi2_OFF = image_JF_OFF[:, roi2[0][0]:roi2[0][1], roi2[1][0]:roi2[1][1]]
-
-    return image_roi1_ON, image_roi1_OFF, image_roi2_ON, image_roi2_OFF, pulse_ids_ON, pulse_ids_OFF
+    return images_on_roi1, images_on_roi2, images_off_roi1, images_off_roi2, pulse_ids
 
 
 ###    Next: 2 functions to load pump-probe YAG data (events/pulseIDs)
@@ -132,9 +152,8 @@ def load_YAG_pulseID(filename, reprateFEL, repratelaser):
 
         pulse_ids = BS_file[channel_BS_pulse_ids][:]
 
-        reprate_FEL = pulse_ids%(100 / reprateFEL) == 0
-        reprate_laser = np.logical_and((pulse_ids%(100 / repratelaser) == 0), (pulse_ids%(100 / reprateFEL) != 0))
-
+        reprate_laser, reprate_FEL = _make_reprates_ON_OFF(pulse_ids, reprate_FEL, reprate_laser)
+        
         LaserDiode_pump = BS_file[channel_LaserDiode][:][reprate_FEL]
         LaserDiode_unpump = BS_file[channel_LaserDiode][:][reprate_laser]
         LaserRefDiode_pump = BS_file[channel_Laser_refDiode][:][reprate_FEL]
@@ -185,8 +204,7 @@ def load_XAS_pulseID(filename, channel_variable, reprateFEL, repratelaser):
         
         pulse_ids = BS_file[channel_BS_pulse_ids][:]
         
-        reprate_FEL = np.logical_and((pulse_ids%(100 / reprateFEL) == 0), (pulse_ids%(100 / repratelaser) != 0))
-        reprate_laser = pulse_ids%(100 / repratelaser) == 0
+        reprate_laser, reprate_FEL = _make_reprates_ON_OFF(pulse_ids, reprate_FEL, reprate_laser)
         
         DataFluo_pump = BS_file[channel_PIPS_fluo][:][reprate_laser]
         DataFluo_unpump = BS_file[channel_PIPS_fluo][:][reprate_FEL]
@@ -240,21 +258,39 @@ def load_FEL_scans(filename, channel_variable):
     return DataFEL, Izero, Variable, PulseIDs
 
 
-def load_FEL_scans_pulseID(filename, channel_variable, reprateFEL):
+def load_FEL_scans_pulseID(filename, channel_variable, reprateFEL, max_num_shots=None):
     with h5py.File(filename, 'r') as BS_file:
-        BS_file = _get_data(BS_file)
+        data = _get_data(BS_file)
 
-        pulse_ids = BS_file[channel_BS_pulse_ids][:]
+        pulse_ids = data[channel_BS_pulse_ids][:max_num_shots]
 
-        reprate_FEL = pulse_ids%(100 / reprateFEL) == 0
+        reprate_FEL = _make_reprate_on(reprateFEL)
 
-        DataFEL = BS_file[channel_PIPS_trans][:][reprate_FEL]
-        Izero = BS_file[channel_Izero][:][reprate_FEL]
-        Variable = BS_file[channel_variable][:][reprate_FEL]
+        DataFEL = data[channel_PIPS_trans][:max_num_shots][reprate_FEL]
+        Izero = data[channel_Izero][:max_num_shots][reprate_FEL]
+        Variable = data[channel_variable][:max_num_shots][reprate_FEL]
 
-        PulseIDs = pulse_ids[:][reprate_FEL]
+        PulseIDs = pulse_ids[:max_num_shots][reprate_FEL]
 
     return DataFEL, Izero, Variable, PulseIDs
+
+
+def load_FEL_pp_pulseID(filename, channel_variable, reprateFEL, reparatelaser, max_num_shots=None):
+    with h5py.File(filename, 'r') as BS_file:
+        data = _get_data(BS_file)
+
+        pulse_ids = data[channel_BS_pulse_ids][:max_num_shots]
+
+        reprate_laser, reprate_FEL = _make_reprates_on_off(pulse_ids, reprate_FEL, reprate_laser)
+
+        IzeroFEL_pump = data[channel_Izero][:max_num_shots][reprate_laser]
+        IzeroFEL_unpump = data[channel_Izero][:max_num_shots][reprate_FEL]
+        Variable = data[channel_variable][:max_num_shots][reprate_FEL]
+
+        PulseIDs = pulse_ids[:max_num_shots][reprate_FEL]
+
+    return IzeroFEL_pump, IzeroFEL_unpump, Variable, PulseIDs
+
 
 
 def load_laser_scans(filename):
