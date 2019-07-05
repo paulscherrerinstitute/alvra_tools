@@ -194,29 +194,29 @@ def load_YAG_pulseID(filename, reprateFEL, repratelaser):
 
 ###    Next: 2 functions to load pump-probe XAS data (energy-delay) (events/pulseIDs)
 
-def load_XAS_events(filename, channel_variable):
+def load_XAS(filename, channel_variable):
     with h5py.File(filename, 'r') as BS_file:
-        data = _get_data(BS_file)
+        BS_file = _get_data(BS_file)
         
-        pulse_ids = data[channel_BS_pulse_ids][:]
+        pulse_ids = BS_file[channel_BS_pulse_ids][:]
         
-        FEL = data[channel_Events][:,48]
-        Laser = data[channel_Events][:,18]
-        Darkshot = data[channel_Events][:,21]
+        FEL = BS_file[channel_Events][:,48]
+        Laser = BS_file[channel_Events][:,18]
+        Darkshot = BS_file[channel_Events][:,21]
         
         index_pump = np.logical_and.reduce((FEL, Laser, np.logical_not(Darkshot)))
         index_unpump = np.logical_and.reduce((FEL, Laser, Darkshot))
                 
-        DataFluo_pump = data[channel_PIPS_fluo][:][index_pump]
-        DataFluo_unpump = data[channel_PIPS_fluo][:][index_unpump]
+        DataFluo_pump = BS_file[channel_PIPS_fluo][:][index_pump]
+        DataFluo_unpump = BS_file[channel_PIPS_fluo][:][index_unpump]
         
-        DataTrans_pump = data[channel_PIPS_trans][:][index_pump]
-        DataTrans_unpump = data[channel_PIPS_trans][:][index_unpump]
+        DataTrans_pump = BS_file[channel_PIPS_trans][:][index_pump]
+        DataTrans_unpump = BS_file[channel_PIPS_trans][:][index_unpump]
         
-        IzeroFEL_pump = data[channel_Izero][:][index_pump]
-        IzeroFEL_unpump = data[channel_Izero][:][index_unpump]
+        IzeroFEL_pump = BS_file[channel_Izero][:][index_pump]
+        IzeroFEL_unpump = BS_file[channel_Izero][:][index_unpump]
         
-        Variable = data[channel_variable][:][index_unpump]
+        Variable = BS_file[channel_variable][:][index_unpump]
              
     return DataFluo_pump, DataFluo_unpump, IzeroFEL_pump, IzeroFEL_unpump, Variable, DataTrans_pump, DataTrans_unpump
 
@@ -267,7 +267,7 @@ def load_FEL_scans(filename, channel_variable, nshots=None):
     with h5py.File(filename, 'r') as BS_file:
         data = _get_data(BS_file)
 
-        pulse_ids = BS_file[channel_BS_pulse_ids][:]
+        pulse_ids = BS_file[channel_BS_pulse_ids][:nshots]
 
         FEL = data[channel_Events][:nshots,48]
         index_light = FEL == 1
