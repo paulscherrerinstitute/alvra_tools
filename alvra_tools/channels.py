@@ -29,10 +29,10 @@ channel_PIPS_fluo      = "SARES11-GES1:CH2_VAL_GET/data"                 #X-ray 
 #channel_Izero3         = "SAROP11-CVME-PBPS2:Lnk9Ch14-DATA-SUM/data"     #Izero diode to Wavedream PBPS117 (Right - PDR)
 #channel_Izero4         = "SAROP11-CVME-PBPS2:Lnk9Ch15-DATA-SUM/data"     #Izero diode to Wavedream PBPS117 (Left - PDL)
 
-channel_Izero4         = "SAROP11-CVME-PBPS1:Lnk9Ch4-DATA-SUM/data"      #Izero diode to Wavedream PBPS122 (Up - PDU)
-channel_Izero2         = "SAROP11-CVME-PBPS1:Lnk9Ch5-DATA-SUM/data"      #Izero diode to Wavedream PBPS122 (Down - PDD)
+channel_Izero2        = "SAROP11-CVME-PBPS1:Lnk9Ch4-DATA-SUM/data"      #Izero diode to Wavedream PBPS122 (Up - PDU)
+channel_Izero          = "SAROP11-CVME-PBPS1:Lnk9Ch5-DATA-SUM/data"      #Izero diode to Wavedream PBPS122 (Down - PDD)
 channel_Izero3         = "SAROP11-CVME-PBPS1:Lnk9Ch6-DATA-SUM/data"      #Izero diode to Wavedream PBPS122 (Right - PDR)
-channel_Izero          = "SAROP11-CVME-PBPS1:Lnk9Ch7-DATA-SUM/data"      #Izero diode to Wavedream PBPS122 (Left - PDL)
+channel_Izero2         = "SAROP11-CVME-PBPS1:Lnk9Ch7-DATA-SUM/data"      #Izero diode to Wavedream PBPS122 (Left - PDL)
 
 #channel_Izero          = "SARFE10-PBPG050:HAMP-INTENSITY-CAL/data"        #Izero from the gas monitor
 
@@ -51,7 +51,8 @@ channel_position_X     = "SLAAR11-LTIM01-EVR0:DUMMY_PV1_NBS/data"        #Huber 
 channel_position_Y     = "SLAAR11-LTIM01-EVR0:DUMMY_PV2_NBS/data"        #Huber stage Y position. 
 channel_position_Z     = "SLAAR11-LTIM01-EVR0:DUMMY_PV3_NBS/data"        #Huber stage Z position. 
 channel_energy         = "SLAAR11-LTIM01-EVR0:DUMMY_PV4_NBS/data"        #Mono energy in eV
-
+channel_PALM           = "SLAAR11-LTIM01-EVR0:DUMMY_PV5_NBS/data"        #arrival time in fs
+channel_waveplate       = "SLAAR11-LTIM01-EVR0:DUMMY_PV6_NBS/data"       #LAser waveplate
 #channel_LAM_delaystage = "SLAAR11-LTIM01-EVR0:DUMMY_PV2_NBS/data"        #LAM internal stage position in mm
 #channel_LAM_stepper    = "SLAAR11-LTIM01-EVR0:DUMMY_PV10_NBS/data"       #LAM stepper motor (used for feedback)
 
