@@ -14,15 +14,16 @@ def update_channels(fname=DEFAULT_FNAME):
     cfg = ConfigFile(fname)
     globals().update(cfg)
     log.debug(f"Loaded channels from {fname}")
+    return cfg
 
 
 
 try:
-    update_channels()
+    config = update_channels()
 except FileNotFoundError:
     dirname = os.path.dirname(__file__)
     fname = os.path.join(dirname, DEFAULT_FNAME)
-    update_channels(fname)
+    config = update_channels(fname)
     log.warning(f"Fallback: loaded default channel list ({fname})")
 
 
