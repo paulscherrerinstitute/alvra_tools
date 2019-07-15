@@ -141,15 +141,17 @@ class ConfigFile(object):
         self.write()
 
 
+    def print_table(self):
+        length = max(len(i) for i in self)
+        for i in self:
+            print(i.ljust(length), cfg[i])
+
 
 
 
 if __name__ == "__main__":
     cfg = ConfigFile("channels.ini")
-    length = max(len(i) for i in cfg)
-    for i in cfg:
-        print(i.ljust(length), cfg[i])
-    locals().update(cfg)
+    cfg.print_table()
     cfg.write("channels-new.ini")
 
     cfg = ConfigFile("channels-new.ini")
