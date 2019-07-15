@@ -17,6 +17,13 @@ def clean_var_name(s):
     return re.sub(RE_CLEAN, '_', s)
 
 
+def forgiving_eval(value):
+    try:
+        return literal_eval(value)
+    except SyntaxError:
+        return value
+
+
 
 class ConfigFile(object):
     """
@@ -69,10 +76,7 @@ class ConfigFile(object):
             items = self._parser.items(section)
             for name, value in items:
                 name = clean_var_name(name)
-                try:
-                    value = literal_eval(value)
-                except SyntaxError:
-                    pass
+                value = forgiving_eval(value)
                 setattr(self, name, value)
 
         if replace:
