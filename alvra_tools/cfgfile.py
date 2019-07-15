@@ -44,6 +44,7 @@ class ConfigFile(object):
             raise ValueError("mode string must be one of '{}' or '{}', not '{}'".format(", ".join(MODES[:-1]), MODES[-1], mode))
 
         self._parser = ConfigParser()
+        self._parser.optionxform = str
         if filename:
             self.read()
 

@@ -1,6 +1,6 @@
 import os
 import logging
-from cfgfile import ConfigFile
+from .cfgfile import ConfigFile
 
 
 DEFAULT_FNAME = "channels.ini"
