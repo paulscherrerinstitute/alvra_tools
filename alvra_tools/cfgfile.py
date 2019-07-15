@@ -11,7 +11,7 @@ from ast import literal_eval
 
 import re
 
-RE_CLEAN = re.compile(r'\W|^(?=\d)')
+RE_CLEAN = re.compile(r'\W|^(?=\d)') # non-word chars anywhere or digits at start of string
 
 def clean_var_name(s):
     return re.sub(RE_CLEAN, '_', s)
@@ -38,7 +38,7 @@ class ConfigFile(object):
 
         self._parser = ConfigParser()
         if filename:
-            self._read()
+            self.read()
 
 
     def __iter__(self):
@@ -51,7 +51,7 @@ class ConfigFile(object):
         return self._dict.keys()
 
 
-    def _read(self, filename=None, section=None, replace=True):
+    def read(self, filename=None, section=None, replace=True):
         filename = filename or self._filename
         section  = section  or self._section
 
@@ -65,10 +65,16 @@ class ConfigFile(object):
                 content = "[{}]\n".format(section) + f.read()
                 self._parser.read_string(content)
 
+        if not self._parser.sections():
+            raise ValueError("Configuration is empty")
+
         items = self._parser.items(section)
         for name, value in items:
             name = clean_var_name(name)
-            value = literal_eval(value)
+            try:
+                value = literal_eval(value)
+            except SyntaxError:
+                pass
             setattr(self, name, value)
 
         if replace:
@@ -90,10 +96,12 @@ class ConfigFile(object):
         if mode == 'r':
             return
 
-        outcfg = ConfigParser()
+        outcfg = ConfigFile()
         if mode == 'i':
             mode = 'w'
-            outcfg.read(filename)
+            outcfg.read(filename, section)
+
+        outcfg = outcfg._parser
 
         try:
             outcfg.add_section(section)
@@ -105,7 +113,7 @@ class ConfigFile(object):
             value = str(value)
             outcfg.set(section, name, value)
 
-        with open(filename, mode+'b') as outfile:
+        with open(filename, mode) as outfile:
             outcfg.write(outfile)
 
         if replace:
@@ -139,6 +147,7 @@ if __name__ == "__main__":
     for i in cfg:
         print(i.ljust(length), cfg[i])
     locals().update(cfg)
+    cfg.write()
 
 
 
