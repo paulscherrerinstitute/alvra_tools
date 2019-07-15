@@ -16,7 +16,7 @@ requirements:
         - h5py
         - numpy
         - scipy
-        - paulscherrerinstitute::jungfrau_utils >=0.3.0
+        - jungfrau_utils >=0.3.0
 
 about:
    home: https://github.com/paulscherrerinstitute/alvra_tools
