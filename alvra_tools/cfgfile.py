@@ -55,7 +55,7 @@ class ConfigFile(object):
         filename = filename or self._filename
         section  = section  or self._section
 
-        if not os.path.exists(filename):
+        if self._mode == 'r' and not os.path.exists(filename):
             os.listdir(filename) # raise the correct exception
 
         try:
@@ -65,17 +65,15 @@ class ConfigFile(object):
                 content = "[{}]\n".format(section) + f.read()
                 self._parser.read_string(content)
 
-        if not self._parser.sections():
-            raise ValueError("Configuration is empty")
-
-        items = self._parser.items(section)
-        for name, value in items:
-            name = clean_var_name(name)
-            try:
-                value = literal_eval(value)
-            except SyntaxError:
-                pass
-            setattr(self, name, value)
+        if self._parser.sections():
+            items = self._parser.items(section)
+            for name, value in items:
+                name = clean_var_name(name)
+                try:
+                    value = literal_eval(value)
+                except SyntaxError:
+                    pass
+                setattr(self, name, value)
 
         if replace:
             self._filename = filename
@@ -147,6 +145,9 @@ if __name__ == "__main__":
     for i in cfg:
         print(i.ljust(length), cfg[i])
     locals().update(cfg)
+    cfg.write("channels-new.ini")
+
+    cfg = ConfigFile("channels-new.ini")
     cfg.write()
 
 
