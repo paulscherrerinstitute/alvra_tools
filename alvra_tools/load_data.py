@@ -32,8 +32,41 @@ def _make_reprates_off(pulse_ids, reprate):
 def _make_reprates_FEL_on_laser_off(pulse_ids, reprate_FEL, reprate_laser):
     return np.logical_and(_make_reprates_on(pulse_ids, reprate_FEL), _make_reprates_off(pulse_ids, reprate_laser))
 
+
 def _get_detector_name(f):
-    return f["general/detector_name"].value.decode()
+    return f["general/detector_name"][()].decode()
+
+def _get_module_map(f):
+    detector_name = _get_detector_name(f)
+    try:
+        module_map = f[f"data/{detector_name}/module_map"][:]
+    except:
+        return None
+    if -1 not in module_map:
+        return None
+    return module_map
+
+
+def apply_module_map(image, module_map, mask, chip_size=512):
+    if module_map is None or -1 not in module_map:
+        return image, mask
+
+    original_mask = mask.copy()
+    image_ext = _make_empty_image(image, module_map)
+
+    for i, m in enumerate(module_map):
+        if m == -1:
+            mask[chip_size * i : chip_size * (i + 1), :] = 1
+        else:
+            image_ext[chip_size * i : chip_size * (i + 1), :] = image[chip_size * m : chip_size * (m + 1), :]
+            mask[chip_size * i : chip_size * (i + 1), :] = original_mask[chip_size * i : chip_size * (i + 1), :]
+
+    return image_ext, mask
+
+
+def _make_empty_image(image, module_map):
+    return np.zeros((512 * len(module_map), 1024), dtype=image.dtype)
+
 
 def _apply_to_all_images(func, images, *args, **kwargs):
     nshots = len(images)
@@ -45,7 +78,8 @@ def _apply_to_all_images(func, images, *args, **kwargs):
     for n, img in enumerate(images):
         images_corr[n] = func(img,  *args, **kwargs)
     return images_corr
-    
+
+
 
 def load_JF_data(fname, nshots=None):
     with h5py.File(fname, "r") as f:
@@ -114,11 +148,22 @@ def load_crop_JF_data_on_off(fname, roi1, roi2, reprate_FEL, reprate_laser,
                              G=None, P=None, pixel_mask=None, highgain=False, nshots=None):
     images, pulse_ids = load_JF_data(fname, nshots=nshots)
 
-    if any(i is not None for i in (G, P, pixel_mask)):
-        images = ju.apply_gain_pede(images, G=G, P=P, pixel_mask=pixel_mask, highgain=highgain)
-
     with h5py.File(fname, "r") as f:
         detector_name = _get_detector_name(f)
+        module_maps = _get_module_map(f)
+
+    if module_maps is not None:
+        print ("Will apply module map:", module_maps[0])
+        images_full = []
+        for image, module_map in zip(images, module_maps):
+            image, pixel_mask = apply_module_map(image, module_map, pixel_mask)
+            image = ju.apply_gain_pede(image, G=G, P=P, pixel_mask=pixel_mask, highgain=highgain)
+            images_full.append(image)
+        images = images_full #np.stack(images_full)
+    else:
+        print ("All modules are active")
+        if any(i is not None for i in (G, P, pixel_mask)):
+            images = ju.apply_gain_pede(images, G=G, P=P, pixel_mask=pixel_mask, highgain=highgain)
 
     #images = np.stack(ju.apply_geometry(img, detector_name) for img in images)
     images = _apply_to_all_images(ju.apply_geometry, images, detector_name)
@@ -136,6 +181,13 @@ def load_crop_JF_data_on_off(fname, roi1, roi2, reprate_FEL, reprate_laser,
     pulse_ids_off   = pulse_ids[reprate_off]
 
     return images_on_roi1, images_on_roi2, pulse_ids_on, images_off_roi1, images_off_roi2, pulse_ids_off
+
+
+
+
+
+
+
 
 
 ###    Next: 2 functions to load pump-probe YAG data (events/pulseIDs)
