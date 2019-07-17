@@ -1,7 +1,9 @@
 import h5py
+import os
 
 
 def save_JF_data_cropped(fn, img_roi1, img_roi2, pulse_ids, roi1=None, roi2=None, det_name="JF02T09V02"):
+    os.makedirs(os.path.dirname(fn), exist_ok=True)
     with h5py.File(fn, "w") as f:
         grp = f.create_group(det_name + "_crop")
         grp.create_dataset("pulse_ids", data=pulse_ids)
@@ -14,9 +16,10 @@ def save_JF_data_cropped(fn, img_roi1, img_roi2, pulse_ids, roi1=None, roi2=None
 
 
 def save(fn, **kwargs):
+    os.makedirs(os.path.dirname(fn), exist_ok=True)
     with h5py.File(fn, "w") as f:
         for key, value in kwargs.items():
-            grp.create_dataset(key, data=value)
+            f.create_dataset(key, data=value)
 
 
 
