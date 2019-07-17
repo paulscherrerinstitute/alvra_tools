@@ -65,6 +65,7 @@ if __name__ == "__main__":
 #        print(fnames_data_current, fnames_data)
 #        print(fnames_crop_current, fnames_crop)
 #        print(fnames_lock_current, fnames_lock)
+#        print(fnames_BS_current,   fnames_BS)
 
         for fn in sorted(fnames_data_current, reverse=clargs.reverse):
             new_fn = convert_input_output(fn, dir_data, dir_crop)
@@ -91,7 +92,7 @@ if __name__ == "__main__":
             os.environ["source"] = fn
             os.environ["target"] = new_fn
 #            os.system("bash ./runner.sh")
-            os.system("sbatch ./runner.sh")
+            os.system("sbatch {}/runner.sh".format(os.path.dirname(__file__)))
             print("{} locked".format(new_fn))
             os.system("mkdir -p \"$(dirname {})\"".format(new_fn_lock))
             os.system("touch \"{}\"".format(new_fn + ".lock"))

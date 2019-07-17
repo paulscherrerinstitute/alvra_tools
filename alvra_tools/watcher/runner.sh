@@ -1,8 +1,10 @@
 #!/bin/bash
+
+mkdir -p logs
+
 #SBATCH --job-name test_watcher
 #SBATCH -e logs/test_watcher.%j.err
 #SBATCH -o logs/test_watcher.%j.out
-#SBATCH --exclude sf-cn-[3-10]
 
 
 module load psi-python36/4.4.0

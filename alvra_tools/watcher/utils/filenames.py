@@ -50,8 +50,8 @@ def fname_parse(fn):
         step = None
         scanname = remainder
 
-    if folder.endswith("/" + scanname):
-        folder = folder[:-len(scanname)-1]
+#    if folder.endswith("/" + scanname):
+#        folder = folder[:-len(scanname)-1]
 
     res = {
         "folder": folder,
