@@ -31,6 +31,15 @@ def convert_to_photon_num_mean(image, photon_range):
     """
     return image / np.mean(photon_range)
 
+def threshold(data, lower=None, upper=None, inplace=True, fill=0):
+    if not inplace:
+        data = data.copy()
+    if lower is not None:
+        data[data >= lower] = fill
+    if upper is not None:
+        data[data < upper] = fill
+    return data
+
 
 def crop_roi(arr, roi):
     if roi is None:
