@@ -355,13 +355,13 @@ def load_FEL_scans_pulseID(filename, channel_variable, reprateFEL, nshots=None):
     return DataFEL_t, DataFEL_f, Izero, Laser, Variable, PulseIDs
 
 
-def load_FEL_pp_pulseID(filename, channel_variable, reprateFEL, reparatelaser, nshots=None):
+def load_FEL_pp_pulseID(filename, channel_variable, reprateFEL, repratelaser, nshots=None):
     with h5py.File(filename, 'r') as BS_file:
         data = _get_data(BS_file)
 
         pulse_ids = data[channel_BS_pulse_ids][:nshots]
 
-        reprate_FEL, reprate_laser = _make_reprates_on_off(pulse_ids, reprate_FEL, reprate_laser)
+        reprate_FEL, reprate_laser = _make_reprates_on_off(pulse_ids, reprateFEL, repratelaser)
 
         IzeroFEL_pump = data[channel_Izero][:nshots][reprate_laser]
         IzeroFEL_unpump = data[channel_Izero][:nshots][reprate_FEL]
@@ -406,12 +406,16 @@ def load_single_channel_pulseID(filename, channel, reprate):
     with h5py.File(filename, 'r') as BS_file:
         data = _get_data(BS_file)
         
-        condition = _make_reprates_on(reprate)
+        pulse_ids = data[channel_BS_pulse_ids][:]
+        
+        condition_ON = _make_reprates_on(pulse_ids, reprate)
+        condition_OFF = _make_reprates_off(pulse_ids, reprate)
 
-        DataBS = BS_file[channel][:][condition]
-        PulseIDs = BS_file[channel_BS_pulse_ids][:][condition]
+        DataBS_ON = data[channel][:][condition_ON]
+        DataBS_OFF = data[channel][:][condition_OFF]
+        PulseIDs = data[channel_BS_pulse_ids][:][condition_ON]
 
-    return DataBS, PulseIDs
+    return DataBS_ON, DataBS_OFF, PulseIDs
 
 
 
