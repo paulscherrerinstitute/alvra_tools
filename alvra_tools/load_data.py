@@ -408,14 +408,27 @@ def load_single_channel_pulseID(filename, channel, reprate):
         
         pulse_ids = data[channel_BS_pulse_ids][:]
         
-        condition_ON = _make_reprates_on(pulse_ids, reprate)
-        condition_OFF = _make_reprates_off(pulse_ids, reprate)
+        condition = _make_reprates_on(pulse_ids, reprate)
+        
+        DataBS = data[channel][:][condition]
+        PulseIDs = data[channel_BS_pulse_ids][:][condition]
 
-        DataBS_ON = data[channel][:][condition_ON]
-        DataBS_OFF = data[channel][:][condition_OFF]
-        PulseIDs = data[channel_BS_pulse_ids][:][condition_ON]
+    return DataBS, PulseIDs
 
-    return DataBS_ON, DataBS_OFF, PulseIDs
+def load_single_channel_pp_pulseID(filename, channel, reprateFEL, repratelaser):
+    with h5py.File(filename, 'r') as BS_file:
+        data = _get_data(BS_file)
+        
+        pulse_ids = data[channel_BS_pulse_ids][:]
+        
+        reprate_FEL, reprate_laser = _make_reprates_on_off(pulse_ids, reprateFEL, repratelaser)
+        
+        DataBS_ON = data[channel][:][reprate_laser]
+        DataBS_OFF = data[channel][:][reprate_FEL]
+        PulseIDs_ON = data[channel_BS_pulse_ids][:][reprate_laser]
+        PulseIDs_OFF = data[channel_BS_pulse_ids][:][reprate_FEL]
+
+    return DataBS_ON, DataBS_OFF, PulseIDs_ON, PulseIDs_OFF 
 
 
 
