@@ -35,14 +35,16 @@ pfolder = pgroup[:3]
 dir_data = f"/sf/alvra/data/{pgroup}/raw"
 dir_crop = f"/das/work/{pfolder}/{pgroup}/cropped_data"
 
+dir_data_name = dir_data
+dir_crop_name = dir_crop
 if name is not "*":
-    dir_data += "/" + name
-    dir_crop += "/" + name
+    dir_data_name += "/" + name
+    dir_crop_name += "/" + name
 
-fnames_data = dir_data + "/**/*.JF02T09V*.h5"
-fnames_crop = dir_crop + "/**/*.h5"
-fnames_lock = dir_crop + "/**/*.h5.lock"
-fnames_BS   = dir_data + "/**/*.BSREAD.h5"
+fnames_data = dir_data_name + "/**/*.JF02T09V*.h5"
+fnames_crop = dir_crop_name + "/**/*.h5"
+fnames_lock = dir_crop_name + "/**/*.h5.lock"
+fnames_BS   = dir_data_name + "/**/*.BSREAD.h5"
 
 
 ################################################################################
