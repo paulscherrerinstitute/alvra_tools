@@ -94,7 +94,9 @@ if __name__ == "__main__":
             os.environ["source"] = fn
             os.environ["target"] = new_fn
 #            os.system("bash ./runner.sh")
-            os.system("sbatch {}/runner.sh".format(os.path.dirname(__file__)))
+            exit_status = os.system("sbatch {}/runner.sh".format(os.path.realpath(os.path.dirname(__file__))))
+            if exit_status != 0:
+                continue
             print("{} locked".format(new_fn))
             os.system("mkdir -p \"$(dirname {})\"".format(new_fn_lock))
             os.system("touch \"{}\"".format(new_fn + ".lock"))
