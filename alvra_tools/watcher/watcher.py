@@ -52,6 +52,7 @@ import os
 from time import sleep
 from utils import rglob
 from convertio import convert_input_output, convert_JF_BS
+from find_pede import find_pede
 
 
 
@@ -93,8 +94,13 @@ if __name__ == "__main__":
             os.environ["script"] = clargs.processor
             os.environ["source"] = fn
             os.environ["target"] = new_fn
+
+            pede = find_pede(fn)
+            print("with pedestal:", pede)
+            os.environ["options"] = "-p {}".format(pede)
+
 #            os.system("bash ./runner.sh")
-            exit_status = os.system("sbatch {}/runner.sh".format(os.path.realpath(os.path.dirname(__file__))))
+            exit_status = os.system("sbatch -p hour {}/runner.sh".format(os.path.realpath(os.path.dirname(__file__))))
             if exit_status != 0:
                 continue
             print("{} locked".format(new_fn))

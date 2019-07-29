@@ -20,7 +20,7 @@ conda activate dev
 
 mkdir -p $(dirname $target)
 
-time $script $source $target &
+time $script $options $source $target &
 wait
 
 

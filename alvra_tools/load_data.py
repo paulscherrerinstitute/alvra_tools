@@ -23,6 +23,8 @@ def _make_reprates_on_off(pulse_ids, reprate_FEL, reprate_laser):
     reprate_off = _make_reprates_FEL_on_laser_off(pulse_ids, reprate_FEL, reprate_laser)
     return reprate_on, reprate_off
 
+make_reprates_on_off = _make_reprates_on_off
+
 def _make_reprates_on(pulse_ids, reprate):
     return pulse_ids % (100 / reprate) == 0
 
@@ -47,11 +49,12 @@ def _get_module_map(f):
     return module_map
 
 
-def apply_module_map(image, module_map, mask, chip_size=512):
+def apply_module_map(image, module_map, original_mask, chip_size=512):
     if module_map is None or -1 not in module_map:
-        return image, mask
+        #print("module map skipped")
+        return image, original_mask
 
-    original_mask = mask.copy()
+    mask = original_mask.copy()
     image_ext = _make_empty_image(image, module_map)
 
     for i, m in enumerate(module_map):
@@ -89,6 +92,26 @@ def load_JF_data(fname, nshots=None):
         pulse_ids = data[detector_name + channel_JF_pulse_ids][:nshots].T[0] # pulse_ids comes in a weird shape
         images    = data[detector_name + channel_JF_images][:nshots]
     
+    return images, pulse_ids
+
+
+def load_JF_cropped_data(fname, roi, nshots=None):
+    roi = str(roi)
+    if not roi.startswith("images_roi"):
+        roi = "roi" + roi if not roi.startswith("roi") else roi
+        roi = "images_" + roi if not roi.startswith("images_") else roi
+
+    coords = "coords_roi{}".format(roi[len("images_roi"):])
+
+    with h5py.File(fname, "r") as f:
+        keys = list(f.keys())
+       # print(f"{fname} contains {keys}")
+
+        coords = f[coords][:]
+        print(f"{roi}: {coords}")
+        
+        pulse_ids = f["pulse_ids"][:nshots]
+        images    = f[roi][:nshots]
     return images, pulse_ids
 
 
@@ -193,27 +216,27 @@ def load_crop_JF_data_on_off(fname, roi1, roi2, reprate_FEL, reprate_laser,
 ###    Next: 2 functions to load pump-probe YAG data (events/pulseIDs)
 
 
-def load_YAG_events(filename):
+def load_YAG_events(filename, nshots=None):
     with h5py.File(filename, 'r') as BS_file:
         data = _get_data(BS_file)
 
-        pulse_ids = data[channel_BS_pulse_ids][:]
+        pulse_ids = data[channel_BS_pulse_ids][:nshots]
 
-        FEL = data[channel_Events][:,48]
-        Laser = data[channel_Events][:,18]
-        Darkshot = data[channel_Events][:,21]
+        FEL = data[channel_Events][:nshots,48]
+        Laser = data[channel_Events][:nshots,18]
+        Darkshot = data[channel_Events][:nshots,21]
 
         index_pump = np.logical_and.reduce((FEL, Laser, np.logical_not(Darkshot)))
         index_unpump = np.logical_and.reduce((np.logical_not(FEL), Laser, np.logical_not(Darkshot)))
 
-        LaserDiode_pump = data[channel_LaserDiode][:][index_pump]
-        LaserDiode_unpump = data[channel_LaserDiode][:][index_unpump]
-        LaserRefDiode_pump = data[channel_Laser_refDiode][:][index_pump]
-        LaserRefDiode_unpump = data[channel_Laser_refDiode][:][index_unpump]
-        IzeroFEL = data[channel_Izero][:][index_pump]
-        PIPS = data[channel_PIPS_trans][:][index_pump]
+        LaserDiode_pump = data[channel_LaserDiode][:nshots][index_pump]
+        LaserDiode_unpump = data[channel_LaserDiode][:nshots][index_unpump]
+        LaserRefDiode_pump = data[channel_Laser_refDiode][:nshots][index_pump]
+        LaserRefDiode_unpump = data[channel_Laser_refDiode][:nshots][index_unpump]
+        IzeroFEL = data[channel_Izero][:nshots][index_pump]
+        PIPS = data[channel_PIPS_trans][:nshots][index_pump]
 
-        Delay = data[channel_delay][:][index_unpump]
+        Delay = data[channel_delay_SH][:nshots][index_unpump]
         #Delay = BS_file[channel_laser_pitch][:][index_unpump]
 
         #BAM = BS_file[channel_BAM][:][index_pump]
@@ -236,7 +259,7 @@ def load_YAG_pulseID(filename, reprateFEL, repratelaser):
         IzeroFEL = BS_file[channel_Izero][:][reprate_FEL]
         PIPS = BS_file[channel_PIPS_trans][:][reprate_FEL]
 
-        Delay = BS_file[channel_delay][:][reprate_laser]
+        Delay = BS_file[channel_delay_SH][:][reprate_laser]
         #Delay = BS_file[channel_laser_pitch][:][index_unpump]
 
         #BAM = BS_file[channel_BAM][:][reprate_FEL]
@@ -266,10 +289,47 @@ def load_PumpProbe_events(filename, channel_variable, nshots=None):
         DataTrans_pump = BS_file[channel_PIPS_trans][:nshots][index_pump]
         DataTrans_unpump = BS_file[channel_PIPS_trans][:nshots][index_unpump]
         
-        IzeroFEL_pump = BS_file[channel_Izero][:nshots][index_pump]
-        IzeroFEL_unpump = BS_file[channel_Izero][:nshots][index_unpump]
+        IzeroFEL_pump = BS_file[channel_Izero4][:nshots][index_pump]
+        IzeroFEL_unpump = BS_file[channel_Izero4][:nshots][index_unpump]
         
         Variable = BS_file[channel_variable][:nshots][index_unpump]
+             
+    return DataFluo_pump, DataFluo_unpump, IzeroFEL_pump, IzeroFEL_unpump, Variable, DataTrans_pump, DataTrans_unpump
+
+
+def load_PumpProbe_events_test(filename, channel_variable, nshots=None):
+    with h5py.File(filename, 'r') as BS_file:
+        BS_file = _get_data(BS_file)
+        
+        pulse_ids = BS_file[channel_BS_pulse_ids][:nshots]
+        
+        FEL = BS_file[channel_Events][:nshots,48]
+        Laser = BS_file[channel_Events][:nshots,18]
+        Darkshot = BS_file[channel_Events][:nshots,21]
+        
+        index_pump = np.logical_and.reduce((FEL, Laser, np.logical_not(Darkshot)))       
+        index_unpump = np.logical_and.reduce((FEL, Laser, Darkshot))
+ #       print (index_pump, index_unpump)
+                
+       
+        DataFluo_pump_1 = BS_file[channel_PIPS_fluo][:nshots][index_pump][:333]
+        DataFluo_pump_2 = BS_file[channel_PIPS_fluo][:nshots][index_pump][333:666]
+        DataFluo_pump = (DataFluo_pump_1 + DataFluo_pump_2)/2
+        DataFluo_unpump = BS_file[channel_PIPS_fluo][:nshots][index_unpump][:333]
+        
+        DataTrans_pump_1 = BS_file[channel_PIPS_trans][:nshots][index_pump][:333]
+        DataTrans_pump_2 = BS_file[channel_PIPS_trans][:nshots][index_pump][333:666]
+        DataTrans_pump = (DataTrans_pump_1 + DataTrans_pump_2)/2 
+        DataTrans_unpump = BS_file[channel_PIPS_trans][:nshots][index_unpump][:333]
+        
+        IzeroFEL_pump_1 = BS_file[channel_Izero4][:nshots][index_pump][:333]
+        IzeroFEL_pump_2 = BS_file[channel_Izero4][:nshots][index_pump][333:666]
+        IzeroFEL_pump = (IzeroFEL_pump_1 + IzeroFEL_pump_2)/2
+        
+        
+        IzeroFEL_unpump = BS_file[channel_Izero4][:nshots][index_unpump][:333]
+        
+        Variable = BS_file[channel_variable][:nshots][index_unpump][:333]
              
     return DataFluo_pump, DataFluo_unpump, IzeroFEL_pump, IzeroFEL_unpump, Variable, DataTrans_pump, DataTrans_unpump
 
@@ -327,7 +387,7 @@ def load_FEL_scans(filename, channel_variable, nshots=None):
 
         DataFEL_t  = data[channel_PIPS_trans][:nshots][index_light]
         DataFEL_f  = data[channel_PIPS_fluo][:nshots][index_light]
-        Izero      = data[channel_Izero][:nshots][index_light]
+        Izero      = data[channel_Izero2][:nshots][index_light]
         Laser      = data[channel_LaserDiode][:nshots][index_light]
         Variable   = data[channel_variable][:nshots][index_light]
 
