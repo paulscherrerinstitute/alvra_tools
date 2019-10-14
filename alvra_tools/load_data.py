@@ -236,7 +236,7 @@ def load_YAG_events(filename, nshots=None):
         IzeroFEL = data[channel_Izero][:nshots][index_pump]
         PIPS = data[channel_PIPS_trans][:nshots][index_pump]
 
-        Delay = data[channel_delay_SH][:nshots][index_unpump]
+        Delay = data[channel_delay][:nshots][index_unpump]
         #Delay = BS_file[channel_laser_pitch][:][index_unpump]
 
         #BAM = BS_file[channel_BAM][:][index_pump]
