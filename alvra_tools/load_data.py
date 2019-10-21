@@ -95,6 +95,16 @@ def load_JF_data(fname, nshots=None):
     return images, pulse_ids
 
 
+def load_corr_JF_data(fname, nshots=None):
+    with h5py.File(fname, "r") as f:
+        
+        data = _get_data(f)
+        pulse_ids = data[channel_corr_JF_pulse_ids][:nshots]#.T[0] # pulse_ids comes in a weird shape
+        images    = data[channel_corr_JF_images][:nshots]
+    
+    return images, pulse_ids
+
+
 def load_JF_cropped_data(fname, roi, nshots=None):
     roi = str(roi)
     if not roi.startswith("images_roi"):
@@ -491,6 +501,20 @@ def load_single_channel_pp_pulseID(filename, channel, reprateFEL, repratelaser):
     return DataBS_ON, DataBS_OFF, PulseIDs_ON, PulseIDs_OFF 
 
 
+def load_PSSS_data_from_scans_pulseID(filename, channel_variable, reprateFEL, nshots=None):
+    with h5py.File(filename, 'r') as BS_file:
+        data = _get_data(BS_file)
 
+        pulse_ids = data[channel_BS_pulse_ids][:nshots]
 
+        reprate_FEL = _make_reprates_on(pulse_ids, reprateFEL)
+
+        PSSS_center  = data[channel_PSSS_center][:nshots][reprate_FEL]
+        PSSS_fwhm    = data[channel_PSSS_fwhm][:nshots][reprate_FEL]
+        PSSS_x       = data[channel_PSSS_x][:nshots][reprate_FEL]
+        PSSS_y       = data[channel_PSSS_y][:nshots][reprate_FEL]
+        
+        PulseIDs = pulse_ids[:nshots][reprate_FEL]
+
+    return PSSS_center, PSSS_fwhm, PSSS_x, PSSS_y, PulseIDs
 
