@@ -11,8 +11,18 @@ def _get_data(f):
     if "data" in f:
         return f["data"]
     else:
-        return f
+        return f 
+    
+def _get_modulo(pulse_ids, modulo):  
+    nshots = len(pulse_ids)
+    nshots = nshots - (nshots % modulo)
+    print ("Load {} shots".format(nshots))
+    return nshots
 
+def _average(data, modulo):
+    data = [np.sum(data[i:i+modulo])/modulo for i in np.arange(0,len(data)-1,modulo)]
+    data = np.asarray(data)
+    return data
 
 def _make_reprates_on_off(pulse_ids, reprate_FEL, reprate_laser):
     #reprate_off = ((pulse_ids%10 == 0) & (pulse_ids%20 != 0))            #This is for 10 Hz
@@ -226,11 +236,12 @@ def load_crop_JF_data_on_off(fname, roi1, roi2, reprate_FEL, reprate_laser,
 ###    Next: 2 functions to load pump-probe YAG data (events/pulseIDs)
 
 
-def load_YAG_events(filename, nshots=None):
+def load_YAG_events(filename, modulo = 2, nshots=None):
     with h5py.File(filename, 'r') as BS_file:
         data = _get_data(BS_file)
 
         pulse_ids = data[channel_BS_pulse_ids][:nshots]
+        nshots = _get_modulo(pulse_ids,modulo)
 
         FEL = data[channel_Events][:nshots,48]
         Laser = data[channel_Events][:nshots,18]
@@ -239,12 +250,21 @@ def load_YAG_events(filename, nshots=None):
         index_pump = np.logical_and.reduce((FEL, Laser, np.logical_not(Darkshot)))
         index_unpump = np.logical_and.reduce((np.logical_not(FEL), Laser, np.logical_not(Darkshot)))
 
-        LaserDiode_pump = data[channel_LaserDiode][:nshots][index_pump]
-        LaserDiode_unpump = data[channel_LaserDiode][:nshots][index_unpump]
-        LaserRefDiode_pump = data[channel_Laser_refDiode][:nshots][index_pump]
-        LaserRefDiode_unpump = data[channel_Laser_refDiode][:nshots][index_unpump]
-        IzeroFEL = data[channel_Izero][:nshots][index_pump]
-        PIPS = data[channel_PIPS_trans][:nshots][index_pump]
+        LaserDiode_pump = data[channel_LaserDiode][:nshots][index_pump].ravel()
+        LaserDiode_pump = _average(LaserDiode_pump, modulo -1)
+        LaserDiode_unpump = data[channel_LaserDiode][:nshots][index_unpump].ravel()
+        LaserDiode_unpump = _average(LaserDiode_unpump, modulo -1)
+        
+        LaserRefDiode_pump = data[channel_Laser_refDiode][:nshots][index_pump].ravel()
+        LaserRefDiode_pump = _average(LaserRefDiode_pump, modulo -1)
+        LaserRefDiode_unpump = data[channel_Laser_refDiode][:nshots][index_unpump].ravel()
+        LaserRefDiode_unpump = _average(LaserRefDiode_unpump, modulo -1)
+        
+        IzeroFEL = data[channel_Izero][:nshots][index_pump].ravel()
+        IzeroFEL = _average(IzeroFEL, modulo -1)  
+        
+        #PIPS = data[channel_PIPS_trans][:nshots][index_pump]
+        PIPS = data[channel_LaserDiode][:nshots][index_pump].ravel()
 
         Delay = data[channel_delay][:nshots][index_unpump]
         #Delay = BS_file[channel_laser_pitch][:][index_unpump]
