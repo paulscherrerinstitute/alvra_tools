@@ -53,17 +53,6 @@ def _make_empty_image(image, module_map):
     return np.zeros((512 * len(module_map), 1024), dtype=image.dtype)
 
 
-def load_JF_data(fname, nshots=None):
-    with h5py.File(fname, "r") as f:
-        detector_name = _get_detector_name(f)
-
-        data = _get_data(f)
-        pulse_ids = data[detector_name + channel_JF_pulse_ids][:nshots].T[0] # pulse_ids comes in a weird shape
-        images    = data[detector_name + channel_JF_images][:nshots]
-
-    return images, pulse_ids
-
-
 def load_corr_JF_data(fname, nshots=None):
     with h5py.File(fname, "r") as f:
 
@@ -92,17 +81,6 @@ def load_JF_cropped_data(fname, roi, nshots=None):
         pulse_ids = f["pulse_ids"][:nshots]
         images    = f[roi][:nshots]
     return images, pulse_ids
-
-
-def load_JF_data_on_off(fname, reprate_FEL, reprate_laser, nshots=None):
-    images, pulse_ids = load_JF_data(fname, nshots=nshots)
-
-    reprate_on, reprate_off = _make_reprates_on_off(pulse_ids, reprate_FEL, reprate_laser)
-
-    images_on  = images[reprate_on]
-    images_off = images[reprate_off]
-
-    return images_on, images_off, pulse_ids
 
 
 def load_crop_JF_data_on_off(fname, roi1, roi2, reprate_FEL, reprate_laser,
