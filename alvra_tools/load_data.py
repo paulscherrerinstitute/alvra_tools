@@ -48,50 +48,9 @@ def _make_reprates_FEL_on_laser_off(pulse_ids, reprate_FEL, reprate_laser):
 def _get_detector_name(f):
     return f["general/detector_name"][()].decode()
 
-def _get_module_map(f):
-    detector_name = _get_detector_name(f)
-    try:
-        module_map = f[f"data/{detector_name}/module_map"][:]
-    except:
-        return None
-    if -1 not in module_map:
-        return None
-    return module_map
-
-
-def apply_module_map(image, module_map, original_mask, chip_size=512):
-    if module_map is None or -1 not in module_map:
-        #print("module map skipped")
-        return image, original_mask
-
-    mask = original_mask.copy()
-    image_ext = _make_empty_image(image, module_map)
-
-    for i, m in enumerate(module_map):
-        if m == -1:
-            mask[chip_size * i : chip_size * (i + 1), :] = 1
-        else:
-            image_ext[chip_size * i : chip_size * (i + 1), :] = image[chip_size * m : chip_size * (m + 1), :]
-            mask[chip_size * i : chip_size * (i + 1), :] = original_mask[chip_size * i : chip_size * (i + 1), :]
-
-    return image_ext, mask
-
 
 def _make_empty_image(image, module_map):
     return np.zeros((512 * len(module_map), 1024), dtype=image.dtype)
-
-
-def _apply_to_all_images(func, images, *args, **kwargs):
-    nshots = len(images)
-    one_image = func(images[0],  *args, **kwargs)
-    target_dtype = one_image.dtype
-    target_shape = one_image.shape
-    target_shape = [nshots] + list(target_shape)
-    images_corr = np.empty(shape=target_shape, dtype=target_dtype)
-    for n, img in enumerate(images):
-        images_corr[n] = func(img,  *args, **kwargs)
-    return images_corr
-
 
 
 def load_JF_data(fname, nshots=None):
@@ -147,28 +106,11 @@ def load_JF_data_on_off(fname, reprate_FEL, reprate_laser, nshots=None):
 
 
 def load_crop_JF_data_on_off(fname, roi1, roi2, reprate_FEL, reprate_laser,
-                             G=None, P=None, pixel_mask=None, highgain=False, nshots=None):
-    images, pulse_ids = load_JF_data(fname, nshots=nshots)
+                             gain_file=None, pedestal_file=None, nshots=None):
 
-    with h5py.File(fname, "r") as f:
-        detector_name = _get_detector_name(f)
-        module_maps = _get_module_map(f)
-
-    if module_maps is not None:
-        print ("Will apply module map:", module_maps[0])
-        images_full = []
-        for image, module_map in zip(images, module_maps):
-            image, pixel_mask = apply_module_map(image, module_map, pixel_mask)
-            image = ju.apply_gain_pede(image, G=G, P=P, pixel_mask=pixel_mask, highgain=highgain)
-            images_full.append(image)
-        images = images_full #np.stack(images_full)
-    else:
-        print ("All modules are active")
-        if any(i is not None for i in (G, P, pixel_mask)):
-            images = ju.apply_gain_pede(images, G=G, P=P, pixel_mask=pixel_mask, highgain=highgain)
-
-    #images = np.stack(ju.apply_geometry(img, detector_name) for img in images)
-    images = _apply_to_all_images(ju.apply_geometry, images, detector_name)
+    with ju.File(fname, gain_file=gain_file, pedestal_file=pedestal_file) as juf:
+        images = juf[:nshots]
+        pulse_ids = juf["pulse_id"][:nshots].T[0]
 
     images_roi1 = crop_roi(images, roi1)
     images_roi2 = crop_roi(images, roi2)
