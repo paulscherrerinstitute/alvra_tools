@@ -146,47 +146,6 @@ def load_JF_data_on_off(fname, reprate_FEL, reprate_laser, nshots=None):
     return images_on, images_off, pulse_ids
 
 
-def load_crop_JF_data(fname, roi1, roi2, nshots=None):
-    with h5py.File(fname, "r") as f:
-        detector_name = _get_detector_name(f)
-
-    if detector_name == "JF02T09V01":
-        #print(f"got {detector_name} assuming v01")
-        return load_crop_JF_data_v01(fname, roi1, roi2, nshots=nshots)
-    else:
-        #print(f"got {detector_name} assuming v02")
-        return load_crop_JF_data_v02(fname, roi1, roi2, nshots=nshots, detector_name=detector_name)
-
-
-def load_crop_JF_data_v01(fname, roi1, roi2, nshots=None):
-    # v01 does not need geometry correction, lazy load from file is possible
-    r10, r11 = make_roi(roi1)
-    r20, r21 = make_roi(roi2)
-
-    with h5py.File(fname, "r") as f:
-        detector_name = _get_detector_name(f)
-
-        data = _get_data(f)
-        pulse_ids = data[detector_name + channel_JF_pulse_ids][:nshots].T[0] # pulse_ids comes in a weird shape
-
-        img_data = data[detector_name + channel_JF_images]
-        images_roi1 = img_data[:nshots, r10, r11]
-        images_roi2 = img_data[:nshots, r20, r21]
-
-    return images_roi1, images_roi2, pulse_ids
-
-
-def load_crop_JF_data_v02(fname, roi1, roi2, nshots=None, detector_name="JF02T09V02"):
-    # v02 needs geometry correction, cannot load lazily
-    images, pulse_ids = load_JF_data(fname, nshots=nshots)
-
-    images = np.stack(ju.apply_geometry(img, detector_name) for img in images)
-    images_roi1 = crop_roi(images, roi1)
-    images_roi2 = crop_roi(images, roi2)
-
-    return images_roi1, images_roi2, pulse_ids
-
-
 def load_crop_JF_data_on_off(fname, roi1, roi2, reprate_FEL, reprate_laser,
                              G=None, P=None, pixel_mask=None, highgain=False, nshots=None):
     images, pulse_ids = load_JF_data(fname, nshots=nshots)
