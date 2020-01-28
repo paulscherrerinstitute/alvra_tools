@@ -15,9 +15,14 @@ def _get_data(f):
 
 def _get_modulo(pulse_ids, modulo):
     nshots = len(pulse_ids)
+    print ("Found {} shots in the file".format(nshots))
     nshots = nshots - (nshots % modulo)
     print ("Load {} shots".format(nshots))
     return nshots
+
+def _cut_to_shortest_length(*args):
+    shortest_length = min(len(i) for i in args)
+    return [a[:shortest_length] for a in args]
 
 def _average(data, modulo):
     data = [np.sum(data[i:i+modulo])/modulo for i in np.arange(0,len(data)-1,modulo)]
@@ -125,10 +130,11 @@ def load_YAG_events(filename, modulo = 2, nshots=None):
         FEL = data[channel_Events][:nshots,48]
         Laser = data[channel_Events][:nshots,18]
         Darkshot = data[channel_Events][:nshots,21]
-
-        index_pump = np.logical_and.reduce((FEL, Laser, np.logical_not(Darkshot)))
-        index_unpump = np.logical_and.reduce((np.logical_not(FEL), Laser, np.logical_not(Darkshot)))
-
+        
+        index_dark_before = np.append([True], np.logical_not(Darkshot))[:-1]
+        index_pump = np.logical_and.reduce((FEL, Laser, np.logical_not(Darkshot), index_dark_before))
+        index_unpump = np.logical_and.reduce((np.logical_not(FEL), Laser, np.logical_not(Darkshot), index_dark_before))
+        
         LaserDiode_pump = data[channel_LaserDiode][:nshots][index_pump].ravel()
         LaserDiode_pump = _average(LaserDiode_pump, modulo -1)
         LaserDiode_unpump = data[channel_LaserDiode][:nshots][index_unpump].ravel()
@@ -149,8 +155,9 @@ def load_YAG_events(filename, modulo = 2, nshots=None):
         #Delay = BS_file[channel_laser_pitch][:][index_unpump]
 
         #BAM = BS_file[channel_BAM][:][index_pump]
-
-    return LaserDiode_pump, LaserDiode_unpump, LaserRefDiode_pump, LaserRefDiode_unpump, IzeroFEL, PIPS, Delay, pulse_ids
+        
+        print ("Pump/umpump arrays have {} shots each".format(len(LaserDiode_pump), len(LaserDiode_unpump)))
+        return _cut_to_shortest_length(LaserDiode_pump, LaserDiode_unpump, LaserRefDiode_pump, LaserRefDiode_unpump, IzeroFEL, PIPS, Delay, pulse_ids)
 
 
 def load_YAG_pulseID(filename, reprateFEL, repratelaser):
@@ -168,7 +175,7 @@ def load_YAG_pulseID(filename, reprateFEL, repratelaser):
         IzeroFEL = BS_file[channel_Izero][:][reprate_FEL]
         PIPS = BS_file[channel_PIPS_trans][:][reprate_FEL]
 
-        Delay = BS_file[channel_delay_SH][:][reprate_laser]
+        Delay = BS_file[channel_delay][:][reprate_laser]
         #Delay = BS_file[channel_laser_pitch][:][index_unpump]
 
         #BAM = BS_file[channel_BAM][:][reprate_FEL]
@@ -178,69 +185,38 @@ def load_YAG_pulseID(filename, reprateFEL, repratelaser):
 
 ###    Next: 2 functions to load pump-probe XAS data (energy-delay) (events/pulseIDs)
 
-def load_PumpProbe_events(filename, channel_variable, nshots=None):
+def load_PumpProbe_events(filename, channel_variable, modulo=2, nshots=None):
     with h5py.File(filename, 'r') as BS_file:
         BS_file = _get_data(BS_file)
-
+        
         pulse_ids = BS_file[channel_BS_pulse_ids][:nshots]
-
+        nshots = _get_modulo(pulse_ids,modulo)
+        
         FEL = BS_file[channel_Events][:nshots,48]
         Laser = BS_file[channel_Events][:nshots,18]
         Darkshot = BS_file[channel_Events][:nshots,21]
-
+        
         index_pump = np.logical_and.reduce((FEL, Laser, np.logical_not(Darkshot)))
         index_unpump = np.logical_and.reduce((FEL, Laser, Darkshot))
  #       print (index_pump, index_unpump)
-
-        DataFluo_pump = BS_file[channel_PIPS_fluo][:nshots][index_pump]
-        DataFluo_unpump = BS_file[channel_PIPS_fluo][:nshots][index_unpump]
-
-        DataTrans_pump = BS_file[channel_PIPS_trans][:nshots][index_pump]
-        DataTrans_unpump = BS_file[channel_PIPS_trans][:nshots][index_unpump]
-
-        IzeroFEL_pump = BS_file[channel_Izero4][:nshots][index_pump]
-        IzeroFEL_unpump = BS_file[channel_Izero4][:nshots][index_unpump]
-
+                
+        DataFluo_pump = BS_file[channel_PIPS_fluo][:nshots][index_pump].ravel()
+        DataFluo_pump = _average(DataFluo_pump, modulo - 1)
+        DataFluo_unpump = BS_file[channel_PIPS_fluo][:nshots][index_unpump].ravel()
+        
+        DataTrans_pump = BS_file[channel_PIPS_trans][:nshots][index_pump].ravel()
+        DataTrans_pump = _average(DataTrans_pump, modulo - 1)
+        DataTrans_unpump = BS_file[channel_PIPS_trans][:nshots][index_unpump].ravel()
+        
+        IzeroFEL_pump = BS_file[channel_Izero][:nshots][index_pump].ravel()
+        IzeroFEL_pump = _average(IzeroFEL_pump, modulo - 1)
+        IzeroFEL_unpump = BS_file[channel_Izero][:nshots][index_unpump].ravel()
+        
         Variable = BS_file[channel_variable][:nshots][index_unpump]
-
-    return DataFluo_pump, DataFluo_unpump, IzeroFEL_pump, IzeroFEL_unpump, Variable, DataTrans_pump, DataTrans_unpump
-
-
-def load_PumpProbe_events_test(filename, channel_variable, nshots=None):
-    with h5py.File(filename, 'r') as BS_file:
-        BS_file = _get_data(BS_file)
-
-        pulse_ids = BS_file[channel_BS_pulse_ids][:nshots]
-
-        FEL = BS_file[channel_Events][:nshots,48]
-        Laser = BS_file[channel_Events][:nshots,18]
-        Darkshot = BS_file[channel_Events][:nshots,21]
-
-        index_pump = np.logical_and.reduce((FEL, Laser, np.logical_not(Darkshot)))
-        index_unpump = np.logical_and.reduce((FEL, Laser, Darkshot))
- #       print (index_pump, index_unpump)
-
-
-        DataFluo_pump_1 = BS_file[channel_PIPS_fluo][:nshots][index_pump][:333]
-        DataFluo_pump_2 = BS_file[channel_PIPS_fluo][:nshots][index_pump][333:666]
-        DataFluo_pump = (DataFluo_pump_1 + DataFluo_pump_2)/2
-        DataFluo_unpump = BS_file[channel_PIPS_fluo][:nshots][index_unpump][:333]
-
-        DataTrans_pump_1 = BS_file[channel_PIPS_trans][:nshots][index_pump][:333]
-        DataTrans_pump_2 = BS_file[channel_PIPS_trans][:nshots][index_pump][333:666]
-        DataTrans_pump = (DataTrans_pump_1 + DataTrans_pump_2)/2
-        DataTrans_unpump = BS_file[channel_PIPS_trans][:nshots][index_unpump][:333]
-
-        IzeroFEL_pump_1 = BS_file[channel_Izero4][:nshots][index_pump][:333]
-        IzeroFEL_pump_2 = BS_file[channel_Izero4][:nshots][index_pump][333:666]
-        IzeroFEL_pump = (IzeroFEL_pump_1 + IzeroFEL_pump_2)/2
-
-
-        IzeroFEL_unpump = BS_file[channel_Izero4][:nshots][index_unpump][:333]
-
-        Variable = BS_file[channel_variable][:nshots][index_unpump][:333]
-
-    return DataFluo_pump, DataFluo_unpump, IzeroFEL_pump, IzeroFEL_unpump, Variable, DataTrans_pump, DataTrans_unpump
+        
+        print ("Pump/umpump arrays have {} shots each".format(len(DataFluo_pump), len(DataFluo_unpump)))
+             
+    return _cut_to_shortest_length(DataFluo_pump, DataFluo_unpump, IzeroFEL_pump, IzeroFEL_unpump, Variable, DataTrans_pump, DataTrans_unpump)
 
 
 def load_PumpProbe_pulseID(filename, channel_variable, reprateFEL, repratelaser):
