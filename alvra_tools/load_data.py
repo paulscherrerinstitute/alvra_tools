@@ -272,7 +272,7 @@ def load_FEL_scans(filename, channel_variable, nshots=None):
 
         DataFEL_t  = data[channel_PIPS_trans][:nshots][index_light]
         DataFEL_f  = data[channel_PIPS_fluo][:nshots][index_light]
-        Izero      = data[channel_Izero2][:nshots][index_light]
+        Izero      = data[channel_Izero][:nshots][index_light]
         Laser      = data[channel_LaserDiode][:nshots][index_light]
         Variable   = data[channel_variable][:nshots][index_light]
 
