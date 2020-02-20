@@ -141,10 +141,13 @@ class ConfigFile(object):
         self.write()
 
 
-    def print_table(self):
-        length = max(len(i) for i in self)
-        for i in self:
-            print(i.ljust(length), cfg[i])
+def print_table(self):
+    if not self._dict:
+        print("no entries")
+        return
+    length = max(len(i) for i in self)
+    for i in self:
+        print(i.ljust(length), self[i])
 
 
 
