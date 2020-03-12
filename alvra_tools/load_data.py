@@ -110,6 +110,20 @@ def load_crop_JF_data_on_off(fname, roi1, roi2, reprate_FEL, reprate_laser,
     return images_on_roi1, images_on_roi2, pulse_ids_on, images_off_roi1, images_off_roi2, pulse_ids_off
 
 
+def load_crop_JF_data(fname, roi1, roi2,roi3,roi4,
+                             gain_file=None, pedestal_file=None, nshots=None):
+
+    with ju.File(fname, gain_file=gain_file, pedestal_file=pedestal_file) as juf:
+        images = juf[:nshots]
+        pulse_ids = juf["pulse_id"][:nshots].T[0]
+
+    images_roi1 = crop_roi(images, roi1)
+    images_roi2 = crop_roi(images, roi2)
+    images_roi3 = crop_roi(images, roi3)
+    images_roi4 = crop_roi(images, roi4)
+    
+    return images_roi1, images_roi2, images_roi3, images_roi4, pulse_ids
+
 
 
 
@@ -341,7 +355,7 @@ def load_single_channel(filename, channel, eventCode):
 
         condition_array = data[channel_Events][:,eventCode]
         condition = condition_array == 1
-
+        
         DataBS = data[channel][:][condition]
         PulseIDs = data[channel_BS_pulse_ids][:][condition]
 
