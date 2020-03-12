@@ -25,9 +25,11 @@ def _cut_to_shortest_length(*args):
     return [a[:shortest_length] for a in args]
 
 def _average(data, modulo):
-    data = [np.sum(data[i:i+modulo])/modulo for i in np.arange(0,len(data)-1,modulo)]
-    data = np.asarray(data)
-    return data
+    length = len(data)
+    length //= modulo
+    length *= modulo
+    data = data[:length]
+    return data.reshape(-1, modulo).mean(axis=1)
 
 def _make_reprates_on_off(pulse_ids, reprate_FEL, reprate_laser):
     #reprate_off = ((pulse_ids%10 == 0) & (pulse_ids%20 != 0))            #This is for 10 Hz
