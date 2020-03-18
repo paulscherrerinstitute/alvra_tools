@@ -2,7 +2,7 @@ from setuptools import setup
 
 setup(
     name='alvra_tools',
-    version='0.0.6',
+    version='0.0.7',
     url="https://github.com/paulscherrerinstitute/alvra_tools",
     description='Tools for Alvra',
     author='Paul Scherrer Institute',
