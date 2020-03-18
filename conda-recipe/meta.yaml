@@ -17,6 +17,7 @@ requirements:
         - numpy
         - scipy
         - jungfrau_utils=0.10
+        - bitshuffle=0.3.5
 
 about:
    home: https://github.com/paulscherrerinstitute/alvra_tools
