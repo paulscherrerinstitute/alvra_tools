@@ -15,9 +15,9 @@ def _get_data(f):
 
 def _get_modulo(pulse_ids, modulo):
     nshots = len(pulse_ids)
-    print ("Found {} shots in the file".format(nshots))
+#    print ("Found {} shots in the file".format(nshots))
     nshots = nshots - (nshots % modulo)
-    print ("Load {} shots".format(nshots))
+#    print ("Load {} shots".format(nshots))
     return nshots
 
 def _cut_to_shortest_length(*args):
@@ -90,10 +90,117 @@ def load_JF_cropped_data(fname, roi, nshots=None):
     return images, pulse_ids
 
 
+def load_JF_data_4rois_on_off(fname, index_light, index_dark, roi1, roi2,roi3,roi4,
+                             gain_file=None, pedestal_file=None, nshots=None):
+
+    with ju.File(fname, gain_file=gain_file, pedestal_file=pedestal_file) as juf:
+        images = juf[:nshots]
+        pulse_ids = juf["pulse_id"][:nshots].T[0]
+
+    images_roi1     = crop_roi(images, roi1)
+    images_on_roi1  = images_roi1[index_light]
+    images_off_roi1 = images_roi1[index_dark]
+    
+    images_roi2     = crop_roi(images, roi2)
+    images_on_roi2  = images_roi2[index_light]
+    images_off_roi2 = images_roi2[index_dark]
+    
+    images_roi3     = crop_roi(images, roi3)
+    images_on_roi3  = images_roi3[index_light]
+    images_off_roi3 = images_roi3[index_dark]
+    
+    images_roi4     = crop_roi(images, roi4)
+    images_on_roi4  = images_roi4[index_light]
+    images_off_roi4 = images_roi4[index_dark]
+    
+    pulse_ids_on    = pulse_ids[index_light]
+    pulse_ids_off   = pulse_ids[index_dark]
+    
+    return images_on_roi1, images_off_roi1, images_on_roi2, images_off_roi2, images_on_roi3, images_off_roi3, images_on_roi4, images_off_roi4, pulse_ids_on, pulse_ids_off
+
+
+def load_crop_JF_batches_on_off(fname, roi1, roi2, reprate_FEL, reprate_laser, 
+                         gain_file=None, pedestal_file=None, nshots=None, batch_size = 1000):
+
+    with ju.File(fname, gain_file=gain_file, pedestal_file=pedestal_file) as juf:
+        
+        pulse_ids = juf["pulse_id"][:nshots].T[0]
+        n_images = pulse_ids.shape[0]
+        images_roi1 = []
+        images_roi2 = []   
+        
+        print ('Total images = {}, load them in batches of {}'.format(n_images, batch_size))
+        
+        for ind in range(0, n_images, batch_size):
+            batch_slice = slice(ind, min(ind + batch_size, n_images))
+            
+            print ('Load batch = {}'.format(batch_slice))
+            
+            batch_images = juf[batch_slice, :, :]
+            
+            images_roi1.extend(crop_roi(batch_images, roi1))
+            images_roi2.extend(crop_roi(batch_images, roi2))
+            
+            del batch_images
+            
+    images_roi1 = np.asarray(images_roi1)
+    images_roi2 = np.asarray(images_roi2)
+
+    reprate_on, reprate_off = _make_reprates_on_off(pulse_ids, reprate_FEL, reprate_laser)
+
+    images_on_roi1  = images_roi1[reprate_on]
+    images_on_roi2  = images_roi2[reprate_on]
+    images_off_roi1 = images_roi1[reprate_off]
+    images_off_roi2 = images_roi2[reprate_off]
+    pulse_ids_on    = pulse_ids[reprate_on]
+    pulse_ids_off   = pulse_ids[reprate_off]
+
+    return images_on_roi1, images_on_roi2, pulse_ids_on, images_off_roi1, images_off_roi2, pulse_ids_off
+
+def load_crop_JF_batches_on_off2(fname, roi1, roi2, reprate_FEL, reprate_laser, 
+                                gain_file=None, pedestal_file=None, nshots=None, batch_size = 1000):
+    
+    with ju.File(fname, gain_file=gain_file, pedestal_file=pedestal_file) as juf:
+        
+        pulse_ids = juf["pulse_id"][:nshots].T[0]
+        n_images = pulse_ids.shape[0]
+
+        first_images = juf[0, :, :]
+        first_image_roi1 = crop_roi(first_images, roi1)
+        first_image_roi2 = crop_roi(first_images, roi2)
+
+        images_roi1 = np.empty((n_images, *first_image_roi1.shape))
+        images_roi2 = np.empty((n_images, *first_image_roi2.shape))
+
+        print ('Total images = {}, load them in batches of {}'.format(n_images, batch_size))
+        
+        for ind in range(0, n_images, batch_size):
+            batch_slice = slice(ind, min(ind + batch_size, n_images))
+            
+            print ('Load batch = {}'.format(batch_slice))
+            
+            batch_images = juf[batch_slice, :, :]
+
+            images_roi1[batch_slice] = crop_roi(batch_images, roi1)
+            images_roi2[batch_slice] = crop_roi(batch_images, roi2)
+
+    reprate_on, reprate_off = _make_reprates_on_off(pulse_ids, reprate_FEL, reprate_laser)
+    images_on_roi1  = images_roi1[reprate_on]
+    images_on_roi2  = images_roi2[reprate_on]
+    images_off_roi1 = images_roi1[reprate_off]
+    images_off_roi2 = images_roi2[reprate_off]
+    pulse_ids_on    = pulse_ids[reprate_on]
+    pulse_ids_off   = pulse_ids[reprate_off]
+    
+    return images_on_roi1, images_on_roi2, pulse_ids_on, images_off_roi1, images_off_roi2, pulse_ids_off
+
+
+
 def load_crop_JF_data_on_off(fname, roi1, roi2, reprate_FEL, reprate_laser,
                              gain_file=None, pedestal_file=None, nshots=None):
 
     with ju.File(fname, gain_file=gain_file, pedestal_file=pedestal_file) as juf:
+        
         images = juf[:nshots]
         pulse_ids = juf["pulse_id"][:nshots].T[0]
 
@@ -133,8 +240,54 @@ def load_crop_JF_data(fname, roi1, roi2,roi3,roi4,
 
 
 
-###    Next: 2 functions to load pump-probe YAG data (events/pulseIDs)
+# ##    Next: 2 functions to load pump-probe YAG data (events/pulseIDs)
 
+def check_files_and_data(filename, modulo = 2, nshots=None):
+    exists = os.path.isfile(filename)
+    with h5py.File(filename, 'r') as BS_file:
+        data = _get_data(BS_file)
+        checkData = data["SAR-CVME-TIFALL5:EvtSet/is_data_present"][:nshots]
+        dataOK = checkData.all()
+        
+        combined = exists & dataOK
+        
+        return combined
+    
+def load_YAG_events2(filename, modulo = 2, nshots=None):
+    
+    (index_light, index_dark), ratioPump_FEL, ratioProbe_laser = load_reprates_FEL_pump(filename, nshots)
+    modulo_int = ratioPump_FEL * ratioProbe_laser
+    
+    with h5py.File(filename, 'r') as BS_file:
+        data = _get_data(BS_file)
+        pulse_ids = data[channel_BS_pulse_ids][:nshots]
+        nshots = _get_modulo(pulse_ids,modulo_int)
+
+        LaserDiode_pump = data[channel_LaserDiode][:nshots][index_light].ravel()
+        LaserDiode_pump = _average(LaserDiode_pump, modulo_int -1)
+        LaserDiode_unpump = data[channel_LaserDiode][:nshots][index_dark].ravel()
+        LaserDiode_unpump = _average(LaserDiode_unpump, modulo_int -1)
+
+        LaserRefDiode_pump = data[channel_Laser_refDiode][:nshots][index_light].ravel()
+        LaserRefDiode_pump = _average(LaserRefDiode_pump, modulo_int -1)
+        LaserRefDiode_unpump = data[channel_Laser_refDiode][:nshots][index_dark].ravel()
+        LaserRefDiode_unpump = _average(LaserRefDiode_unpump, modulo_int -1)
+        
+        pulse_ids = data[channel_BS_pulse_ids][:nshots][index_light].ravel()
+
+        IzeroFEL = data[channel_Izero][:nshots][index_light].ravel()
+        IzeroFEL = _average(IzeroFEL, modulo_int -1)
+
+        #PIPS = data[channel_PIPS_trans][:nshots][index_light]
+        PIPS = data[channel_LaserDiode][:nshots][index_light].ravel()
+
+        Delay = data[channel_delay][:nshots][index_dark]
+        #Delay = BS_file[channel_laser_pitch][:][index_dark]
+
+        #BAM = BS_file[channel_BAM][:][index_light]
+        
+        print ("Pump/umpump arrays have {} shots each".format(len(LaserDiode_pump), len(LaserDiode_unpump)))
+        return _cut_to_shortest_length(LaserDiode_pump, LaserDiode_unpump, LaserRefDiode_pump, LaserRefDiode_unpump, IzeroFEL, PIPS, Delay, pulse_ids)
 
 def load_YAG_events(filename, modulo = 2, nshots=None):
     with h5py.File(filename, 'r') as BS_file:
@@ -148,29 +301,31 @@ def load_YAG_events(filename, modulo = 2, nshots=None):
         Darkshot = data[channel_Events][:nshots,21]
         
         index_dark_before = np.append([True], np.logical_not(Darkshot))[:-1]
-        index_pump = np.logical_and.reduce((FEL, Laser, np.logical_not(Darkshot), index_dark_before))
-        index_unpump = np.logical_and.reduce((np.logical_not(FEL), Laser, np.logical_not(Darkshot), index_dark_before))
+        index_light = np.logical_and.reduce((FEL, Laser, np.logical_not(Darkshot), index_dark_before))
+        index_dark = np.logical_and.reduce((np.logical_not(FEL), Laser, np.logical_not(Darkshot), index_dark_before))
         
-        LaserDiode_pump = data[channel_LaserDiode][:nshots][index_pump].ravel()
+        LaserDiode_pump = data[channel_LaserDiode][:nshots][index_light].ravel()
         LaserDiode_pump = _average(LaserDiode_pump, modulo -1)
-        LaserDiode_unpump = data[channel_LaserDiode][:nshots][index_unpump].ravel()
+        LaserDiode_unpump = data[channel_LaserDiode][:nshots][index_dark].ravel()
         LaserDiode_unpump = _average(LaserDiode_unpump, modulo -1)
 
-        LaserRefDiode_pump = data[channel_Laser_refDiode][:nshots][index_pump].ravel()
+        LaserRefDiode_pump = data[channel_Laser_refDiode][:nshots][index_light].ravel()
         LaserRefDiode_pump = _average(LaserRefDiode_pump, modulo -1)
-        LaserRefDiode_unpump = data[channel_Laser_refDiode][:nshots][index_unpump].ravel()
+        LaserRefDiode_unpump = data[channel_Laser_refDiode][:nshots][index_dark].ravel()
         LaserRefDiode_unpump = _average(LaserRefDiode_unpump, modulo -1)
+        
+        pulse_ids = data[channel_BS_pulse_ids][:nshots][index_light].ravel()
 
-        IzeroFEL = data[channel_Izero][:nshots][index_pump].ravel()
+        IzeroFEL = data[channel_Izero][:nshots][index_light].ravel()
         IzeroFEL = _average(IzeroFEL, modulo -1)
 
-        #PIPS = data[channel_PIPS_trans][:nshots][index_pump]
-        PIPS = data[channel_LaserDiode][:nshots][index_pump].ravel()
+        #PIPS = data[channel_PIPS_trans][:nshots][index_light]
+        PIPS = data[channel_LaserDiode][:nshots][index_light].ravel()
 
-        Delay = data[channel_delay][:nshots][index_unpump]
-        #Delay = BS_file[channel_laser_pitch][:][index_unpump]
+        Delay = data[channel_delay][:nshots][index_dark]
+        #Delay = BS_file[channel_laser_pitch][:][index_dark]
 
-        #BAM = BS_file[channel_BAM][:][index_pump]
+        #BAM = BS_file[channel_BAM][:][index_light]
         
         print ("Pump/umpump arrays have {} shots each".format(len(LaserDiode_pump), len(LaserDiode_unpump)))
         return _cut_to_shortest_length(LaserDiode_pump, LaserDiode_unpump, LaserRefDiode_pump, LaserRefDiode_unpump, IzeroFEL, PIPS, Delay, pulse_ids)
@@ -199,7 +354,36 @@ def load_YAG_pulseID(filename, reprateFEL, repratelaser):
     return LaserDiode_pump, LaserDiode_unpump, LaserRefDiode_pump, LaserRefDiode_unpump, IzeroFEL, PIPS, Delay, pulse_ids
 
 
-###    Next: 2 functions to load pump-probe XAS data (energy-delay) (events/pulseIDs)
+
+# ##    Next: 2 functions to load pump-probe XAS data (energy-delay) (events/pulseIDs)
+
+def load_PumpProbe_events2(filename, channel_variable, modulo=2, nshots=None):
+    
+    (index_light, index_dark), ratioPump_laser, ratioProbe_FEL = load_reprates_laser_pump(filename, nshots)
+    modulo_int = ratioPump_laser * ratioProbe_FEL
+    
+    with h5py.File(filename, 'r') as BS_file:
+        BS_file = _get_data(BS_file)
+        pulse_ids = BS_file[channel_BS_pulse_ids][:nshots]
+        nshots = _get_modulo(pulse_ids,modulo_int)
+                
+        DataFluo_pump = BS_file[channel_PIPS_fluo][:nshots][index_light].ravel()
+        DataFluo_pump = _average(DataFluo_pump, ratioPump_laser - 1)
+        DataFluo_unpump = BS_file[channel_PIPS_fluo][:nshots][index_dark].ravel()
+        
+        DataTrans_pump = BS_file[channel_PIPS_trans][:nshots][index_light].ravel()
+        DataTrans_pump = _average(DataTrans_pump, ratioPump_laser - 1)
+        DataTrans_unpump = BS_file[channel_PIPS_trans][:nshots][index_dark].ravel()
+        
+        IzeroFEL_pump = BS_file[channel_Izero][:nshots][index_light].ravel()
+        IzeroFEL_pump = _average(IzeroFEL_pump, ratioPump_laser - 1)
+        IzeroFEL_unpump = BS_file[channel_Izero][:nshots][index_dark].ravel()
+        
+        Variable = BS_file[channel_variable][:nshots][index_dark]
+        
+        print ("Pump/umpump arrays have {} shots each".format(len(DataFluo_pump), len(DataFluo_unpump)))
+             
+    return _cut_to_shortest_length(DataFluo_pump, DataFluo_unpump, IzeroFEL_pump, IzeroFEL_unpump, Variable, DataTrans_pump, DataTrans_unpump, pulse_ids)
 
 def load_PumpProbe_events(filename, channel_variable, modulo=2, nshots=None):
     with h5py.File(filename, 'r') as BS_file:
@@ -212,27 +396,27 @@ def load_PumpProbe_events(filename, channel_variable, modulo=2, nshots=None):
         Laser = BS_file[channel_Events][:nshots,18]
         Darkshot = BS_file[channel_Events][:nshots,21]
         
-        index_pump = np.logical_and.reduce((FEL, Laser, np.logical_not(Darkshot)))
-        index_unpump = np.logical_and.reduce((FEL, Laser, Darkshot))
- #       print (index_pump, index_unpump)
+        index_light = np.logical_and.reduce((FEL, Laser, np.logical_not(Darkshot)))
+        index_dark = np.logical_and.reduce((FEL, Laser, Darkshot))
+ #       print (index_light, index_dark)
                 
-        DataFluo_pump = BS_file[channel_PIPS_fluo][:nshots][index_pump].ravel()
+        DataFluo_pump = BS_file[channel_PIPS_fluo][:nshots][index_light].ravel()
         DataFluo_pump = _average(DataFluo_pump, modulo - 1)
-        DataFluo_unpump = BS_file[channel_PIPS_fluo][:nshots][index_unpump].ravel()
+        DataFluo_unpump = BS_file[channel_PIPS_fluo][:nshots][index_dark].ravel()
         
-        DataTrans_pump = BS_file[channel_PIPS_trans][:nshots][index_pump].ravel()
+        DataTrans_pump = BS_file[channel_PIPS_trans][:nshots][index_light].ravel()
         DataTrans_pump = _average(DataTrans_pump, modulo - 1)
-        DataTrans_unpump = BS_file[channel_PIPS_trans][:nshots][index_unpump].ravel()
+        DataTrans_unpump = BS_file[channel_PIPS_trans][:nshots][index_dark].ravel()
         
-        IzeroFEL_pump = BS_file[channel_Izero][:nshots][index_pump].ravel()
+        IzeroFEL_pump = BS_file[channel_Izero][:nshots][index_light].ravel()
         IzeroFEL_pump = _average(IzeroFEL_pump, modulo - 1)
-        IzeroFEL_unpump = BS_file[channel_Izero][:nshots][index_unpump].ravel()
+        IzeroFEL_unpump = BS_file[channel_Izero][:nshots][index_dark].ravel()
         
-        Variable = BS_file[channel_variable][:nshots][index_unpump]
+        Variable = BS_file[channel_variable][:nshots][index_dark]
         
         print ("Pump/umpump arrays have {} shots each".format(len(DataFluo_pump), len(DataFluo_unpump)))
              
-    return _cut_to_shortest_length(DataFluo_pump, DataFluo_unpump, IzeroFEL_pump, IzeroFEL_unpump, Variable, DataTrans_pump, DataTrans_unpump)
+    return _cut_to_shortest_length(DataFluo_pump, DataFluo_unpump, IzeroFEL_pump, IzeroFEL_unpump, Variable, DataTrans_pump, DataTrans_unpump, pulse_ids)
 
 
 def load_PumpProbe_pulseID(filename, channel_variable, reprateFEL, repratelaser):
@@ -408,3 +592,69 @@ def load_PSSS_data_from_scans_pulseID(filename, channel_variable, reprateFEL, ns
         PulseIDs = pulse_ids[:nshots][reprate_FEL]
 
     return PSSS_center, PSSS_fwhm, PSSS_x, PSSS_y, PulseIDs
+
+def load_reprates_FEL_pump(filename, nshots=None):
+    with h5py.File(filename, 'r') as BS_file:
+        BS_file = _get_data(BS_file)
+
+        pulse_ids = BS_file[channel_BS_pulse_ids][:nshots]
+        FEL = BS_file[channel_Events][:nshots,48]
+        Laser = BS_file[channel_Events][:nshots,18]
+        Darkshot = BS_file[channel_Events][:nshots,21]
+        
+        #Laser is the probe:
+        ratioProbe_laser = int(np.rint(Laser.sum()/len(Laser)))
+        
+        #FEL is the pump:
+        ratioPump_FEL = int(np.rint(len(FEL)/FEL.sum()))
+                
+        modulo_int = ratioPump_FEL * ratioProbe_laser
+        
+        nshots = _get_modulo(pulse_ids, modulo_int)
+        
+        pulse_ids = BS_file[channel_BS_pulse_ids][:nshots]
+        FEL = BS_file[channel_Events][:nshots,48]
+        Laser = BS_file[channel_Events][:nshots,18]
+        Darkshot = BS_file[channel_Events][:nshots,21]
+          
+        index_dark_before = np.append([True], np.logical_not(Darkshot))[:-1]
+        index_light = np.logical_and.reduce((FEL, Laser, np.logical_not(Darkshot), index_dark_before))
+        index_dark = np.logical_and.reduce((np.logical_not(FEL), Laser, np.logical_not(Darkshot), index_dark_before))
+              
+        return _cut_to_shortest_length(index_light, index_dark), ratioPump_FEL, ratioProbe_laser
+
+    
+def load_reprates_laser_pump(filename, nshots=None):
+    with h5py.File(filename, 'r') as BS_file:
+        BS_file = _get_data(BS_file)
+
+        pulse_ids = BS_file[channel_BS_pulse_ids][:nshots]
+        FEL = BS_file[channel_Events][:nshots,48]
+        Laser = BS_file[channel_Events][:nshots,18]
+        Darkshot = BS_file[channel_Events][:nshots,21]
+        
+        #FEL is the probe:
+        ratioProbe_FEL = int(np.rint(len(FEL)/FEL.sum()))
+        
+        #Laser is the pump:
+        if (Darkshot.sum() == 0):
+            ratioPump_laser = int(np.rint(Laser.sum()/len(Laser)))
+        else:
+            ratioPump_laser = int(np.rint(Laser.sum()/Darkshot.sum()))
+                    
+        modulo_int = ratioPump_laser * ratioProbe_FEL
+       
+        nshots = _get_modulo(pulse_ids, modulo_int)
+
+        pulse_ids = BS_file[channel_BS_pulse_ids][:nshots]
+        FEL = BS_file[channel_Events][:nshots,48]
+        Laser = BS_file[channel_Events][:nshots,18]
+        Darkshot = BS_file[channel_Events][:nshots,21]
+                 
+        index_light = np.logical_and.reduce((FEL, Laser, np.logical_not(Darkshot)))
+        index_dark = np.logical_and.reduce((FEL, Laser, Darkshot))
+        
+        #print (len(FEL), len(index_light), len(index_dark))
+        
+        return _cut_to_shortest_length(index_light, index_dark), ratioPump_laser, ratioProbe_FEL
+    
