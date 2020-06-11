@@ -1,11 +1,12 @@
-from setuptools import setup
+from setuptools import setup, find_packages
 
 setup(
-    name='alvra_tools',
-    version='0.0.8',
+    name="alvra_tools",
+    version="0.0.8",
     url="https://github.com/paulscherrerinstitute/alvra_tools",
-    description='Tools for Alvra',
-    author='Paul Scherrer Institute',
-    packages=['alvra_tools']
+    description="Tools for Alvra",
+    author="Paul Scherrer Institute",
+    packages=find_packages()
 )
+
 
