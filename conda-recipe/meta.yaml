@@ -2,7 +2,11 @@
 
 package:
     name: alvra_tools
-    version: {{ data['version'] }}
+    version: {{ data["version"] }}
+
+about:
+   home: {{ data["url"] }}
+   summary: {{ data["description"] }}
 
 source:
     path: ..
@@ -18,6 +22,4 @@ requirements:
         - scipy
         - jungfrau_utils=0.11
 
-about:
-   home: https://github.com/paulscherrerinstitute/alvra_tools
-   summary: {{ data['description'] }}
+
