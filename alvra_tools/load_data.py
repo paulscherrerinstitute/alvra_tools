@@ -2,6 +2,9 @@ import h5py
 import numpy as np
 
 import jungfrau_utils as ju
+from sfdata import SFDataFile, SFDataFiles
+from collections import namedtuple
+from glob import glob
 
 from .channels import *
 from .utils import crop_roi, make_roi
@@ -18,6 +21,11 @@ def _get_modulo(pulse_ids, modulo):
 #    print ("Found {} shots in the file".format(nshots))
     nshots = nshots - (nshots % modulo)
 #    print ("Load {} shots".format(nshots))
+    return nshots
+
+def _get_modulo_length(length, modulo):
+    nshots = length
+    nshots = nshots - (nshots % modulo)
     return nshots
 
 def _cut_to_shortest_length(*args):
@@ -240,9 +248,9 @@ def load_crop_JF_data(fname, roi1, roi2,roi3,roi4,
 
 
 
-# ##    Next: 2 functions to load pump-probe YAG data (events/pulseIDs)
+# ##    Next: 3 functions to load COMPACT BS data
 
-def check_files_and_data(filename, modulo = 2, nshots=None):
+def check_file_and_data(filename, nshots=None):
     exists = os.path.isfile(filename)
     with h5py.File(filename, 'r') as BS_file:
         data = _get_data(BS_file)
@@ -252,6 +260,202 @@ def check_files_and_data(filename, modulo = 2, nshots=None):
         combined = exists & dataOK
         
         return combined
+
+
+def check_files_and_data(filenames, nshots=None):
+    with SFDataFiles(filenames) as data:
+        try:
+            checkData = data["SAR-CVME-TIFALL5:EvtSet"]._group["is_data_present"][:nshots] #FIX!
+        except KeyError:
+            return False
+        dataOK = checkData.all()
+        return dataOK
+
+    
+def load_data_compact(channel_list, datafiles):
+    with SFDataFiles(datafiles) as data:#, SFDataFile(filename_camera) as data_camera:
+        
+        channel_list_original = channel_list.copy()
+        check_channels = set(data.names).intersection(channel_list) == set(channel_list)
+        if not check_channels:
+            channel_list = list(set(data.names).intersection(channel_list))
+            
+        channel_list_complete = [channel_Events] + channel_list
+               
+        subset = data[channel_list_complete]
+        subset.print_stats(show_complete=True)
+        Event_code = subset[channel_Events].data
+        index_FEL = Event_code[:,12] #Event 12: BAM bunch 1
+        subset.drop_missing()
+        
+        #df = data[channel_list_complete].to_dataframe().dropna()
+        #df = data[channel_list_complete].to_dataframe
+        #print (df[tuple(channel_list_complete)].pids.shape)
+        #df.drop_missing()
+        #print (df[tuple(channel_list_complete)].pids.shape)
+        
+        #Event_code = np.stack(df[channel_Events].dropna().values)
+        Event_code = subset[channel_Events].data       
+        FEL = Event_code[:,12] #Event 12: BAM bunch 1
+        index_light = FEL == 1
+        
+        Deltap = (1 / index_FEL.mean()).round().astype(int) #Get the FEL rep rate from the Event code
+        print ('FEL rep rate is {} Hz'.format(100 / Deltap))
+        
+        result = {}
+        for ch in channel_list_complete:
+            try:
+                #dat = np.stack(df[ch].dropna().values)
+                dat = subset[ch].data
+                ch_out   = dat[index_light]
+                result[ch] = ch_out
+            except Exception as e:
+                print("channel missing:", e)
+            
+        return result
+    
+def load_data_compact_FEL_pump(channel_list_pumpProbe, channel_list_all, datafiles):
+    with SFDataFiles(datafiles) as data:
+        
+        channel_list_pump_probe_original = channel_list_pumpProbe.copy()
+        
+        check_channels_pump_probe = set(data.names).intersection(channel_list_pumpProbe) == set(channel_list_pumpProbe)
+        if not check_channels_pump_probe:
+            channel_list_pumpProbe = list(set(data.names).intersection(channel_list_pumpProbe))
+            
+        check_channels_all = set(data.names).intersection(channel_list_all) == set(channel_list_all)
+        if not check_channels_all:
+            channel_list_all = list(set(data.names).intersection(channel_list_all))
+            
+        channel_list_complete = [channel_Events] + channel_list_pumpProbe
+        #df = data[channel_list_complete].to_dataframe().dropna()
+        subset_PumpProbe = data[channel_list_complete]
+        subset_PumpProbe.print_stats(show_complete=True)
+        subset_PumpProbe.drop_missing()
+        
+        subset_all = data[channel_list_all]
+        
+        #Event_code = np.stack(df[channel_Events].dropna().values)
+        Event_code = subset_PumpProbe[channel_Events].data
+                
+        FEL = Event_code[:,12] #Event 12: BAM bunch 1
+        Laser = Event_code[:,18]
+        Darkshot = Event_code[:,21]
+        
+        index_dark_before = np.append([True], np.logical_not(Darkshot))[:-1]
+        index_light = np.logical_and.reduce((FEL, Laser, np.logical_not(Darkshot), index_dark_before))
+        index_dark = np.logical_and.reduce((np.logical_not(FEL), Laser, np.logical_not(Darkshot), index_dark_before))
+        
+#        print (index_dark, index_light)
+        
+        index_probe = np.logical_and.reduce((Laser, np.logical_not(Darkshot)))
+        Deltap = (1 / index_probe.mean()).round().astype(int) #Get the FEL rep rate from the Event code
+        print ('Probe rep rate (laser) is {} Hz'.format(100 / Deltap))      
+        
+        result_pp = {}
+        for ch in channel_list_pump_probe_original:
+            try:
+                ch_pump   = subset_PumpProbe[ch].data[index_light]
+                pids_pump   = subset_PumpProbe[ch].pids[index_light]
+                
+                ch_unpump = subset_PumpProbe[ch].data[index_dark]
+                pids_unpump = subset_PumpProbe[ch].pids[index_dark]
+                
+                correct_pids_pump   = pids_unpump + Deltap
+                final_pids, indPump, indUnPump = np.intersect1d(pids_pump, correct_pids_pump, return_indices=True)
+                
+                ch_pump   = ch_pump[indPump]
+                ch_unpump = ch_unpump[indUnPump] 
+                
+                #dat = np.stack(df[ch].dropna().values)
+                #dat = subset[ch].datasets.data[:][subset[ch].valid]
+                
+                ppdata = namedtuple("PPData", ["pump", "unpump"])
+                result_pp[ch] = ppdata(pump=ch_pump, unpump=ch_unpump)
+                
+            except Exception as e:
+                print("channel missing:", e)
+        
+        result_all = {}
+        for ch in channel_list_all:
+            try:
+                result_all[ch] = subset_all[ch].data 
+            except Exception as e:
+                print ("channel missing:",e)
+                
+        print ("Loaded pump = {} and unpump = {} shots".format(indPump.shape, indUnPump.shape))
+            
+        return result_pp, result_all
+    
+def load_data_compact_laser_pump(channel_list_pumpProbe, channel_list_all, datafiles):
+    with SFDataFiles(datafiles) as data:
+        
+        channel_list_pump_probe_original = channel_list_pumpProbe.copy()
+        
+        check_channels_pump_probe = set(data.names).intersection(channel_list_pumpProbe) == set(channel_list_pumpProbe)
+        if not check_channels_pump_probe:
+            channel_list_pumpProbe = list(set(data.names).intersection(channel_list_pumpProbe))
+            
+        check_channels_all = set(data.names).intersection(channel_list_all) == set(channel_list_all)
+        if not check_channels_all:
+            channel_list_all = list(set(data.names).intersection(channel_list_all))
+            
+        channel_list_complete = [channel_Events] + channel_list_pumpProbe
+        #df = data[channel_list_complete].to_dataframe().dropna()
+        subset_PumpProbe = data[channel_list_complete]
+        subset_PumpProbe.print_stats(show_complete=True)
+        subset_PumpProbe.drop_missing()
+        
+        subset_all = data[channel_list_all]
+        
+        #Event_code = np.stack(df[channel_Events].dropna().values)
+        Event_code = subset_PumpProbe[channel_Events].data
+                                                          
+        FEL = Event_code[:,12] #Event 12: BAM bunch 1
+        Laser = Event_code[:,18]
+        Darkshot = Event_code[:,21]
+        
+        index_light = np.logical_and.reduce((FEL, Laser, np.logical_not(Darkshot)))
+        index_dark = np.logical_and.reduce((FEL, Laser, Darkshot))
+        
+        Deltap = (1 / FEL.mean()).round().astype(int) #Get the FEL rep rate from the Event code
+        print ('Probe rep rate (FEL) is {} Hz'.format(100 / Deltap))
+        
+        result_pp = {}
+        for ch in channel_list_pump_probe_original:
+            try:
+                ch_pump   = subset_PumpProbe[ch].data[index_light]
+                pids_pump   = subset_PumpProbe[ch].pids[index_light]
+                
+                ch_unpump = subset_PumpProbe[ch].data[index_dark]
+                pids_unpump = subset_PumpProbe[ch].pids[index_dark]
+                
+                correct_pids_pump   = pids_unpump + Deltap
+                final_pids, indPump, indUnPump = np.intersect1d(pids_pump, correct_pids_pump, return_indices=True)
+                
+                ch_pump   = ch_pump[indPump]
+                ch_unpump = ch_unpump[indUnPump] 
+                
+                #dat = np.stack(df[ch].dropna().values)
+                #dat = subset[ch].datasets.data[:][subset[ch].valid]
+                
+                ppdata = namedtuple("PPData", ["pump", "unpump"])
+                result_pp[ch] = ppdata(pump=ch_pump, unpump=ch_unpump)
+                
+            except Exception as e:
+                print("channel missing:", e)
+        
+        result_all = {}
+        for ch in channel_list_all:
+            try:
+                result_all[ch] = subset_all[ch].data 
+            except Exception as e:
+                print ("channel missing:",e)
+        
+        print ("Loaded pump = {} and unpump = {} shots".format(indPump.shape, indUnPump.shape))
+            
+        return result_pp, result_all
+    
     
 def load_YAG_events2(filename, modulo = 2, nshots=None):
     
@@ -263,25 +467,25 @@ def load_YAG_events2(filename, modulo = 2, nshots=None):
         pulse_ids = data[channel_BS_pulse_ids][:nshots]
         nshots = _get_modulo(pulse_ids,modulo_int)
 
-        LaserDiode_pump = data[channel_LaserDiode][:nshots][index_light].ravel()
+        LaserDiode_pump = data[channel_LaserDiode]['data'][:nshots][index_light].ravel()
         LaserDiode_pump = _average(LaserDiode_pump, modulo_int -1)
-        LaserDiode_unpump = data[channel_LaserDiode][:nshots][index_dark].ravel()
+        LaserDiode_unpump = data[channel_LaserDiode]['data'][:nshots][index_dark].ravel()
         LaserDiode_unpump = _average(LaserDiode_unpump, modulo_int -1)
 
-        LaserRefDiode_pump = data[channel_Laser_refDiode][:nshots][index_light].ravel()
+        LaserRefDiode_pump = data[channel_Laser_refDiode]['data'][:nshots][index_light].ravel()
         LaserRefDiode_pump = _average(LaserRefDiode_pump, modulo_int -1)
-        LaserRefDiode_unpump = data[channel_Laser_refDiode][:nshots][index_dark].ravel()
+        LaserRefDiode_unpump = data[channel_Laser_refDiode]['data'][:nshots][index_dark].ravel()
         LaserRefDiode_unpump = _average(LaserRefDiode_unpump, modulo_int -1)
         
         pulse_ids = data[channel_BS_pulse_ids][:nshots][index_light].ravel()
 
-        IzeroFEL = data[channel_Izero][:nshots][index_light].ravel()
+        IzeroFEL = data[channel_Izero]['data'][:nshots][index_light].ravel()
         IzeroFEL = _average(IzeroFEL, modulo_int -1)
 
         #PIPS = data[channel_PIPS_trans][:nshots][index_light]
-        PIPS = data[channel_LaserDiode][:nshots][index_light].ravel()
+        PIPS = data[channel_LaserDiode]['data'][:nshots][index_light].ravel()
 
-        Delay = data[channel_delay][:nshots][index_dark]
+        Delay = data[channel_delay]['data'][:nshots][index_dark]
         #Delay = BS_file[channel_laser_pitch][:][index_dark]
 
         #BAM = BS_file[channel_BAM][:][index_light]
@@ -296,33 +500,33 @@ def load_YAG_events(filename, modulo = 2, nshots=None):
         pulse_ids = data[channel_BS_pulse_ids][:nshots]
         nshots = _get_modulo(pulse_ids,modulo)
 
-        FEL = data[channel_Events][:nshots,48]
-        Laser = data[channel_Events][:nshots,18]
-        Darkshot = data[channel_Events][:nshots,21]
+        FEL = data[channel_Events]['data'][:nshots,48]
+        Laser = data[channel_Events]['data'][:nshots,18]
+        Darkshot = data[channel_Events]['data'][:nshots,21]
         
         index_dark_before = np.append([True], np.logical_not(Darkshot))[:-1]
         index_light = np.logical_and.reduce((FEL, Laser, np.logical_not(Darkshot), index_dark_before))
         index_dark = np.logical_and.reduce((np.logical_not(FEL), Laser, np.logical_not(Darkshot), index_dark_before))
         
-        LaserDiode_pump = data[channel_LaserDiode][:nshots][index_light].ravel()
+        LaserDiode_pump = data[channel_LaserDiode]['data'][:nshots][index_light].ravel()
         LaserDiode_pump = _average(LaserDiode_pump, modulo -1)
-        LaserDiode_unpump = data[channel_LaserDiode][:nshots][index_dark].ravel()
+        LaserDiode_unpump = data[channel_LaserDiode]['data'][:nshots][index_dark].ravel()
         LaserDiode_unpump = _average(LaserDiode_unpump, modulo -1)
 
-        LaserRefDiode_pump = data[channel_Laser_refDiode][:nshots][index_light].ravel()
+        LaserRefDiode_pump = data[channel_Laser_refDiode]['data'][:nshots][index_light].ravel()
         LaserRefDiode_pump = _average(LaserRefDiode_pump, modulo -1)
-        LaserRefDiode_unpump = data[channel_Laser_refDiode][:nshots][index_dark].ravel()
+        LaserRefDiode_unpump = data[channel_Laser_refDiode]['data'][:nshots][index_dark].ravel()
         LaserRefDiode_unpump = _average(LaserRefDiode_unpump, modulo -1)
         
         pulse_ids = data[channel_BS_pulse_ids][:nshots][index_light].ravel()
 
-        IzeroFEL = data[channel_Izero][:nshots][index_light].ravel()
+        IzeroFEL = data[channel_Izero]['data'][:nshots][index_light].ravel()
         IzeroFEL = _average(IzeroFEL, modulo -1)
 
         #PIPS = data[channel_PIPS_trans][:nshots][index_light]
-        PIPS = data[channel_LaserDiode][:nshots][index_light].ravel()
+        PIPS = data[channel_LaserDiode]['data'][:nshots][index_light].ravel()
 
-        Delay = data[channel_delay][:nshots][index_dark]
+        Delay = data[channel_delay]['data'][:nshots][index_dark]
         #Delay = BS_file[channel_laser_pitch][:][index_dark]
 
         #BAM = BS_file[channel_BAM][:][index_light]
@@ -339,14 +543,14 @@ def load_YAG_pulseID(filename, reprateFEL, repratelaser):
 
         reprate_FEL, reprate_laser = _make_reprates_on_off(pulse_ids, reprateFEL, repratelaser)
 
-        LaserDiode_pump = BS_file[channel_LaserDiode][:][reprate_FEL]
-        LaserDiode_unpump = BS_file[channel_LaserDiode][:][reprate_laser]
-        LaserRefDiode_pump = BS_file[channel_Laser_refDiode][:][reprate_FEL]
-        LaserRefDiode_unpump = BS_file[channel_Laser_refDiode][:][reprate_laser]
-        IzeroFEL = BS_file[channel_Izero][:][reprate_FEL]
-        PIPS = BS_file[channel_PIPS_trans][:][reprate_FEL]
+        LaserDiode_pump = BS_file[channel_LaserDiode]['data'][:][reprate_FEL]
+        LaserDiode_unpump = BS_file[channel_LaserDiode]['data'][:][reprate_laser]
+        LaserRefDiode_pump = BS_file[channel_Laser_refDiode]['data'][:][reprate_FEL]
+        LaserRefDiode_unpump = BS_file[channel_Laser_refDiode]['data'][:][reprate_laser]
+        IzeroFEL = BS_file[channel_Izero]['data'][:][reprate_FEL]
+        PIPS = BS_file[channel_PIPS_trans]['data'][:][reprate_FEL]
 
-        Delay = BS_file[channel_delay][:][reprate_laser]
+        Delay = BS_file[channel_delay]['data'][:][reprate_laser]
         #Delay = BS_file[channel_laser_pitch][:][index_unpump]
 
         #BAM = BS_file[channel_BAM][:][reprate_FEL]
@@ -367,19 +571,19 @@ def load_PumpProbe_events2(filename, channel_variable, modulo=2, nshots=None):
         pulse_ids = BS_file[channel_BS_pulse_ids][:nshots]
         nshots = _get_modulo(pulse_ids,modulo_int)
                 
-        DataFluo_pump = BS_file[channel_PIPS_fluo][:nshots][index_light].ravel()
+        DataFluo_pump = BS_file[channel_PIPS_fluo]['data'][:nshots][index_light].ravel()
         DataFluo_pump = _average(DataFluo_pump, ratioPump_laser - 1)
-        DataFluo_unpump = BS_file[channel_PIPS_fluo][:nshots][index_dark].ravel()
+        DataFluo_unpump = BS_file[channel_PIPS_fluo]['data'][:nshots][index_dark].ravel()
         
-        DataTrans_pump = BS_file[channel_PIPS_trans][:nshots][index_light].ravel()
+        DataTrans_pump = BS_file[channel_PIPS_trans]['data'][:nshots][index_light].ravel()
         DataTrans_pump = _average(DataTrans_pump, ratioPump_laser - 1)
-        DataTrans_unpump = BS_file[channel_PIPS_trans][:nshots][index_dark].ravel()
+        DataTrans_unpump = BS_file[channel_PIPS_trans]['data'][:nshots][index_dark].ravel()
         
-        IzeroFEL_pump = BS_file[channel_Izero][:nshots][index_light].ravel()
+        IzeroFEL_pump = BS_file[channel_Izero]['data'][:nshots][index_light].ravel()
         IzeroFEL_pump = _average(IzeroFEL_pump, ratioPump_laser - 1)
-        IzeroFEL_unpump = BS_file[channel_Izero][:nshots][index_dark].ravel()
+        IzeroFEL_unpump = BS_file[channel_Izero]['data'][:nshots][index_dark].ravel()
         
-        Variable = BS_file[channel_variable][:nshots][index_dark]
+        Variable = BS_file[channel_variable]['data'][:nshots][index_dark]
         
         print ("Pump/umpump arrays have {} shots each".format(len(DataFluo_pump), len(DataFluo_unpump)))
              
@@ -392,27 +596,27 @@ def load_PumpProbe_events(filename, channel_variable, modulo=2, nshots=None):
         pulse_ids = BS_file[channel_BS_pulse_ids][:nshots]
         nshots = _get_modulo(pulse_ids,modulo)
         
-        FEL = BS_file[channel_Events][:nshots,48]
-        Laser = BS_file[channel_Events][:nshots,18]
-        Darkshot = BS_file[channel_Events][:nshots,21]
+        FEL = BS_file[channel_Events]['data'][:nshots,48]
+        Laser = BS_file[channel_Events]['data'][:nshots,18]
+        Darkshot = BS_file[channel_Events]['data'][:nshots,21]
         
         index_light = np.logical_and.reduce((FEL, Laser, np.logical_not(Darkshot)))
         index_dark = np.logical_and.reduce((FEL, Laser, Darkshot))
  #       print (index_light, index_dark)
                 
-        DataFluo_pump = BS_file[channel_PIPS_fluo][:nshots][index_light].ravel()
+        DataFluo_pump = BS_file[channel_PIPS_fluo]['data'][:nshots][index_light].ravel()
         DataFluo_pump = _average(DataFluo_pump, modulo - 1)
-        DataFluo_unpump = BS_file[channel_PIPS_fluo][:nshots][index_dark].ravel()
+        DataFluo_unpump = BS_file[channel_PIPS_fluo]['data'][:nshots][index_dark].ravel()
         
-        DataTrans_pump = BS_file[channel_PIPS_trans][:nshots][index_light].ravel()
+        DataTrans_pump = BS_file[channel_PIPS_trans]['data'][:nshots][index_light].ravel()
         DataTrans_pump = _average(DataTrans_pump, modulo - 1)
-        DataTrans_unpump = BS_file[channel_PIPS_trans][:nshots][index_dark].ravel()
+        DataTrans_unpump = BS_file[channel_PIPS_trans]['data'][:nshots][index_dark].ravel()
         
-        IzeroFEL_pump = BS_file[channel_Izero][:nshots][index_light].ravel()
+        IzeroFEL_pump = BS_file[channel_Izero]['data'][:nshots][index_light].ravel()
         IzeroFEL_pump = _average(IzeroFEL_pump, modulo - 1)
-        IzeroFEL_unpump = BS_file[channel_Izero][:nshots][index_dark].ravel()
+        IzeroFEL_unpump = BS_file[channel_Izero]['data'][:nshots][index_dark].ravel()
         
-        Variable = BS_file[channel_variable][:nshots][index_dark]
+        Variable = BS_file[channel_variable]['data'][:nshots][index_dark]
         
         print ("Pump/umpump arrays have {} shots each".format(len(DataFluo_pump), len(DataFluo_unpump)))
              
@@ -427,16 +631,16 @@ def load_PumpProbe_pulseID(filename, channel_variable, reprateFEL, repratelaser)
 
         reprate_FEL, reprate_laser = _make_reprates_on_off(pulse_ids, reprateFEL, repratelaser)
 
-        DataFluo_pump = BS_file[channel_PIPS_fluo][:][reprate_laser]
-        DataFluo_unpump = BS_file[channel_PIPS_fluo][:][reprate_FEL]
+        DataFluo_pump = BS_file[channel_PIPS_fluo]['data'][:][reprate_laser]
+        DataFluo_unpump = BS_file[channel_PIPS_fluo]['data'][:][reprate_FEL]
 
-        DataTrans_pump = BS_file[channel_PIPS_trans][:][reprate_laser]
-        DataTrans_unpump = BS_file[channel_PIPS_trans][:][reprate_FEL]
+        DataTrans_pump = BS_file[channel_PIPS_trans]['data'][:][reprate_laser]
+        DataTrans_unpump = BS_file[channel_PIPS_trans]['data'][:][reprate_FEL]
 
-        IzeroFEL_pump = BS_file[channel_Izero][:][reprate_laser]
-        IzeroFEL_unpump = BS_file[channel_Izero][:][reprate_FEL]
+        IzeroFEL_pump = BS_file[channel_Izero]['data'][:][reprate_laser]
+        IzeroFEL_unpump = BS_file[channel_Izero]['data'][:][reprate_FEL]
 
-        Variable = BS_file[channel_variable][:][reprate_FEL]
+        Variable = BS_file[channel_variable]['data'][:][reprate_FEL]
 
     return DataFluo_pump, DataFluo_unpump, IzeroFEL_pump, IzeroFEL_unpump, Variable, DataTrans_pump, DataTrans_unpump
 
@@ -447,14 +651,14 @@ def load_laserIntensity(filename):
 
         pulse_ids = BS_file[channel_BS_pulse_ids][:]
 
-        FEL = BS_file[channel_Events][:,48]
-        Laser = BS_file[channel_Events][:,18]
-        Darkshot = BS_file[channel_Events][:,21]
-        Jungfrau = BS_file[channel_Events][:,40]
+        FEL = BS_file[channel_Events]['data'][:,48]
+        Laser = BS_file[channel_Events]['data'][:,18]
+        Darkshot = BS_file[channel_Events]['data'][:,21]
+        Jungfrau = BS_file[channel_Events]['data'][:,40]
 
         index_light = np.logical_and(Jungfrau,Laser,np.logical_not(Darkshot))
 
-        DataLaser = BS_file[channel_LaserDiode_DIAG][:][index_light]
+        DataLaser = BS_file[channel_LaserDiode_DIAG]['data'][:][index_light]
 
         PulseIDs = pulse_ids[:][index_light]
 
@@ -467,14 +671,14 @@ def load_FEL_scans(filename, channel_variable, nshots=None):
 
         pulse_ids = data[channel_BS_pulse_ids][:nshots]
 
-        FEL = data[channel_Events][:nshots,48]
+        FEL = data[channel_Events]['data'][:nshots,48]
         index_light = FEL == 1
 
-        DataFEL_t  = data[channel_PIPS_trans][:nshots][index_light]
-        DataFEL_f  = data[channel_PIPS_fluo][:nshots][index_light]
-        Izero      = data[channel_Izero][:nshots][index_light]
-        Laser      = data[channel_LaserDiode][:nshots][index_light]
-        Variable   = data[channel_variable][:nshots][index_light]
+        DataFEL_t  = data[channel_PIPS_trans]['data'][:nshots][index_light]
+        DataFEL_f  = data[channel_PIPS_fluo]['data'][:nshots][index_light]
+        Izero      = data[channel_Izero]['data'][:nshots][index_light]
+        Laser      = data[channel_LaserDiode]['data'][:nshots][index_light]
+        Variable   = data[channel_variable]['data'][:nshots][index_light]
 
         PulseIDs = pulse_ids[:nshots][index_light]
 
@@ -489,11 +693,11 @@ def load_FEL_scans_pulseID(filename, channel_variable, reprateFEL, nshots=None):
 
         reprate_FEL = _make_reprates_on(pulse_ids, reprateFEL)
 
-        DataFEL_t  = data[channel_PIPS_trans][:nshots][reprate_FEL]
-        DataFEL_f  = data[channel_PIPS_fluo][:nshots][reprate_FEL]
-        Izero      = data[channel_Izero][:nshots][reprate_FEL]
-        Laser      = data[channel_LaserDiode][:nshots][reprate_FEL]
-        Variable   = data[channel_variable][:nshots][reprate_FEL]
+        DataFEL_t  = data[channel_PIPS_trans]['data'][:nshots][reprate_FEL]
+        DataFEL_f  = data[channel_PIPS_fluo]['data'][:nshots][reprate_FEL]
+        Izero      = data[channel_Izero]['data'][:nshots][reprate_FEL]
+        Laser      = data[channel_LaserDiode]['data'][:nshots][reprate_FEL]
+        Variable   = data[channel_variable]['data'][:nshots][reprate_FEL]
 
         PulseIDs = pulse_ids[:nshots][reprate_FEL]
 
@@ -508,9 +712,9 @@ def load_FEL_pp_pulseID(filename, channel_variable, reprateFEL, repratelaser, ns
 
         reprate_FEL, reprate_laser = _make_reprates_on_off(pulse_ids, reprateFEL, repratelaser)
 
-        IzeroFEL_pump = data[channel_Izero][:nshots][reprate_laser]
-        IzeroFEL_unpump = data[channel_Izero][:nshots][reprate_FEL]
-        Variable = data[channel_variable][:nshots][reprate_FEL]
+        IzeroFEL_pump = data[channel_Izero]['data'][:nshots][reprate_laser]
+        IzeroFEL_unpump = data[channel_Izero]['data'][:nshots][reprate_FEL]
+        Variable = data[channel_variable]['data'][:nshots][reprate_FEL]
 
         PulseIDs = pulse_ids[:nshots][reprate_FEL]
 
@@ -524,11 +728,11 @@ def load_laser_scans(filename):
 
         pulse_ids = BS_file[channel_BS_pulse_ids][:]
 
-        Laser = BS_file[channel_Events][:,18]
+        Laser = BS_file[channel_Events]['data'][:,18]
         index_light = Laser == 1
 
-        DataLaser = BS_file[channel_LaserDiode][:][index_light]
-        Position = BS_file[channel_position][:][index_light]
+        DataLaser = BS_file[channel_LaserDiode]['data'][:][index_light]
+        Position = BS_file[channel_position]['data'][:][index_light]
 
         PulseIDs = pulse_ids[:][index_light]
 
@@ -542,7 +746,7 @@ def load_single_channel(filename, channel, eventCode):
         condition_array = data[channel_Events][:,eventCode]
         condition = condition_array == 1
         
-        DataBS = data[channel][:][condition]
+        DataBS = data[channel]['data'][:][condition]
         PulseIDs = data[channel_BS_pulse_ids][:][condition]
 
     return DataBS, PulseIDs
@@ -555,7 +759,7 @@ def load_single_channel_pulseID(filename, channel, reprate):
 
         condition = _make_reprates_on(pulse_ids, reprate)
 
-        DataBS = data[channel][:][condition]
+        DataBS = data[channel]['data'][:][condition]
         PulseIDs = data[channel_BS_pulse_ids][:][condition]
 
     return DataBS, PulseIDs
@@ -568,8 +772,8 @@ def load_single_channel_pp_pulseID(filename, channel, reprateFEL, repratelaser):
 
         reprate_FEL, reprate_laser = _make_reprates_on_off(pulse_ids, reprateFEL, repratelaser)
 
-        DataBS_ON = data[channel][:][reprate_laser]
-        DataBS_OFF = data[channel][:][reprate_FEL]
+        DataBS_ON = data[channel]['data'][:][reprate_laser]
+        DataBS_OFF = data[channel]['data'][:][reprate_FEL]
         PulseIDs_ON = data[channel_BS_pulse_ids][:][reprate_laser]
         PulseIDs_OFF = data[channel_BS_pulse_ids][:][reprate_FEL]
 
@@ -584,10 +788,10 @@ def load_PSSS_data_from_scans_pulseID(filename, channel_variable, reprateFEL, ns
 
         reprate_FEL = _make_reprates_on(pulse_ids, reprateFEL)
 
-        PSSS_center  = data[channel_PSSS_center][:nshots][reprate_FEL]
-        PSSS_fwhm    = data[channel_PSSS_fwhm][:nshots][reprate_FEL]
-        PSSS_x       = data[channel_PSSS_x][:nshots][reprate_FEL]
-        PSSS_y       = data[channel_PSSS_y][:nshots][reprate_FEL]
+        PSSS_center  = data[channel_PSSS_center]['data'][:nshots][reprate_FEL]
+        PSSS_fwhm    = data[channel_PSSS_fwhm]['data'][:nshots][reprate_FEL]
+        PSSS_x       = data[channel_PSSS_x]['data'][:nshots][reprate_FEL]
+        PSSS_y       = data[channel_PSSS_y]['data'][:nshots][reprate_FEL]
 
         PulseIDs = pulse_ids[:nshots][reprate_FEL]
 
@@ -598,9 +802,9 @@ def load_reprates_FEL_pump(filename, nshots=None):
         BS_file = _get_data(BS_file)
 
         pulse_ids = BS_file[channel_BS_pulse_ids][:nshots]
-        FEL = BS_file[channel_Events][:nshots,48]
-        Laser = BS_file[channel_Events][:nshots,18]
-        Darkshot = BS_file[channel_Events][:nshots,21]
+        FEL = BS_file[channel_Events]['data'][:nshots,48]
+        Laser = BS_file[channel_Events]['data'][:nshots,18]
+        Darkshot = BS_file[channel_Events]['data'][:nshots,21]
         
         #Laser is the probe:
         ratioProbe_laser = int(np.rint(Laser.sum()/len(Laser)))
@@ -613,9 +817,9 @@ def load_reprates_FEL_pump(filename, nshots=None):
         nshots = _get_modulo(pulse_ids, modulo_int)
         
         pulse_ids = BS_file[channel_BS_pulse_ids][:nshots]
-        FEL = BS_file[channel_Events][:nshots,48]
-        Laser = BS_file[channel_Events][:nshots,18]
-        Darkshot = BS_file[channel_Events][:nshots,21]
+        FEL = BS_file[channel_Events]['data'][:nshots,48]
+        Laser = BS_file[channel_Events]['data'][:nshots,18]
+        Darkshot = BS_file[channel_Events]['data'][:nshots,21]
           
         index_dark_before = np.append([True], np.logical_not(Darkshot))[:-1]
         index_light = np.logical_and.reduce((FEL, Laser, np.logical_not(Darkshot), index_dark_before))
@@ -629,9 +833,9 @@ def load_reprates_laser_pump(filename, nshots=None):
         BS_file = _get_data(BS_file)
 
         pulse_ids = BS_file[channel_BS_pulse_ids][:nshots]
-        FEL = BS_file[channel_Events][:nshots,48]
-        Laser = BS_file[channel_Events][:nshots,18]
-        Darkshot = BS_file[channel_Events][:nshots,21]
+        FEL = BS_file[channel_Events]['data'][:nshots,48]
+        Laser = BS_file[channel_Events]['data'][:nshots,18]
+        Darkshot = BS_file[channel_Events]['data'][:nshots,21]
         
         #FEL is the probe:
         ratioProbe_FEL = int(np.rint(len(FEL)/FEL.sum()))
@@ -647,9 +851,9 @@ def load_reprates_laser_pump(filename, nshots=None):
         nshots = _get_modulo(pulse_ids, modulo_int)
 
         pulse_ids = BS_file[channel_BS_pulse_ids][:nshots]
-        FEL = BS_file[channel_Events][:nshots,48]
-        Laser = BS_file[channel_Events][:nshots,18]
-        Darkshot = BS_file[channel_Events][:nshots,21]
+        FEL = BS_file[channel_Events]['data'][:nshots,48]
+        Laser = BS_file[channel_Events]['data'][:nshots,18]
+        Darkshot = BS_file[channel_Events]['data'][:nshots,21]
                  
         index_light = np.logical_and.reduce((FEL, Laser, np.logical_not(Darkshot)))
         index_dark = np.logical_and.reduce((FEL, Laser, Darkshot))
