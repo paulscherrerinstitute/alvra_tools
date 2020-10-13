@@ -271,7 +271,7 @@ def check_files_and_data(filenames, nshots=None):
         dataOK = checkData.all()
         return dataOK
 
-    
+
 def load_data_compact(channel_list, datafiles):
     with SFDataFiles(datafiles) as data:#, SFDataFile(filename_camera) as data_camera:
         
@@ -305,7 +305,7 @@ def load_data_compact(channel_list, datafiles):
                 print("channel missing:", e)
             
         return result
-    
+
 def load_data_compact_FEL_pump(channels_pump_unpump, channels_pump, datafiles):
     
     with SFDataFiles(datafiles) as data:
@@ -390,10 +390,11 @@ def load_data_compact_FEL_pump(channels_pump_unpump, channels_pump, datafiles):
     for ch in shared_channels:
         result_pp[ch] = ppdata(pump=result_pump[ch], unpump=result_unpump[ch])
                 
-    return result_pp, result_pump, FEL_reprate, laser_reprate
-    
+#    return result_pp, result_pump, FEL_reprate, laser_reprate
+    return result_pp, result_pump, final_pids_pump, final_pids_unpump
+
   
-    
+
 def load_data_compact_laser_pump(channels_pump_unpump, channels_FEL, datafiles):
     
     with SFDataFiles(datafiles) as data:
@@ -467,9 +468,9 @@ def load_data_compact_laser_pump(channels_pump_unpump, channels_FEL, datafiles):
         
         print ("Loaded {} pump and {} unpump shots".format(len(ch_pump), len(ch_unpump)))
             
-        return result_pp, result_FEL
-    
-    
+        return result_pp, result_FEL, pids_pump, pids_unpump
+
+
 def load_YAG_events2(filename, modulo = 2, nshots=None):
     
     (index_light, index_dark), ratioPump_FEL, ratioProbe_laser = load_reprates_FEL_pump(filename, nshots)
@@ -840,7 +841,7 @@ def load_reprates_FEL_pump(filename, nshots=None):
               
         return _cut_to_shortest_length(index_light, index_dark), ratioPump_FEL, ratioProbe_laser
 
-    
+
 def load_reprates_laser_pump(filename, nshots=None):
     with h5py.File(filename, 'r') as BS_file:
         BS_file = _get_data(BS_file)
@@ -874,4 +875,4 @@ def load_reprates_laser_pump(filename, nshots=None):
         #print (len(FEL), len(index_light), len(index_dark))
         
         return _cut_to_shortest_length(index_light, index_dark), ratioPump_laser, ratioProbe_FEL
-    
+
