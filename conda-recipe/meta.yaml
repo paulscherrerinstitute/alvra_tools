@@ -20,6 +20,6 @@ requirements:
         - h5py
         - numpy
         - scipy
-        - jungfrau_utils>=0.11
+        - jungfrau_utils=1
 
 
