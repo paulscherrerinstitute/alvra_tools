@@ -449,7 +449,7 @@ def load_data_compact_laser_pump(channels_pump_unpump, channels_FEL, datafiles):
                 correct_pids_pump   = pids_unpump + Deltap_FEL
                 final_pids, indPump, indUnPump = np.intersect1d(pids_pump, correct_pids_pump, return_indices=True)
                 
-                if (laser_reprate == FEL_reprate):
+                if ((100 / laser_reprate) == FEL_reprate):
                     ch_pump   = ch_pump[indPump]
                     ch_unpump = ch_unpump[indUnPump] 
                     
