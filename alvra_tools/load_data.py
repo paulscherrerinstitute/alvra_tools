@@ -8,6 +8,7 @@ from glob import glob
 
 from .channels import *
 from .utils import crop_roi, make_roi
+from sfdata.utils import cprint, print_line
 
 
 def _get_data(f):
@@ -262,116 +263,105 @@ def check_file_and_data(filename, nshots=None):
         return combined
 
 
-def check_files_and_data(filenames, nshots=None):
-    with SFDataFiles(filenames) as data:
-        try:
-            checkData = data["SAR-CVME-TIFALL5:EvtSet"]._group["is_data_present"][:nshots] #FIX!
-        except KeyError:
-            return False
-        dataOK = checkData.all()
-        return dataOK
+def check_files_and_data(data, nshots=None):
+    #with SFDataFiles(filenames) as data:
+    try:
+        checkData = data["SAR-CVME-TIFALL5:EvtSet"]._group["is_data_present"][:nshots] #FIX!
+    except KeyError:
+        return False
+    dataOK = checkData.all()
+    return dataOK
 
 
-def load_data_compact(channel_list, datafiles):
-    with SFDataFiles(datafiles) as data:#, SFDataFile(filename_camera) as data_camera:
-        
-        channel_list_original = channel_list.copy()
-        check_channels = set(data.names).intersection(channel_list) == set(channel_list)
-        if not check_channels:
-            channel_list = list(set(data.names).intersection(channel_list))
-            
-        channel_list_complete = [channel_Events] + channel_list
-               
-        subset = data[channel_list_complete]
-        subset.print_stats(show_complete=True)
-        subset.drop_missing()
-        
-        Event_code = subset[channel_Events].data
-        FEL = Event_code[:,12] #Event 12: BAM bunch 1
-        
-        
-        index_light = FEL == 1
-        
-        Deltap = (1 / FEL.mean()).round().astype(int) #Get the FEL rep rate from the Event code
-        print ('FEL rep rate is {} Hz'.format(100 / Deltap))
-        
-        result = {}
-        for ch in channel_list_complete:
-            try:
-                dat = subset[ch].data
-                ch_out   = dat[index_light]
-                result[ch] = ch_out
-            except Exception as e:
-                print("channel missing:", e)
-            
-        return result
+def check_channels(data, asked_channels, name):
+    asked_channels = set(asked_channels)
+    inters = asked_channels.intersection(data.names)
+    check = (inters == asked_channels)
+    if not check:
+        print_line()
+        cprint(f"asked channels \"{name}\" has unknown channels:", set(asked_channels) - set(data.names), color="blue")
+        print_line()
+        asked_channels = list(inters)
+    return list(asked_channels)
 
-def load_data_compact_FEL_pump(channels_pump_unpump, channels_pump, datafiles):
+
+def load_data_compact(channel_list, data):
+    #with SFDataFiles(datafiles) as data:#, SFDataFile(filename_camera) as data_camera:
+    channel_list = check_channels(data, channel_list, "channels")
+
+    channel_list_complete = [channel_Events] + channel_list
+
+    subset = data[channel_list_complete]
+    subset.print_stats(show_complete=True)
+    subset.drop_missing()
+
+    Event_code = subset[channel_Events].data
+    FEL = Event_code[:,12] #Event 12: BAM bunch 1
+
+    index_light = FEL == 1
+
+    Deltap = (1 / FEL.mean()).round().astype(int) #Get the FEL rep rate from the Event code
+    print ('FEL rep rate is {} Hz'.format(100 / Deltap))
+
+    result = {}
+    for ch in channel_list_complete:
+        dat = subset[ch].data
+        ch_out   = dat[index_light]
+        result[ch] = ch_out
+
+    return result
+
+def load_data_compact_FEL_pump(channels_pump_unpump, channels_pump, data):  
+    #with SFDataFiles(datafiles) as data:
+    channels_pump_unpump = check_channels(data, channels_pump_unpump, "pump unpump")
+    channels_pump = check_channels(data, channels_pump, "pump")
+
+    channels_unpump = channels_pump_unpump
+
+    subset_unpump = data[channels_pump_unpump]
+    subset_unpump.drop_missing()
+
+    Event_code = subset_unpump[channel_Events].data
+
+    FEL      = Event_code[:,12] #Event 12: BAM bunch 1
+    Laser    = Event_code[:,18]
+    Darkshot = Event_code[:,21]
+
+    if Darkshot.mean()==0:
+        laser_reprate = Laser.mean().round().astype(int)
+    else:
+        laser_reprate = (Laser.mean() / Darkshot.mean() - 1).round().astype(int)
+
+    index_dark_before = np.append([True], np.logical_not(Darkshot))[:-1]
+    index_light       = np.logical_and.reduce((FEL, Laser, np.logical_not(Darkshot), index_dark_before))
+    index_dark        = np.logical_and.reduce((np.logical_not(FEL), Laser, np.logical_not(Darkshot), index_dark_before))
+
+    Deltap_FEL = (1 / FEL.mean()).round().astype(int) #Get the FEL rep rate from the Event code
+    FEL_reprate = 100 / Deltap_FEL
+    print ('Pump rep rate (FEL) is {} Hz'.format(FEL_reprate))
+
+    index_probe = np.logical_and.reduce((Laser, np.logical_not(Darkshot)))
+
+    Deltap_laser = (1 / index_probe.mean()).round().astype(int) #Get the laser rep rate from the Event code
+    print ('Probe rep rate (laser) is {} Hz'.format(100 / Deltap_laser))
+
+    result_unpump ={}
+    for ch in channels_unpump:
+        result_unpump[ch] = subset_unpump[ch].data[index_dark]
+
+    actual_pids_unpump = subset_unpump[channel_Events].pids[index_dark]
     
-    with SFDataFiles(datafiles) as data:
+    #with SFDataFiles(datafiles) as data:
         
-        check_channels_pump_unpump = set(data.names).intersection(channels_pump_unpump) == set(channels_pump_unpump)
-        if not check_channels_pump_unpump:
-            channels_pump_unpump = list(set(data.names).intersection(channels_pump_unpump))
-            
-        check_channels_pump = set(data.names).intersection(channels_pump) == set(channels_pump)
-        if not check_channels_pump:
-            channels_pump = list(set(data.names).intersection(channels_pump))
-        
-        channels_unpump = channels_pump_unpump
-        
-    with SFDataFiles(datafiles) as data:
-        
-        subset_unpump = data[channels_pump_unpump]
-        subset_unpump.drop_missing()
-        
-        Event_code = subset_unpump[channel_Events].data
-        
-        FEL      = Event_code[:,12] #Event 12: BAM bunch 1
-        Laser    = Event_code[:,18]
-        Darkshot = Event_code[:,21]
-        
-        if Darkshot.mean()==0:
-            laser_reprate = Laser.mean().round().astype(int)
-        else:
-            laser_reprate = (Laser.mean() / Darkshot.mean() - 1).round().astype(int)
-        
-        index_dark_before = np.append([True], np.logical_not(Darkshot))[:-1]
-        index_light       = np.logical_and.reduce((FEL, Laser, np.logical_not(Darkshot), index_dark_before))
-        index_dark        = np.logical_and.reduce((np.logical_not(FEL), Laser, np.logical_not(Darkshot), index_dark_before))
-        
-        Deltap_FEL = (1 / FEL.mean()).round().astype(int) #Get the FEL rep rate from the Event code
-        FEL_reprate = 100 / Deltap_FEL
-        print ('Pump rep rate (FEL) is {} Hz'.format(FEL_reprate))
-        
-        index_probe = np.logical_and.reduce((Laser, np.logical_not(Darkshot)))
-        
-        Deltap_laser = (1 / index_probe.mean()).round().astype(int) #Get the laser rep rate from the Event code
-        print ('Probe rep rate (laser) is {} Hz'.format(100 / Deltap_laser))
-        
-        result_unpump ={}
-        for ch in channels_unpump:
-            try:
-                result_unpump[ch] = subset_unpump[ch].data[index_dark]
-            except Exception as e:
-                print ("Channel missing:", ch, e)
-        
-        actual_pids_unpump = subset_unpump[channel_Events].pids[index_dark]
-    
-    with SFDataFiles(datafiles) as data:
-        
-        subset_pump = data[channels_pump]
-        subset_pump.print_stats(show_complete=True)
-        subset_pump.drop_missing()
-        
-        result_pump = {}
-        for ch in channels_pump:
-            try:
-                result_pump[ch] = subset_pump[ch].data
-            except Exception as e:
-                print ("Channel missing:", ch, e)
-        
-        actual_pids_pump = subset_pump[channel_Events].pids
+    subset_pump = data[channels_pump]
+    subset_pump.print_stats(show_complete=True)
+    subset_pump.drop_missing()
+
+    result_pump = {}
+    for ch in channels_pump:
+        result_pump[ch] = subset_pump[ch].data
+
+    actual_pids_pump = subset_pump[channel_Events].pids
         
     wanted_pids_pump = actual_pids_unpump + Deltap_laser
     final_pids_pump, ind_pump, _ = np.intersect1d(actual_pids_pump, wanted_pids_pump, return_indices=True)
@@ -395,80 +385,63 @@ def load_data_compact_FEL_pump(channels_pump_unpump, channels_pump, datafiles):
 
   
 
-def load_data_compact_laser_pump(channels_pump_unpump, channels_FEL, datafiles):
-    
-    with SFDataFiles(datafiles) as data:
-        
-        check_channels_pump_unpump = set(data.names).intersection(channels_pump_unpump) == set(channels_pump_unpump)
-        if not check_channels_pump_unpump:
-            channels_pump_unpump = list(set(data.names).intersection(channels_pump_unpump))
-            
-        check_channels_FEL = set(data.names).intersection(channels_FEL) == set(channels_FEL)
-        if not check_channels_FEL:
-            channels_FEL = list(set(data.names).intersection(channels_FEL))
-        
-        #channels_unpump = channels_pump_unpump
-    
-    with SFDataFiles(datafiles) as data:
-        
-        subset_FEL = data[channels_FEL]
-        subset_FEL.print_stats(show_complete=True)
-        subset_FEL.drop_missing()
-        
-        Event_code = subset_FEL[channel_Events].data
-                                                          
-        FEL      = Event_code[:,12] #Event 12: BAM bunch 1
-        Laser    = Event_code[:,18]
-        Darkshot = Event_code[:,21]
-        
-        if Darkshot.mean()==0:
-            laser_reprate = Laser.mean().round().astype(int)
-        else:
-            laser_reprate = (Laser.mean() / Darkshot.mean() - 1).round().astype(int)
-        
-        index_light = np.logical_and.reduce((FEL, Laser, np.logical_not(Darkshot)))
-        index_dark = np.logical_and.reduce((FEL, Laser, Darkshot))
-        
-        index_probe = np.logical_and.reduce((Laser, np.logical_not(Darkshot)))
-        
-        Deltap_FEL = (1 / FEL.mean()).round().astype(int) #Get the FEL rep rate from the Event code
-        FEL_reprate = 100 / Deltap_FEL
-        print ('Probe rep rate (FEL) is {} Hz'.format(FEL_reprate))
-        
-        print ('Pump scheme is {}:1'.format(laser_reprate))
-        
-        result_pp = {}
-        for ch in channels_pump_unpump:
-            try:
-                ch_pump   = subset_FEL[ch].data[index_light]
-                pids_pump   = subset_FEL[ch].pids[index_light]
-                
-                ch_unpump = subset_FEL[ch].data[index_dark]
-                pids_unpump = subset_FEL[ch].pids[index_dark]
-                
-                correct_pids_pump   = pids_unpump + Deltap_FEL
-                final_pids, indPump, indUnPump = np.intersect1d(pids_pump, correct_pids_pump, return_indices=True)
-                
-                if ((100 / laser_reprate) == FEL_reprate):
-                    ch_pump   = ch_pump[indPump]
-                    ch_unpump = ch_unpump[indUnPump] 
-                    
-                ppdata = namedtuple("PPData", ["pump", "unpump"])
-                result_pp[ch] = ppdata(pump=ch_pump, unpump=ch_unpump)
-                
-            except Exception as e:
-                print("channel missing:", e)
-        
-        result_FEL = {}
-        for ch in channels_FEL:
-            try:
-                result_FEL[ch] = subset_FEL[ch].data 
-            except Exception as e:
-                print ("channel missing:",e)
-        
-        print ("Loaded {} pump and {} unpump shots".format(len(ch_pump), len(ch_unpump)))
-            
-        return result_pp, result_FEL, pids_pump, pids_unpump
+def load_data_compact_laser_pump(channels_pump_unpump, channels_FEL, data):
+    #with SFDataFiles(datafiles) as data:
+    channels_pump_unpump = check_channels(data, channels_pump_unpump, "pump unpump")
+    channels_FEL = check_channels(data, channels_FEL, "FEL")
+
+    subset_FEL = data[channels_FEL]
+    subset_FEL.print_stats(show_complete=True)
+    subset_FEL.drop_missing()
+
+    Event_code = subset_FEL[channel_Events].data
+
+    FEL      = Event_code[:,12] #Event 12: BAM bunch 1
+    Laser    = Event_code[:,18]
+    Darkshot = Event_code[:,21]
+
+    if Darkshot.mean()==0:
+        laser_reprate = Laser.mean().round().astype(int)
+    else:
+        laser_reprate = (Laser.mean() / Darkshot.mean() - 1).round().astype(int)
+
+    index_light = np.logical_and.reduce((FEL, Laser, np.logical_not(Darkshot)))
+    index_dark = np.logical_and.reduce((FEL, Laser, Darkshot))
+
+    index_probe = np.logical_and.reduce((Laser, np.logical_not(Darkshot)))
+
+    Deltap_FEL = (1 / FEL.mean()).round().astype(int) #Get the FEL rep rate from the Event code
+    FEL_reprate = 100 / Deltap_FEL
+    print ('Probe rep rate (FEL) is {} Hz'.format(FEL_reprate))
+
+    print ('Pump scheme is {}:1'.format(laser_reprate))
+
+    result_pp = {}
+    for ch in channels_pump_unpump:
+        ch_pump   = subset_FEL[ch].data[index_light]
+        pids_pump   = subset_FEL[ch].pids[index_light]
+
+        ch_unpump = subset_FEL[ch].data[index_dark]
+        pids_unpump = subset_FEL[ch].pids[index_dark]
+
+        correct_pids_pump   = pids_unpump + Deltap_FEL
+        final_pids, indPump, indUnPump = np.intersect1d(pids_pump, correct_pids_pump, return_indices=True)
+
+        if ((100 / laser_reprate) == FEL_reprate):
+            ch_pump   = ch_pump[indPump]
+            ch_unpump = ch_unpump[indUnPump] 
+
+        ppdata = namedtuple("PPData", ["pump", "unpump"])
+        result_pp[ch] = ppdata(pump=ch_pump, unpump=ch_unpump)
+
+
+    result_FEL = {}
+    for ch in channels_FEL:
+        result_FEL[ch] = subset_FEL[ch].data 
+
+    print ("Loaded {} pump and {} unpump shots".format(len(ch_pump), len(ch_unpump)))
+
+    return result_pp, result_FEL, pids_pump, pids_unpump
 
 
 def load_YAG_events2(filename, modulo = 2, nshots=None):
