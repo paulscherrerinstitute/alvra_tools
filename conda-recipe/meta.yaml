@@ -8,18 +8,19 @@ about:
    home: {{ data["url"] }}
    summary: {{ data["description"] }}
 
+build:
+    noarch: python
+
 source:
     path: ..
 
 requirements:
     build:
-        - python
+        - python >=3.6
         - setuptools
     run:
-        - python
+        - python >=3.6
         - h5py
         - numpy
         - scipy
         - jungfrau_utils=1
-
-
