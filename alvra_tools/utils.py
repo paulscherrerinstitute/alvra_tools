@@ -82,5 +82,17 @@ def two_gaussians(x, h1, c1, w1, h2, c2, w2, offset):
     return three_gaussians(x, h1, c1, w1, h2, c2, w2, 0,0,1, offset)
 
 
+def conv_exp_gauss_heaviside(x,x0,lifetime,amplitude,fwhm,offset):
+    sigma = fwhm/2./np.sqrt(2*np.log(2))
+    frac1 = (sigma**2-2*lifetime*(x0-x))/2./lifetime**2
+    frac2 = (sigma**2 - lifetime*(x0-x))/np.sqrt(2)/sigma/lifetime
+    return amplitude*0.5*np.exp(frac1)*(1-erf(frac2)) + offset
+
+
+def conv_exp_gauss_heaviside2(x,x0,lifetime,amplitude,fwhm,offset,a,b):
+    sigma = fwhm/2./np.sqrt(2*np.log(2))
+    frac1 = (sigma**2-2*lifetime*(x0-x))/2./lifetime**2
+    frac2 = (sigma**2 - lifetime*(x0-x))/np.sqrt(2)/sigma/lifetime
+    return amplitude*0.5*(np.exp(frac1)+a*x+b)*(1-erf(frac2)) + offset
 
 
