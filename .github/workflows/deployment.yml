@@ -15,6 +15,7 @@ jobs:
     - name: Prepare
       run: |
         $CONDA/bin/conda install --quiet --yes conda-build anaconda-client
+        $CONDA/bin/conda config --append channels paulscherrerinstitute
         $CONDA/bin/conda config --append channels conda-forge
         $CONDA/bin/conda config --set anaconda_upload yes
 
