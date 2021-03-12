@@ -128,7 +128,7 @@ def load_JF_data_4rois_on_off(fname, index_light, index_dark, roi1, roi2,roi3,ro
     return images_on_roi1, images_off_roi1, images_on_roi2, images_off_roi2, images_on_roi3, images_off_roi3, images_on_roi4, images_off_roi4, pulse_ids_on, pulse_ids_off
 
 
-def load_crop_JF_batches_on_off(fname, roi1, roi2, reprate_FEL, reprate_laser, 
+def load_crop_JF_batches_on_off_2rois(fname, roi1, roi2, reprate_FEL, reprate_laser, 
                          gain_file=None, pedestal_file=None, nshots=None, batch_size = 1000):
 
     with ju.File(fname, gain_file=gain_file, pedestal_file=pedestal_file) as juf:
@@ -165,6 +165,55 @@ def load_crop_JF_batches_on_off(fname, roi1, roi2, reprate_FEL, reprate_laser,
     pulse_ids_off   = pulse_ids[reprate_off]
 
     return images_on_roi1, images_on_roi2, pulse_ids_on, images_off_roi1, images_off_roi2, pulse_ids_off
+
+
+def load_crop_JF_batches_on_off_4rois(fname, roi1, roi2, roi3, roi4, reprate_FEL, reprate_laser, 
+                         gain_file=None, pedestal_file=None, nshots=None, batch_size = 1000):
+
+    with ju.File(fname, gain_file=gain_file, pedestal_file=pedestal_file) as juf:
+        
+        pulse_ids = juf["pulse_id"][:nshots].T[0]
+        n_images = pulse_ids.shape[0]
+        images_roi1 = []
+        images_roi2 = []
+        images_roi3 = []
+        images_roi4 = []   
+        
+        print ('Total images = {}, load them in batches of {}'.format(n_images, batch_size))
+        
+        for ind in range(0, n_images, batch_size):
+            batch_slice = slice(ind, min(ind + batch_size, n_images))
+            
+            print ('Load batch = {}'.format(batch_slice))
+            
+            batch_images = juf[batch_slice, :, :]
+            
+            images_roi1.extend(crop_roi(batch_images, roi1))
+            images_roi2.extend(crop_roi(batch_images, roi2))
+            images_roi3.extend(crop_roi(batch_images, roi3))
+            images_roi4.extend(crop_roi(batch_images, roi4))
+            
+            del batch_images
+            
+    images_roi1 = np.asarray(images_roi1)
+    images_roi2 = np.asarray(images_roi2)
+    images_roi3 = np.asarray(images_roi3)
+    images_roi4 = np.asarray(images_roi4)
+
+    reprate_on, reprate_off = _make_reprates_on_off(pulse_ids, reprate_FEL, reprate_laser)
+
+    images_on_roi1  = images_roi1[reprate_on]
+    images_on_roi2  = images_roi2[reprate_on]
+    images_off_roi1 = images_roi1[reprate_off]
+    images_off_roi2 = images_roi2[reprate_off]
+    images_on_roi3  = images_roi3[reprate_on]
+    images_on_roi4  = images_roi4[reprate_on]
+    images_off_roi3 = images_roi3[reprate_off]
+    images_off_roi4 = images_roi4[reprate_off]
+    pulse_ids_on    = pulse_ids[reprate_on]
+    pulse_ids_off   = pulse_ids[reprate_off]
+
+    return images_on_roi1, images_on_roi2, images_on_roi3, images_on_roi4, pulse_ids_on, images_off_roi1, images_off_roi2, images_off_roi3, images_off_roi4, pulse_ids_off
 
 def load_crop_JF_batches_on_off2(fname, roi1, roi2, reprate_FEL, reprate_laser, 
                                 gain_file=None, pedestal_file=None, nshots=None, batch_size = 1000):
@@ -243,6 +292,59 @@ def load_crop_JF_data(fname, roi1, roi2,roi3,roi4,
     return images_roi1, images_roi2, images_roi3, images_roi4, pulse_ids
 
 
+def load_crop_JF_batches(fname, roi1, roi2,roi3,roi4,
+                             gain_file=None, pedestal_file=None, nshots=None, batch_size = 1000):
+
+    with ju.File(fname, gain_file=gain_file, pedestal_file=pedestal_file) as juf:
+        pulse_ids = juf["pulse_id"][:nshots].T[0]
+        n_images = pulse_ids.shape[0]
+        images_roi1 = []
+        images_roi2 = []
+        images_roi3 = []
+        images_roi4 = []   
+        
+        print ('Total images = {}, load them in batches of {}'.format(n_images, batch_size))
+        
+        for ind in range(0, n_images, batch_size):
+            batch_slice = slice(ind, min(ind + batch_size, n_images))
+            
+            print ('Load batch = {}'.format(batch_slice))
+            
+            batch_images = juf[batch_slice, :, :]
+            
+            images_roi1.extend(crop_roi(batch_images, roi1))
+            images_roi2.extend(crop_roi(batch_images, roi2))
+            images_roi3.extend(crop_roi(batch_images, roi3))
+            images_roi4.extend(crop_roi(batch_images, roi4))
+            
+            del batch_images
+
+    images_roi1 = np.asarray(images_roi1)
+    images_roi2 = np.asarray(images_roi2)
+    images_roi3 = np.asarray(images_roi3)
+    images_roi4 = np.asarray(images_roi4)
+    
+    return images_roi1, images_roi2, images_roi3, images_roi4, pulse_ids
+
+
+def read_and_crop_jf(channel_jf, roi1=None, roi2=None, roi3=None, roi4=None, batch_size=100):
+    images_roi1 = [] # performance here can be improved by using a np array and fill it, see ch.apply_in_batches()
+    images_roi2 = []
+    images_roi3 = []
+    images_roi4 = []
+    
+    for indices, batch in channel_jf.in_batches(batch_size):
+        images_roi1.extend(crop_roi(batch, roi1))
+        images_roi2.extend(crop_roi(batch, roi2))
+        images_roi3.extend(crop_roi(batch, roi3))
+        images_roi4.extend(crop_roi(batch, roi4))
+        
+    images_roi1 = np.asarray(images_roi1)
+    images_roi2 = np.asarray(images_roi2)
+    images_roi3 = np.asarray(images_roi3)
+    images_roi4 = np.asarray(images_roi4)
+    
+    return images_roi1, images_roi2, images_roi3, images_roi4
 
 
 
@@ -306,10 +408,45 @@ def load_data_compact(channel_list, data):
     result = {}
     for ch in channel_list_complete:
         dat = subset[ch].data
+        pids = subset[ch].pids[index_light]
         ch_out   = dat[index_light]
         result[ch] = ch_out
 
+    return result, pids
+
+def load_data_compact_JF(channel_list, data, roi1, roi2, roi3, roi4):
+    #with SFDataFiles(datafiles) as data:#, SFDataFile(filename_camera) as data_camera:
+    channel_list = check_channels(data, channel_list, "channels")
+
+    channel_list_complete = [channel_Events] + channel_list
+
+    subset = data[channel_list_complete]
+    subset.print_stats(show_complete=True)
+    subset.drop_missing()
+
+    Event_code = subset[channel_Events].data
+    FEL = Event_code[:,12] #Event 12: BAM bunch 1
+
+    index_light = FEL == 1
+
+    Deltap = (1 / FEL.mean()).round().astype(int) #Get the FEL rep rate from the Event code
+    print ('FEL rep rate is {} Hz'.format(100 / Deltap))
+
+    result = {}
+    for chname in channel_list_complete:
+        ch = subset[chname]
+        
+        if "JF" in chname: # or something more clever here!
+            data_imgs1, data_imgs2, data_imgs3, data_imgs4 = read_and_crop_jf(ch, roi1, roi2, roi3, roi4)
+            result["JFroi1"]=data_imgs1[index_light]
+            result["JFroi2"]=data_imgs2[index_light]
+            result["JFroi3"]=data_imgs3[index_light]
+            result["JFroi4"]=data_imgs4[index_light]
+        else:
+            result[chname] = ch.data[index_light]
+
     return result
+
 
 def load_data_compact_FEL_pump(channels_pump_unpump, channels_pump, data):  
     #with SFDataFiles(datafiles) as data:
@@ -392,6 +529,16 @@ def load_data_compact_laser_pump(channels_pump_unpump, channels_FEL, data):
 
     subset_FEL = data[channels_FEL]
     subset_FEL.print_stats(show_complete=True)
+    
+#     subset_FEL.drop_missing()
+    
+    Event_code = subset_FEL[channel_Events].data
+    FEL      = Event_code[:,12] #Event 12: BAM bunch 1
+    
+    Deltap_FEL = (1 / FEL.mean()).round().astype(int) #Get the FEL rep rate from the Event code
+    FEL_reprate = 100 / Deltap_FEL
+    print ('Probe rep rate (FEL) is {} Hz'.format(FEL_reprate))
+    
     subset_FEL.drop_missing()
 
     Event_code = subset_FEL[channel_Events].data
@@ -401,18 +548,20 @@ def load_data_compact_laser_pump(channels_pump_unpump, channels_FEL, data):
     Darkshot = Event_code[:,21]
 
     if Darkshot.mean()==0:
-        laser_reprate = Laser.mean().round().astype(int)
+        laser_reprate = (1 / Laser.mean() - 1).round().astype(int)
+        index_light = np.logical_and.reduce((FEL, Laser))
+        index_dark  = np.logical_and.reduce((FEL, np.logical_not(Laser)))
     else:
         laser_reprate = (Laser.mean() / Darkshot.mean() - 1).round().astype(int)
 
-    index_light = np.logical_and.reduce((FEL, Laser, np.logical_not(Darkshot)))
-    index_dark = np.logical_and.reduce((FEL, Laser, Darkshot))
+        index_light = np.logical_and.reduce((FEL, Laser, np.logical_not(Darkshot)))
+        index_dark = np.logical_and.reduce((FEL, Laser, Darkshot))
 
-    index_probe = np.logical_and.reduce((Laser, np.logical_not(Darkshot)))
+    #index_probe = np.logical_and.reduce((Laser, np.logical_not(Darkshot)))
 
-    Deltap_FEL = (1 / FEL.mean()).round().astype(int) #Get the FEL rep rate from the Event code
-    FEL_reprate = 100 / Deltap_FEL
-    print ('Probe rep rate (FEL) is {} Hz'.format(FEL_reprate))
+    #Deltap_FEL = (1 / FEL.mean()).round().astype(int) #Get the FEL rep rate from the Event code
+    #FEL_reprate = 100 / Deltap_FEL
+    #print ('Probe rep rate (FEL) is {} Hz'.format(FEL_reprate))
 
     print ('Pump scheme is {}:1'.format(laser_reprate))
 
@@ -438,6 +587,98 @@ def load_data_compact_laser_pump(channels_pump_unpump, channels_FEL, data):
     result_FEL = {}
     for ch in channels_FEL:
         result_FEL[ch] = subset_FEL[ch].data 
+
+    print ("Loaded {} pump and {} unpump shots".format(len(ch_pump), len(ch_unpump)))
+
+    return result_pp, result_FEL, pids_pump, pids_unpump
+
+
+def load_data_compact_laser_pump_JF(channels_pump_unpump, channels_FEL, data, roi1=None, roi2=None, roi3=None, roi4=None):
+    #with SFDataFiles(datafiles) as data:
+    channels_pump_unpump = check_channels(data, channels_pump_unpump, "pump unpump")
+    channels_FEL = check_channels(data, channels_FEL, "FEL")
+
+    subset_FEL = data[channels_FEL]
+    subset_FEL.print_stats(show_complete=True)
+    
+    Event_code = subset_FEL[channel_Events].data
+    FEL      = Event_code[:,12] #Event 12: BAM bunch 1
+    
+    Deltap_FEL = (1 / FEL.mean()).round().astype(int) #Get the FEL rep rate from the Event code
+    FEL_reprate = 100 / Deltap_FEL
+    print ('Probe rep rate (FEL) is {} Hz'.format(FEL_reprate))
+    
+    subset_FEL.drop_missing()
+
+    Event_code = subset_FEL[channel_Events].data
+
+    FEL      = Event_code[:,12] #Event 12: BAM bunch 1
+    Laser    = Event_code[:,18]
+    Darkshot = Event_code[:,21]
+
+    if Darkshot.mean()==0:
+        laser_reprate = Laser.mean().round().astype(int)
+    else:
+        laser_reprate = (Laser.mean() / Darkshot.mean() - 1).round().astype(int)
+
+    index_light = np.logical_and.reduce((FEL, Laser, np.logical_not(Darkshot)))
+    index_dark = np.logical_and.reduce((FEL, Laser, Darkshot))
+
+    index_probe = np.logical_and.reduce((Laser, np.logical_not(Darkshot)))
+
+    #Deltap_FEL = (1 / FEL.mean()).round().astype(int) #Get the FEL rep rate from the Event code
+    #FEL_reprate = 100 / Deltap_FEL
+    #print ('Probe rep rate (FEL) is {} Hz'.format(FEL_reprate))
+
+    print ('Pump scheme is {}:1'.format(laser_reprate))
+
+    result_pp = {}
+    
+    for chname in channels_pump_unpump:
+        ch = subset_FEL[chname]
+        
+        pids_pump = ch.pids[index_light]
+        pids_unpump = ch.pids[index_dark]
+        correct_pids_pump = pids_unpump + Deltap_FEL
+        final_pids, indPump, indUnPump = np.intersect1d(pids_pump, correct_pids_pump, return_indices=True)
+        
+        ppdata = namedtuple("PPData", ["pump", "unpump"])  
+        
+        if "JF" in chname: # or something more clever here!
+            fel_data_imgs1, fel_data_imgs2, fel_data_imgs3, fel_data_imgs4 = read_and_crop_jf(ch, roi1, roi2, roi3, roi4)
+            
+            fel_data_imgs1_pump   = fel_data_imgs1[index_light][indPump]
+            fel_data_imgs1_unpump = fel_data_imgs1[index_dark][indUnPump]
+            fel_data_imgs2_pump   = fel_data_imgs2[index_light][indPump]
+            fel_data_imgs2_unpump = fel_data_imgs2[index_dark][indUnPump]
+            fel_data_imgs3_pump   = fel_data_imgs3[index_light][indPump]
+            fel_data_imgs3_unpump = fel_data_imgs3[index_dark][indUnPump]
+            fel_data_imgs4_pump   = fel_data_imgs4[index_light][indPump]
+            fel_data_imgs4_unpump = fel_data_imgs4[index_dark][indUnPump]
+            result_pp["JFroi1"] = ppdata(pump=fel_data_imgs1_pump, unpump=fel_data_imgs1_unpump)
+            result_pp["JFroi2"] = ppdata(pump=fel_data_imgs2_pump, unpump=fel_data_imgs2_unpump)
+            result_pp["JFroi3"] = ppdata(pump=fel_data_imgs3_pump, unpump=fel_data_imgs3_unpump)
+            result_pp["JFroi4"] = ppdata(pump=fel_data_imgs4_pump, unpump=fel_data_imgs4_unpump)
+        else:
+            fel_data = ch.data
+            ch_pump   = fel_data[index_light][indPump]
+            ch_unpump = fel_data[index_dark][indUnPump]
+            result_pp[chname] = ppdata(pump=ch_pump, unpump=ch_unpump)
+            
+        #result_pp[ch] = ppdata(pump=ch_pump, unpump=ch_unpump)
+
+    result_FEL = {}
+    for chname in channels_FEL:
+        ch = subset_FEL[chname]
+        if "JF" in chname: # or something more clever here!
+            fel_data_imgs1, fel_data_imgs2, fel_data_imgs3, fel_data_imgs4 = read_and_crop_jf(ch, roi1, roi2, roi3, roi4)
+            result_FEL["JFroi1"]=fel_data_imgs1
+            result_FEL["JFroi2"]=fel_data_imgs2
+            result_FEL["JFroi3"]=fel_data_imgs3
+            result_FEL["JFroi4"]=fel_data_imgs4
+        else:
+            result_FEL[chname] = ch.data
+ 
 
     print ("Loaded {} pump and {} unpump shots".format(len(ch_pump), len(ch_unpump)))
 

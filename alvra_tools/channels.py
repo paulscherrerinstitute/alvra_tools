@@ -28,4 +28,4 @@ except FileNotFoundError:
 
 
 
-#TODO handle channels that are deleted from config but are still in globals()
+# TODO handle channels that are deleted from config but are still in globals()
