@@ -18,7 +18,8 @@ Heaviside = np.concatenate((np.zeros(100), np.ones(100)))
 def arrivalTimes(filter_name, px2fs, backgrounds, signals, background_from_fit, peakback):
     """
     returns:
-    edge positions determined from argmax of peak traces
+    arrival times in fs determined from argmax of peak traces and the calibration px2fs
+    amplitudes of the peak traces
     signal traces, should show a change in transmission near px 1024 if set up correctly
     peak traces, which are the derivative of signal traces
     """
@@ -45,5 +46,6 @@ def arrivalTimes(filter_name, px2fs, backgrounds, signals, background_from_fit, 
     # peaks
     sig5gaussO1 = gaussian_filter1d(sig5, 50, order = 1) - peakback
     arrivalTimes = (p0 - np.argmax(sig5gaussO1, axis = -1))*px2fs
+    arrivalAmplitudes = np.max(sig5gaussO1, axis = -1) * 11500    
     
-    return arrivalTimes, sig6, sig5gaussO1
+    return arrivalTimes, arrivalAmplitudes, sig6, sig5gaussO1

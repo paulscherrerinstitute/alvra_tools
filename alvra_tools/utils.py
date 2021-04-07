@@ -54,8 +54,8 @@ def make_roi(roi):
     return r0, r1
 
 
-def errfunc_fwhm(x, a, b, c, d):
-    return a + b*erf((c-x)*2*np.sqrt(np.log(2))/(np.abs(d)))         #d is fwhm
+def errfunc_fwhm(x, x0, amplitude, fwhm, offset):
+    return offset + amplitude*erf((x0-x)*2*np.sqrt(np.log(2))/(np.abs(fwhm)))         #d is fwhm
 
 def errfunc_1e2(x, a, b, c, d):
     return a + b*erf((c-x)*2*np.sqrt(2*np.log(2))/(np.abs(d)))       #d is 1/e2, 1/e2 = 1.699 * fwhm
@@ -82,14 +82,14 @@ def two_gaussians(x, h1, c1, w1, h2, c2, w2, offset):
     return three_gaussians(x, h1, c1, w1, h2, c2, w2, 0,0,1, offset)
 
 
-def conv_exp_gauss_heaviside(x,x0,lifetime,amplitude,fwhm,offset):
+def conv_exp_gauss_heaviside(x,x0,amplitude,fwhm,offset,lifetime):
     sigma = fwhm/2./np.sqrt(2*np.log(2))
     frac1 = (sigma**2-2*lifetime*(x0-x))/2./lifetime**2
     frac2 = (sigma**2 - lifetime*(x0-x))/np.sqrt(2)/sigma/lifetime
     return amplitude*0.5*np.exp(frac1)*(1-erf(frac2)) + offset
 
 
-def conv_exp_gauss_heaviside2(x,x0,lifetime,amplitude,fwhm,offset,a,b):
+def conv_exp_gauss_heaviside2(x,x0,amplitude,fwhm,offset,lifetime,a,b):
     sigma = fwhm/2./np.sqrt(2*np.log(2))
     frac1 = (sigma**2-2*lifetime*(x0-x))/2./lifetime**2
     frac2 = (sigma**2 - lifetime*(x0-x))/np.sqrt(2)/sigma/lifetime
