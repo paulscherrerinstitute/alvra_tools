@@ -1,3 +1,6 @@
+import os
+import pathlib
+
 import numpy as np
 from scipy.interpolate import interp1d
 from scipy.signal import tukey
@@ -49,3 +52,32 @@ def arrivalTimes(filter_name, px2fs, backgrounds, signals, background_from_fit, 
     arrivalAmplitudes = np.max(sig5gaussO1, axis = -1) * 11500    
     
     return arrivalTimes, arrivalAmplitudes, sig6, sig5gaussO1
+
+def _get_base_folder(fname):
+    fname = fname.split(os.sep)
+    return os.sep.join(fname[:5])
+
+def find_backgrounds(fname, path):
+    fpath = pathlib.Path(fname)
+    fmtime = fpath.stat().st_mtime
+
+    background_path = _get_base_folder(fname) + path
+    background_path = pathlib.Path(background_path)
+
+    background = None
+    min_time_diff = float('inf')
+    for entry in background_path.iterdir():
+        if entry.is_file() and 'psen-background' in entry.name:
+            pmtime = entry.stat().st_mtime
+            time_diff = abs(pmtime - fmtime)
+            if time_diff < min_time_diff:
+                min_time_diff = time_diff
+                background = entry
+        elif entry.is_file() and 'psen-peak-background' in entry.name:    
+            pmtime = entry.stat().st_mtime
+            time_diff = abs(pmtime - fmtime)
+            if time_diff < min_time_diff:
+                min_time_diff = time_diff
+                peak_background = entry
+
+    return background, peak_background, fmtime
