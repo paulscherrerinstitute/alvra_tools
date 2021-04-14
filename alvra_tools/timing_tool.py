@@ -65,19 +65,21 @@ def find_backgrounds(fname, path):
     background_path = pathlib.Path(background_path)
 
     background = None
-    min_time_diff = float('inf')
+    peak_background = None
+    min_time_diff1 = float('inf')
+    min_time_diff2 = float('inf')
     for entry in background_path.iterdir():
         if entry.is_file() and 'psen-background' in entry.name:
             pmtime = entry.stat().st_mtime
-            time_diff = abs(pmtime - fmtime)
-            if time_diff < min_time_diff:
-                min_time_diff = time_diff
+            time_diff1 = abs(pmtime - fmtime)
+            if time_diff1 < min_time_diff1:
+                min_time_diff1 = time_diff1
                 background = entry
         elif entry.is_file() and 'psen-peak-background' in entry.name:    
             pmtime = entry.stat().st_mtime
-            time_diff = abs(pmtime - fmtime)
-            if time_diff < min_time_diff:
-                min_time_diff = time_diff
+            time_diff2 = abs(pmtime - fmtime)
+            if time_diff2 < min_time_diff2:
+                min_time_diff2 = time_diff2
                 peak_background = entry
 
     return background, peak_background, fmtime
