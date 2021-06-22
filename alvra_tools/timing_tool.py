@@ -83,3 +83,35 @@ def find_backgrounds(fname, path):
                 peak_background = entry
 
     return background, peak_background, fmtime
+
+def edge(filter_name, backgrounds, signals, background_from_fit, peakback):
+    """
+    returns:
+    edge positions determined from argmax of peak traces
+    signal traces, should show a change in transmission near px 1024 if set up correctly
+    peak traces, which are the derivative of signal traces
+    """
+
+    ffilter = filters[filter_name]
+    # background subtraction
+    sig2 = np.nan_to_num(signals / backgrounds) / background_from_fit
+    # interpolate to get evenly sampled in frequency space
+    sig3inter = interp1d(nus, sig2, kind='cubic')
+    sig3 = sig3inter(nus_new)
+    sig4 = np.hstack((sig3, np.zeros_like(sig3)))
+    # Fourier transform, filter, inverse fourier transform, take the real part, take the derivative (sig5gaussO1)
+    sig4fft = np.fft.fft(sig4)
+    sig4filtered = sig4fft * ffilter
+    sig4inverse = np.fft.ifft(sig4filtered)
+    sig4invreal = 2 * np.real(sig4inverse)
+    sig4inter = interp1d(nus_new, sig4invreal[..., 0:2047], kind='cubic')
+    sig5 = sig4inter(nus)
+
+    # transmissive edges, not used, just for plotting if you like.
+    sig5gaussO0 = gaussian_filter1d(sig5, 30)
+    sig6 = convolve1d(sig5gaussO0, Heaviside)
+    # peaks
+    sig5gaussO1 = gaussian_filter1d(sig5, 50, order = 1) - peakback
+    peak2 = np.argmax(sig5gaussO1, axis = -1)
+
+    return peak2, sig6, sig5gaussO1
