@@ -78,8 +78,15 @@ def conv_exp_gauss(x,a,b,c,d,e):
 #return a + b*np.convolve(1/(d*np.sqrt(2*np.pi))*np.exp(-((x-c)**2)/(2*d**2)),np.heaviside((x-c),0)*np.exp(-(x-c)/e),'same')
   #d is sigma, fwhm = 2.355 * sigma
 
-def gaussian(x, height, center, sigma, offset):
-    return height*np.exp(-(x - center)**2/(2*sigma**2)) + offset
+def gaussian(x, x0, amplitude, sigma, offset):
+    return amplitude*np.exp(-(x - x0)**2/(2*sigma**2)) + offset
+
+def estimate_gaussian_parameters(x,y):
+    x0 = x[np.argmax(np.abs(y))]
+    amplitude = np.max(np.abs(y))
+    sigma =  np.diff(x).mean()
+    offset = np.min(np.abs(y)) 
+    return x0, amplitude, sigma, offset
 
 def three_gaussians(x, h1, c1, w1, h2, c2, w2, h3, c3, w3, offset):
     return (gaussian(x, h1, c1, w1, offset=0) +

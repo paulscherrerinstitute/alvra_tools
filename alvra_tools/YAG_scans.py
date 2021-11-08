@@ -109,11 +109,15 @@ def Two_TT_statistics_scan(json_file, target_1, calibration_1, target_2, calibra
         print (bkg_files[1])
         background_from_fit_1 = np.loadtxt(bkg_files[0])
         peakback_1 = np.loadtxt(bkg_files[1])
-        _, _, peakback_2 = edge(target_2, back_2[0], back_2[0], 1, 0)
+        #_, _, peakback_2 = edge(target_2, back_2[0], back_2[0], 1, 0)
+        
+        back_avg_2 = np.mean(back_2, axis = 0)
         
         arrTimes_1, arrTimesAmp_1, sigtraces_1, peaktraces_1 = arrivalTimes(target_1, calibration_1, back_1, sig_1, background_from_fit_1, peakback_1)
-        arrTimes_2, arrTimesAmp_2, sigtraces_2, peaktraces_2 = arrivalTimes(target_2, calibration_2, back_2, sig_2, 1, peakback_2)
-                
+        #arrTimes_2, arrTimesAmp_2, sigtraces_2, peaktraces_2 = arrivalTimes(target_2, calibration_2, back_2, sig_2, 1, peakback_2)
+        
+        arrTimes_2, arrTimesAmp_2, sigtraces_2, peaktraces_2 = arrivalTimes_selfRef(target_2, calibration_2, back_avg_2, sig_2)
+
         arrTimes_1_scan.append(arrTimes_1)
         arrTimesAmp_1_scan.append(arrTimesAmp_1)
         arrTimes_2_scan.append(arrTimes_2)
@@ -209,7 +213,16 @@ def YAG_scan_one_TT(json_file, channel_delay_motor, timezero_mm, quantile, targe
 
     from sfdata import SFScanInfo
     scan = SFScanInfo(json_file)
-    
+   
+    if ' as delay' in scan.parameters['name'][0]:
+        print ('Scan is done with the stage in fs')
+        Delay_fs = scan.readbacks
+        Delay_mm = fs2mm(scan.readbacks,0)
+    else:
+        print ('Scan is done with the stage in mm')
+        Delay_fs = mm2fs(scan.readbacks,0)
+        Delay_mm = scan.readbacks
+ 
     Delay_fs_stage = []
     Pump_probe = []
     Pump_probe_scan = []
@@ -274,7 +287,7 @@ def YAG_scan_one_TT(json_file, channel_delay_motor, timezero_mm, quantile, targe
     print ("Quantile range = {}".format(0.5 - quantile/2), 0.5 + quantile/2)
     print ("Loaded {} files, size of the arrays = {}".format(len(scan.files), len(Pump_probe)))
     
-    return Delay_fs_stage, Delays_corr_scan,Pump_probe,Pump_probe_scan
+    return Delays_fs_scan, Delays_corr_scan,Pump_probe,Pump_probe_scan
 
 
 def YAG_scan_two_TT(json_file, channel_delay_motor, timezero_mm, quantile, 
@@ -283,7 +296,7 @@ def YAG_scan_two_TT(json_file, channel_delay_motor, timezero_mm, quantile,
     
     channel_list_pp = [channel_Events, channel_LaserDiode, channel_Laser_refDiode, channel_delay_motor,
                       channel_PSEN_signal, channel_PSEN_bkg,
-                      channel_cam125_signal]
+                      channel_cam125_signal, channel_Izero117]
     channel_list_all = channel_list_pp
 
     ########################################################################
@@ -291,7 +304,16 @@ def YAG_scan_two_TT(json_file, channel_delay_motor, timezero_mm, quantile,
     from sfdata import SFScanInfo
     scan = SFScanInfo(json_file)
     
-    Delay_fs_stage = []
+    if ' as delay' in scan.parameters['name'][0]:
+        print ('Scan is done with the stage in fs')
+        Delay_fs_stage = scan.readbacks
+        Delay_mm = fs2mm(scan.readbacks,0)
+    else:
+        print ('Scan is done with the stage in mm')
+        Delay_fs_stage = mm2fs(scan.readbacks,0)
+        Delay_mm = scan.readbacks
+    
+    pids_pump_scan = [] 
     Pump_probe = []
     Pump_probe_scan = []
     arrTimes_1_scan = []
@@ -299,6 +321,7 @@ def YAG_scan_two_TT(json_file, channel_delay_motor, timezero_mm, quantile,
     arrTimes_2_scan = []
     arrTimesAmp_2_scan = []
     Delays_fs_scan = []
+    Izero_scan = []
     
     for i, step in enumerate(scan):
         check_files_and_data(step)
@@ -307,8 +330,9 @@ def YAG_scan_two_TT(json_file, channel_delay_motor, timezero_mm, quantile,
         print ('Processing: {}'.format(json_file.split('/')[-1]))
         print ('Step {} of {}: Processing {}'.format(i+1, len(scan.files), filename))
         
-        resultsPP, results_FEL, _, _ = load_data_compact_FEL_pump(channel_list_pp, channel_list_all, step)
-
+        resultsPP, results_FEL, pids_pump, pids_unpump = load_data_compact_FEL_pump(channel_list_pp, channel_list_all, step)
+        
+        Izero = resultsPP[channel_Izero117].pump
         Laser_pump = resultsPP[channel_LaserDiode].pump
         Laser_ref_pump = resultsPP[channel_Laser_refDiode].pump
         Laser_unpump = resultsPP[channel_LaserDiode].unpump
@@ -318,9 +342,10 @@ def YAG_scan_two_TT(json_file, channel_delay_motor, timezero_mm, quantile,
         sig_2 = resultsPP[channel_cam125_signal].pump
         back_2 = resultsPP[channel_cam125_signal].unpump
         
+        #print(np.shape(sig_1), np.shape(back_1), np.shape(sig_2), np.shape(back_2))
+
         delay_shot = resultsPP[channel_delay_motor].pump
         delay_shot_fs = mm2fs(delay_shot, timezero_mm)
-        Delay_fs_stage.append(delay_shot_fs.mean())
 
         Laser_diff = -np.log10((Laser_pump) / (Laser_unpump))
         
@@ -330,26 +355,36 @@ def YAG_scan_two_TT(json_file, channel_delay_motor, timezero_mm, quantile,
         print (bkg_files[1])
         background_from_fit_1 = np.loadtxt(bkg_files[0])
         peakback_1 = np.loadtxt(bkg_files[1])
-        _, _, peakback_2 = edge(target_2, back_2[0], back_2[0], 1, 0)
-            
-        arrTimes_1, arrTimesAmp_1, sigtraces_1, peaktraces_1 = arrivalTimes(target_1, calibration_1, back_1, sig_1, background_from_fit_1, peakback_1)
-        arrTimes_2, arrTimesAmp_2, sigtraces_2, peaktraces_2 = arrivalTimes(target_2, calibration_2, back_2, sig_2, 1, peakback_2)
+        # _, _, peakback_2 = edge(target_2, back_2[0], back_2[0], 1, 0)
         
+        back_avg_2 = np.mean(back_2, axis = 0)
+        
+        print ("Sig M2={}, Sig M1={}".format(np.shape(sig_1), np.shape(sig_2)))
+    
+        arrTimes_1, arrTimesAmp_1, sigtraces_1, peaktraces_1 = arrivalTimes(target_1, calibration_1, back_1, sig_1, background_from_fit_1, peakback_1)
+        # arrTimes_2, arrTimesAmp_2, sigtraces_2, peaktraces_2 = arrivalTimes(target_2, calibration_2, back_2, sig_2, 1, peakback_2)
+        arrTimes_2, arrTimesAmp_2, sigtraces_2, peaktraces_2 = arrivalTimes_selfRef(target_2, calibration_2, back_avg_2, sig_2)        
+        
+        print ("arrTimes M2={}, arrTimes M1={}".format(np.shape(arrTimes_1), np.shape(arrTimes_2)))
+     
         index_1 = (np.asarray(arrTimes_1) < filterTime_1) & (np.asarray(arrTimesAmp_1) > filterAmp_1)
         index_2 = (np.asarray(arrTimes_2) < filterTime_2) & (np.asarray(arrTimesAmp_2) > filterAmp_2)
         
         index = np.logical_and.reduce((index_1, index_2))
         
+        pids_pump_scan.append(pids_pump[index]) 
         Delays_fs_scan.append(delay_shot_fs[index])
         arrTimes_1_scan.append(arrTimes_1[index])
         arrTimesAmp_1_scan.append(arrTimesAmp_1[index])
-        arrTimes_2_scan.append(arrTimes_2[index] + 850)
+        arrTimes_2_scan.append(arrTimes_2[index])
         arrTimesAmp_2_scan.append(arrTimesAmp_2[index])
         Pump_probe_scan.append(Laser_diff[index])
-        
+        Izero_scan.append(Izero[index])        
+
         df_pump_probe = pd.DataFrame(Laser_diff)
         Pump_probe.append(np.nanquantile(df_pump_probe, [0.5, 0.5 - quantile/2, 0.5 + quantile/2]))
     
+    pids_pump_scan = np.asarray(list(itertools.chain.from_iterable(pids_pump_scan)))
     Delays_fs_scan = np.asarray(list(itertools.chain.from_iterable(Delays_fs_scan)))
     arrTimes_1_scan = np.asarray(list(itertools.chain.from_iterable(arrTimes_1_scan)))
     arrTimesAmp_1_scan = np.asarray(list(itertools.chain.from_iterable(arrTimesAmp_1_scan)))
@@ -357,13 +392,16 @@ def YAG_scan_two_TT(json_file, channel_delay_motor, timezero_mm, quantile,
     arrTimesAmp_2_scan = np.asarray(list(itertools.chain.from_iterable(arrTimesAmp_2_scan)))
     
     Pump_probe_scan = np.asarray(list(itertools.chain.from_iterable(Pump_probe_scan)))
-    
+    Izero_scan = np.asarray(list(itertools.chain.from_iterable(Izero_scan)))    
+
+    pids_pump_scan = np.asarray(pids_pump_scan)
     Delays_fs_scan = np.asarray(Delays_fs_scan)
     arrTimes_1_scan = np.asarray(arrTimes_1_scan)
     arrTimesAmp_1_scan = np.asarray(arrTimesAmp_1_scan)
     arrTimes_2_scan = np.asarray(arrTimes_2_scan)
     arrTimesAmp_2_scan = np.asarray(arrTimesAmp_2_scan)
     Pump_probe_scan = np.asarray(Pump_probe_scan)
+    Izero_scan = np.asarray(Izero_scan)
     Pump_probe = np.asarray(Pump_probe)
     
     Delays_corr_1_scan = Delays_fs_scan + arrTimes_1_scan#((p0 - np.array(edgePos))*px2fs)
@@ -372,4 +410,4 @@ def YAG_scan_two_TT(json_file, channel_delay_motor, timezero_mm, quantile,
     print ("Quantile range = {}".format(0.5 - quantile/2), 0.5 + quantile/2)
     print ("Loaded {} files, size of the arrays = {}".format(len(scan.files), len(Pump_probe)))
     
-    return Delay_fs_stage, Delays_corr_1_scan, Delays_corr_2_scan, Pump_probe, Pump_probe_scan
+    return Delay_fs_stage, Delays_fs_scan, Delays_corr_1_scan, Delays_corr_2_scan, Pump_probe, Pump_probe_scan, Izero_scan, arrTimesAmp_1_scan, arrTimesAmp_2_scan, pids_pump_scan

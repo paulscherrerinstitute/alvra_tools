@@ -398,7 +398,10 @@ def load_data_compact(channel_list, data):
     subset.drop_missing()
 
     Event_code = subset[channel_Events].data
-    FEL = Event_code[:,12] #Event 12: BAM bunch 1
+    FEL_raw = Event_code[:,12] #Event 12: BAM bunch 1
+    Ppicker = Event_code[:,200]    
+
+    FEL = np.logical_and(FEL_raw, Ppicker)
 
     index_light = FEL == 1
 
@@ -456,6 +459,7 @@ def load_data_compact_FEL_pump(channels_pump_unpump, channels_pump, data):
     channels_unpump = channels_pump_unpump
 
     subset_unpump = data[channels_pump_unpump]
+    subset_unpump.print_stats(show_complete=True)
     subset_unpump.drop_missing()
 
     Event_code = subset_unpump[channel_Events].data
@@ -465,7 +469,7 @@ def load_data_compact_FEL_pump(channels_pump_unpump, channels_pump, data):
     Laser    = Event_code[:,18]
     Darkshot = Event_code[:,21]
 
-    FEL = np.logical_and(FEL_raw, np.logical_not(Ppicker))
+    FEL = np.logical_and(FEL_raw, Ppicker)
 
     if Darkshot.mean()==0:
         laser_reprate = Laser.mean().round().astype(int)
@@ -475,6 +479,8 @@ def load_data_compact_FEL_pump(channels_pump_unpump, channels_pump, data):
     index_dark_before = np.append([True], np.logical_not(Darkshot))[:-1]
     index_light       = np.logical_and.reduce((FEL, Laser, np.logical_not(Darkshot), index_dark_before))
     index_dark        = np.logical_and.reduce((np.logical_not(FEL), Laser, np.logical_not(Darkshot), index_dark_before))
+
+    #print(np.shape(index_dark), np.shape(index_light))
 
     Deltap_FEL = (1 / FEL.mean()).round().astype(int) #Get the FEL rep rate from the Event code
     FEL_reprate = 100 / Deltap_FEL
@@ -494,7 +500,7 @@ def load_data_compact_FEL_pump(channels_pump_unpump, channels_pump, data):
     #with SFDataFiles(datafiles) as data:
         
     subset_pump = data[channels_pump]
-    subset_pump.print_stats(show_complete=True)
+    #subset_pump.print_stats(show_complete=True)
     subset_pump.drop_missing()
 
     result_pump = {}
@@ -545,10 +551,13 @@ def load_data_compact_laser_pump(channels_pump_unpump, channels_FEL, data):
     subset_FEL.drop_missing()
 
     Event_code = subset_FEL[channel_Events].data
-
-    FEL      = Event_code[:,12] #Event 12: BAM bunch 1
+    
+    FEL_raw  = Event_code[:,12] #Event 12: BAM bunch 1
+    Ppicker  = Event_code[:,200]
     Laser    = Event_code[:,18]
     Darkshot = Event_code[:,21]
+
+    FEL = np.logical_and(FEL_raw, Ppicker)
 
     if Darkshot.mean()==0:
         laser_reprate = (1 / Laser.mean() - 1).round().astype(int)
