@@ -401,7 +401,7 @@ def load_data_compact(channel_list, data):
     FEL_raw = Event_code[:,12] #Event 12: BAM bunch 1
     Ppicker = Event_code[:,200]    
 
-    FEL = np.logical_and(FEL_raw, Ppicker)
+    FEL = np.logical_and(FEL_raw, np.logical_not(Ppicker))
 
     index_light = FEL == 1
 
@@ -557,7 +557,7 @@ def load_data_compact_laser_pump(channels_pump_unpump, channels_FEL, data):
     Laser    = Event_code[:,18]
     Darkshot = Event_code[:,21]
 
-    FEL = np.logical_and(FEL_raw, Ppicker)
+    FEL = np.logical_and(FEL_raw, np.logical_not(Ppicker))
 
     if Darkshot.mean()==0:
         laser_reprate = (1 / Laser.mean() - 1).round().astype(int)
@@ -588,7 +588,7 @@ def load_data_compact_laser_pump(channels_pump_unpump, channels_FEL, data):
         correct_pids_pump   = pids_unpump + Deltap_FEL
         final_pids, indPump, indUnPump = np.intersect1d(pids_pump, correct_pids_pump, return_indices=True)
 
-        if ((100 / laser_reprate) == FEL_reprate):
+        if (((100 / Deltap_FEL) / laser_reprate) == FEL_reprate):
             ch_pump   = ch_pump[indPump]
             ch_unpump = ch_unpump[indUnPump] 
 
