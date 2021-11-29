@@ -14,26 +14,8 @@ from alvra_tools.channels import *
 from alvra_tools.timing_tool import *
 from alvra_tools.utils import *
 
+#########################################################
 
-class Fit:
-    
-    def __init__(self, func, estim, p0=None):
-        self.func = func
-        self.estim = estim
-        self.p0 = self.popt = p0
-        self.pcov = None
-   
-    def estimate(self, x, y):
-        self.p0 = self.popt = self.estim(x,y)
-
-    def fit(self, x, y):
-        self.popt, self.pcov = curve_fit(self.func, x, y, p0=self.p0)
-    
-    def eval(self, x):
-        return self.func(x, *self.popt)
-
-
-# +
 def TT_statistics_scan(json_file, target, calibration):
     channel_list_pp = [channel_Events, channel_PSEN_signal, channel_PSEN_bkg]
     channel_list_all = channel_list_pp
@@ -72,10 +54,8 @@ def TT_statistics_scan(json_file, target, calibration):
     arrTimesAmp_scan = np.asarray(list(itertools.chain.from_iterable(arrTimesAmp_scan)))
     
     return arrTimes, arrTimesAmp, arrTimes_scan, arrTimesAmp_scan, peaktraces
-               
-    
-    
-# -
+                 
+#########################################################
 
 def Two_TT_statistics_scan(json_file, target_1, calibration_1, target_2, calibration_2):
     channel_list_pp = [channel_Events, channel_PSEN_signal, channel_PSEN_bkg, channel_cam125_signal]
@@ -132,12 +112,11 @@ def Two_TT_statistics_scan(json_file, target_1, calibration_1, target_2, calibra
     return arrTimes_1, arrTimesAmp_1, arrTimes_1_scan, arrTimesAmp_1_scan, peaktraces_1,\
 arrTimes_2, arrTimesAmp_2, arrTimes_2_scan, arrTimesAmp_2_scan, peaktraces_2
 
+#########################################################
 
 def YAG_scan_noTT(json_file, quantile):
     channel_list_pp = [channel_Events, channel_LaserDiode, channel_Laser_refDiode]
     channel_list_all = channel_list_pp
-
-    ########################################################################
 
     from sfdata import SFScanInfo
     scan = SFScanInfo(json_file)
@@ -202,14 +181,13 @@ def YAG_scan_noTT(json_file, quantile):
     
     return Delay_mm,Delay_fs,Pump_probe,Pump_probe_all,Pump_probe_std,Pump_probe_std_err,Pump_probe_avg
 
+#########################################################
 
 def YAG_scan_one_TT(json_file, channel_delay_motor, timezero_mm, quantile, target, calibration, filterTime=2000, filterAmp=0):
     
     channel_list_pp = [channel_Events, channel_LaserDiode, channel_Laser_refDiode, channel_delay_motor,
                       channel_PSEN_signal, channel_PSEN_bkg]
     channel_list_all = channel_list_pp
-
-    ########################################################################
 
     from sfdata import SFScanInfo
     scan = SFScanInfo(json_file)
@@ -289,6 +267,7 @@ def YAG_scan_one_TT(json_file, channel_delay_motor, timezero_mm, quantile, targe
     
     return Delays_fs_scan, Delays_corr_scan,Pump_probe,Pump_probe_scan
 
+#########################################################
 
 def YAG_scan_two_TT(json_file, channel_delay_motor, timezero_mm, quantile, 
                     target_1, calibration_1, target_2, calibration_2,
@@ -298,8 +277,6 @@ def YAG_scan_two_TT(json_file, channel_delay_motor, timezero_mm, quantile,
                       channel_PSEN_signal, channel_PSEN_bkg,
                       channel_cam125_signal, channel_Izero117]
     channel_list_all = channel_list_pp
-
-    ########################################################################
 
     from sfdata import SFScanInfo
     scan = SFScanInfo(json_file)
