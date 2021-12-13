@@ -53,9 +53,9 @@ def threshold(data, lower=None, upper=None, inplace=True, fill=0):
     if not inplace:
         data = data.copy()
     if lower is not None:
-        data[data >= lower] = fill
+        data[data <= lower] = fill
     if upper is not None:
-        data[data < upper] = fill
+        data[data > upper] = fill
     return data
 
 
