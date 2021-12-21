@@ -32,6 +32,11 @@ def bin_sum(a, binning):
 def bin_mean(a, binning):
     return _bin(a, binning).mean(axis=1)
 
+def rebin2D(arr, new_shape):
+    shape = (new_shape[0], arr.shape[0] // new_shape[0],
+             new_shape[1], arr.shape[1] // new_shape[1])
+    return arr.reshape(shape).sum(-1).sum(1)
+
 
 def convert_to_photon_num_range(image, photon_range):
     """
