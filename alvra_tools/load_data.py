@@ -11,6 +11,12 @@ from .utils import crop_roi, make_roi
 from sfdata.utils import cprint, print_line
 
 
+def _correct_path(f, pgroup):
+    newf = f.replace("/gpfs/photonics/swissfel/raw/alvra-staff/","/sf/alvra/data/").replace("/gpfs/photonics/swissfel/raw/alvra/","/sf/alvra/data/")
+    if (f'/{pgroup}/raw/') not in newf:
+        newf =  newf.replace(f'/{pgroup}/',f'/{pgroup}/raw/')
+    return newf
+
 def _get_data(f):
     if "data" in f:
         return f["data"]
@@ -40,6 +46,36 @@ def _average(data, modulo):
     data = data[:length]
     return data.reshape(-1, modulo).mean(axis=1)
 
+def _get_reprates_from_file(JF_file, nshots):
+    all_files = JF_file.replace('.{}.h5'.format(_get_detector_name(JF_file)),'.*.h5')
+    data = SFDataFiles(all_files)
+    channel_list = [_get_detector_name(JF_file), channel_Events]
+     
+    subset = data[channel_list]
+    subset.print_stats(show_complete=True)
+    subset.drop_missing()
+        
+    Event_code = subset[channel_Events].data
+    FEL_raw  = Event_code[:,12] #Event 12: BAM bunch 1
+    Ppicker  = Event_code[:,200] 
+    Laser    = Event_code[:,18]
+    Darkshot = Event_code[:,21]
+    
+    FEL = np.logical_and(FEL_raw, np.logical_not(Ppicker))
+    
+    if Darkshot.mean()==0:
+        laser_reprate = (1 / Laser.mean() - 1).round().astype(int)
+        index_light = np.logical_and.reduce((FEL, Laser))[:nshots]
+        index_dark  = np.logical_and.reduce((FEL, np.logical_not(Laser)))[:nshots]
+    else:
+        laser_reprate = (Laser.mean() / Darkshot.mean() - 1).round().astype(int)
+        index_light = np.logical_and.reduce((FEL, Laser, np.logical_not(Darkshot)))[:nshots]
+        index_dark = np.logical_and.reduce((FEL, Laser, Darkshot))[:nshots]
+    pids_light = subset[channel_Events].pids[:nshots][index_light]
+    pids_dark  = subset[channel_Events].pids[:nshots][index_dark]
+    return index_light, index_dark, pids_light, pids_dark
+
+
 def _make_reprates_on_off(pulse_ids, reprate_FEL, reprate_laser):
     #reprate_off = ((pulse_ids%10 == 0) & (pulse_ids%20 != 0))            #This is for 10 Hz
     #reprate_on  = pulse_ids%20 == 0                                      #This is for 5 Hz
@@ -62,7 +98,10 @@ def _make_reprates_FEL_on_laser_off(pulse_ids, reprate_FEL, reprate_laser):
 
 
 def _get_detector_name(f):
-    return f["general/detector_name"][()].decode()
+    with h5py.File(f, "r") as ff:
+        group = ff['general']
+        detector = group['detector_name'][()].decode()
+    return detector
 
 
 def _make_empty_image(image, module_map):
@@ -98,10 +137,182 @@ def load_JF_cropped_data(fname, roi, nshots=None):
         images    = f[roi][:nshots]
     return images, pulse_ids
 
+########################################################################################
 
-def load_JF_data_4rois_on_off(fname, index_light, index_dark, roi1, roi2,roi3,roi4,
+def load_JF_static(fname, pgroup, gain_file=None, pedestal_file=None, nshots=None):
+    fname = _correct_path(fname, pgroup)
+    with ju.File(fname, gain_file=gain_file, pedestal_file=pedestal_file) as juf:
+        images = juf[:nshots]
+        pulse_ids = juf["pulse_id"][:nshots].T[0]
+    return (images, pulse_ids)
+
+########################################################################################
+
+def load_JF_static_batches(fname, pgroup, gain_file=None, pedestal_file=None, nshots=None, batch_size = 1000):
+    fname = _correct_path(fname, pgroup)
+    with ju.File(fname, gain_file=gain_file, pedestal_file=pedestal_file) as juf:
+        pulse_ids = juf["pulse_id"][:nshots].T[0]
+
+        if (nshots is None):
+           nshots = pulse_ids.shape[0]
+        
+        if (nshots < batch_size):
+           images = juf[:nshots]
+
+        else:
+           n_images = pulse_ids.shape[0]
+           images= []
+        
+           print ('Total images = {}, load them in batches of {}'.format(n_images, batch_size))
+        
+           for ind in range(0, n_images, batch_size):
+               batch_slice = slice(ind, min(ind + batch_size, n_images))
+            
+               print ('Load batch = {}'.format(batch_slice))
+            
+               batch_images = juf[batch_slice, :, :]
+            
+               images.extend(batch_images)
+               del batch_images
+    
+    images = np.asarray(images)
+
+    return (images, pulse_ids)
+
+########################################################################################
+
+def load_JF_pp_batches(fname, pgroup, reprate_FEL=100, reprate_laser=50, gain_file=None, pedestal_file=None, nshots=None, batch_size = 1000):
+    fname = _correct_path(fname, pgroup)
+    with ju.File(fname, gain_file=gain_file, pedestal_file=pedestal_file) as juf:
+        pulse_ids = juf["pulse_id"][:nshots].T[0]
+
+        if (nshots is None):
+           nshots = pulse_ids.shape[0]
+        
+        if (nshots < batch_size):
+           images = juf[:nshots]
+
+        else:
+           n_images = pulse_ids.shape[0]
+           images= []
+        
+           print ('Total images = {}, load them in batches of {}'.format(n_images, batch_size))
+        
+           for ind in range(0, n_images, batch_size):
+               batch_slice = slice(ind, min(ind + batch_size, n_images))
+            
+               print ('Load batch = {}'.format(batch_slice))
+            
+               batch_images = juf[batch_slice, :, :]
+            
+               images.extend(batch_images)
+               del batch_images
+    
+    images = np.asarray(images)
+    
+    reprate_on, reprate_off,_,_ = _get_reprates_from_file(fname, nshots)
+    #reprate_on, reprate_off = _make_reprates_on_off(pulse_ids, reprate_FEL, reprate_laser)
+    
+    images_on = images[reprate_on]
+    images_off = images[reprate_off]
+    pulse_ids_on    = pulse_ids[reprate_on]
+    pulse_ids_off   = pulse_ids[reprate_off]
+
+    return (images_on,images_off,pulse_ids_on,pulse_ids_off)
+
+########################################################################################
+
+def load_and_crop_JF_static_batches(fname, pgroup, roi1, roi2, roi3, roi4,
+                             gain_file=None, pedestal_file=None, nshots=None, batch_size = 1000):
+    fname = _correct_path(fname, pgroup)
+    with ju.File(fname, gain_file=gain_file, pedestal_file=pedestal_file) as juf:
+        pulse_ids = juf["pulse_id"][:nshots].T[0]
+        n_images = pulse_ids.shape[0]
+        images_roi1 = []
+        images_roi2 = []
+        images_roi3 = []
+        images_roi4 = []   
+        
+        print ('Total images = {}, load them in batches of {}'.format(n_images, batch_size))
+        
+        for ind in range(0, n_images, batch_size):
+            batch_slice = slice(ind, min(ind + batch_size, n_images))
+            
+            print ('Load batch = {}'.format(batch_slice))
+            
+            batch_images = juf[batch_slice, :, :]
+            
+            images_roi1.extend(crop_roi(batch_images, roi1))
+            images_roi2.extend(crop_roi(batch_images, roi2))
+            images_roi3.extend(crop_roi(batch_images, roi3))
+            images_roi4.extend(crop_roi(batch_images, roi4))
+            
+            del batch_images
+
+    images_roi1 = np.asarray(images_roi1)
+    images_roi2 = np.asarray(images_roi2)
+    images_roi3 = np.asarray(images_roi3)
+    images_roi4 = np.asarray(images_roi4)
+   
+    return images_roi1, images_roi2, images_roi3, images_roi4, pulse_ids
+
+########################################################################################
+
+def load_and_crop_JF_pp_batches_4rois(fname, pgroup, roi1, roi2, roi3, roi4, reprate_FEL=100, reprate_laser=50, 
+                         gain_file=None, pedestal_file=None, nshots=None, batch_size = 1000):
+    fname = _correct_path(fname, pgroup)
+    with ju.File(fname, gain_file=gain_file, pedestal_file=pedestal_file) as juf:
+        
+        pulse_ids = juf["pulse_id"][:nshots].T[0]
+        n_images = pulse_ids.shape[0]
+        images_roi1 = []
+        images_roi2 = []
+        images_roi3 = []
+        images_roi4 = []   
+        
+        print ('Total images = {}, load them in batches of {}'.format(n_images, batch_size))
+        
+        for ind in range(0, n_images, batch_size):
+            batch_slice = slice(ind, min(ind + batch_size, n_images))
+            
+            print ('Load batch = {}'.format(batch_slice))
+            
+            batch_images = juf[batch_slice, :, :]
+            
+            images_roi1.extend(crop_roi(batch_images, roi1))
+            images_roi2.extend(crop_roi(batch_images, roi2))
+            images_roi3.extend(crop_roi(batch_images, roi3))
+            images_roi4.extend(crop_roi(batch_images, roi4))
+            
+            del batch_images
+            
+    images_roi1 = np.asarray(images_roi1)
+    images_roi2 = np.asarray(images_roi2)
+    images_roi3 = np.asarray(images_roi3)
+    images_roi4 = np.asarray(images_roi4)
+
+    reprate_on, reprate_off,_,_ = _get_reprates_from_file(fname, nshots)
+    #reprate_on, reprate_off = _make_reprates_on_off(pulse_ids, reprate_FEL, reprate_laser)
+
+    images_on_roi1  = images_roi1[reprate_on]
+    images_on_roi2  = images_roi2[reprate_on]
+    images_off_roi1 = images_roi1[reprate_off]
+    images_off_roi2 = images_roi2[reprate_off]
+    images_on_roi3  = images_roi3[reprate_on]
+    images_on_roi4  = images_roi4[reprate_on]
+    images_off_roi3 = images_roi3[reprate_off]
+    images_off_roi4 = images_roi4[reprate_off]
+    pulse_ids_on    = pulse_ids[reprate_on]
+    pulse_ids_off   = pulse_ids[reprate_off]
+
+    return images_on_roi1, images_on_roi2, images_on_roi3, images_on_roi4, pulse_ids_on, images_off_roi1, images_off_roi2, images_off_roi3, images_off_roi4, pulse_ids_off
+
+########################################################################################
+
+
+def load_JF_data_4rois_on_off(fname, pgroup, index_light, index_dark, roi1, roi2, roi3, roi4,
                              gain_file=None, pedestal_file=None, nshots=None):
-
+    fname = _correct_path(fname, pgroup)
     with ju.File(fname, gain_file=gain_file, pedestal_file=pedestal_file) as juf:
         images = juf[:nshots]
         pulse_ids = juf["pulse_id"][:nshots].T[0]
@@ -127,6 +338,7 @@ def load_JF_data_4rois_on_off(fname, index_light, index_dark, roi1, roi2,roi3,ro
     
     return images_on_roi1, images_off_roi1, images_on_roi2, images_off_roi2, images_on_roi3, images_off_roi3, images_on_roi4, images_off_roi4, pulse_ids_on, pulse_ids_off
 
+########################################################################################
 
 def load_crop_JF_batches_on_off_2rois(fname, roi1, roi2, reprate_FEL, reprate_laser, 
                          gain_file=None, pedestal_file=None, nshots=None, batch_size = 1000):
@@ -167,53 +379,7 @@ def load_crop_JF_batches_on_off_2rois(fname, roi1, roi2, reprate_FEL, reprate_la
     return images_on_roi1, images_on_roi2, pulse_ids_on, images_off_roi1, images_off_roi2, pulse_ids_off
 
 
-def load_crop_JF_batches_on_off_4rois(fname, roi1, roi2, roi3, roi4, reprate_FEL, reprate_laser, 
-                         gain_file=None, pedestal_file=None, nshots=None, batch_size = 1000):
 
-    with ju.File(fname, gain_file=gain_file, pedestal_file=pedestal_file) as juf:
-        
-        pulse_ids = juf["pulse_id"][:nshots].T[0]
-        n_images = pulse_ids.shape[0]
-        images_roi1 = []
-        images_roi2 = []
-        images_roi3 = []
-        images_roi4 = []   
-        
-        print ('Total images = {}, load them in batches of {}'.format(n_images, batch_size))
-        
-        for ind in range(0, n_images, batch_size):
-            batch_slice = slice(ind, min(ind + batch_size, n_images))
-            
-            print ('Load batch = {}'.format(batch_slice))
-            
-            batch_images = juf[batch_slice, :, :]
-            
-            images_roi1.extend(crop_roi(batch_images, roi1))
-            images_roi2.extend(crop_roi(batch_images, roi2))
-            images_roi3.extend(crop_roi(batch_images, roi3))
-            images_roi4.extend(crop_roi(batch_images, roi4))
-            
-            del batch_images
-            
-    images_roi1 = np.asarray(images_roi1)
-    images_roi2 = np.asarray(images_roi2)
-    images_roi3 = np.asarray(images_roi3)
-    images_roi4 = np.asarray(images_roi4)
-
-    reprate_on, reprate_off = _make_reprates_on_off(pulse_ids, reprate_FEL, reprate_laser)
-
-    images_on_roi1  = images_roi1[reprate_on]
-    images_on_roi2  = images_roi2[reprate_on]
-    images_off_roi1 = images_roi1[reprate_off]
-    images_off_roi2 = images_roi2[reprate_off]
-    images_on_roi3  = images_roi3[reprate_on]
-    images_on_roi4  = images_roi4[reprate_on]
-    images_off_roi3 = images_roi3[reprate_off]
-    images_off_roi4 = images_roi4[reprate_off]
-    pulse_ids_on    = pulse_ids[reprate_on]
-    pulse_ids_off   = pulse_ids[reprate_off]
-
-    return images_on_roi1, images_on_roi2, images_on_roi3, images_on_roi4, pulse_ids_on, images_off_roi1, images_off_roi2, images_off_roi3, images_off_roi4, pulse_ids_off
 
 def load_crop_JF_batches_on_off2(fname, roi1, roi2, reprate_FEL, reprate_laser, 
                                 gain_file=None, pedestal_file=None, nshots=None, batch_size = 1000):
@@ -291,40 +457,6 @@ def load_crop_JF_data(fname, roi1, roi2,roi3,roi4,
     
     return images_roi1, images_roi2, images_roi3, images_roi4, pulse_ids
 
-
-def load_crop_JF_batches(fname, roi1, roi2,roi3,roi4,
-                             gain_file=None, pedestal_file=None, nshots=None, batch_size = 1000):
-
-    with ju.File(fname, gain_file=gain_file, pedestal_file=pedestal_file) as juf:
-        pulse_ids = juf["pulse_id"][:nshots].T[0]
-        n_images = pulse_ids.shape[0]
-        images_roi1 = []
-        images_roi2 = []
-        images_roi3 = []
-        images_roi4 = []   
-        
-        print ('Total images = {}, load them in batches of {}'.format(n_images, batch_size))
-        
-        for ind in range(0, n_images, batch_size):
-            batch_slice = slice(ind, min(ind + batch_size, n_images))
-            
-            print ('Load batch = {}'.format(batch_slice))
-            
-            batch_images = juf[batch_slice, :, :]
-            
-            images_roi1.extend(crop_roi(batch_images, roi1))
-            images_roi2.extend(crop_roi(batch_images, roi2))
-            images_roi3.extend(crop_roi(batch_images, roi3))
-            images_roi4.extend(crop_roi(batch_images, roi4))
-            
-            del batch_images
-
-    images_roi1 = np.asarray(images_roi1)
-    images_roi2 = np.asarray(images_roi2)
-    images_roi3 = np.asarray(images_roi3)
-    images_roi4 = np.asarray(images_roi4)
-    
-    return images_roi1, images_roi2, images_roi3, images_roi4, pulse_ids
 
 
 def read_and_crop_jf(channel_jf, roi1=None, roi2=None, roi3=None, roi4=None, batch_size=100):
@@ -629,14 +761,16 @@ def load_data_compact_laser_pump_JF(channels_pump_unpump, channels_FEL, data, ro
     Darkshot = Event_code[:,21]
 
     if Darkshot.mean()==0:
-        laser_reprate = Laser.mean().round().astype(int)
+        laser_reprate = (1 / Laser.mean() - 1).round().astype(int)
+        index_light = np.logical_and.reduce((FEL, Laser))
+        index_dark  = np.logical_and.reduce((FEL, np.logical_not(Laser)))
     else:
         laser_reprate = (Laser.mean() / Darkshot.mean() - 1).round().astype(int)
 
-    index_light = np.logical_and.reduce((FEL, Laser, np.logical_not(Darkshot)))
-    index_dark = np.logical_and.reduce((FEL, Laser, Darkshot))
+        index_light = np.logical_and.reduce((FEL, Laser, np.logical_not(Darkshot)))
+        index_dark = np.logical_and.reduce((FEL, Laser, Darkshot))
 
-    index_probe = np.logical_and.reduce((Laser, np.logical_not(Darkshot)))
+    #index_probe = np.logical_and.reduce((Laser, np.logical_not(Darkshot)))
 
     #Deltap_FEL = (1 / FEL.mean()).round().astype(int) #Get the FEL rep rate from the Event code
     #FEL_reprate = 100 / Deltap_FEL
