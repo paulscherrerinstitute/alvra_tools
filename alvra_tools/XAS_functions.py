@@ -15,6 +15,17 @@ from alvra_tools.utils import *
 
 ######################################
 
+def get_timezero_NBS(json_file):
+    from sfdata import SFScanInfo
+    scan = SFScanInfo(json_file)
+    fn = scan.files[0][0].replace('.BSDATA.h5','*').replace('.PVCHANNELS.h5','*').replace('.CAMERAS.h5','*').replace('.*JF*.h5','*')
+    with SFDataFiles(fn) as sfd:
+        ch = sfd['SARES11-CVME-EVR0:DUMMY_PV2_NBS']
+        t0mm = ch.data[0]
+    return t0mm
+
+######################################
+
 def correlation_filter_static(FluoData, Izero, quantile):
     
     FluoData_norm = FluoData / Izero
@@ -112,7 +123,7 @@ def XAS_scan_1diode_static(json_file, diode, Izero, quantile):
     from sfdata import SFScanInfo
     scan = SFScanInfo(json_file)
 
-    Energy_eV = scan.readbacks
+    Adjustable = scan.readbacks
 
     DataFluo = []
     IzeroFEL = []
@@ -150,13 +161,13 @@ def XAS_scan_1diode_static(json_file, diode, Izero, quantile):
        print ('Step {} of {}: Processed {}'.format(i+1, len(scan.files), filename))
        print ("correlation Diode (all shots) = {}".format(pearsonr(IzeroFEL_shot,Fluo_shot)[0]))
     
-    Energy_eV = Energy_eV[:np.shape(DataFluo)[0]]
+    Adjustable = Energy_eV[:np.shape(DataFluo)[0]]
     
     DataFluo = np.asarray(DataFluo)
     IzeroFEL = np.asarray(Izero)
     correlation = np.asarray(correlation)
 
-    return (DataFluo, IzeroFEL, correlation, Energy_eV)
+    return (DataFluo, IzeroFEL, correlation, Adjustable)
 
 ######################################
 
@@ -232,6 +243,81 @@ def XAS_scan_1diode(json_file, diode, Izero, quantile):
     correlation = np.asarray(correlation)
 
     return (DataFluo_pump, DataFluo_unpump, Pump_probe, Izero_pump, Izero_unpump, correlation, Adjustable)
+
+######################################
+
+def XAS_scan_2diodes_static(json_file, diode1, diode2, Izero, quantile):
+    channels = [channel_Events, diode1, diode2, Izero]
+
+    from sfdata import SFScanInfo
+    scan = SFScanInfo(json_file)
+
+    Adjustable = scan.readbacks
+
+    DataFluo1 = []
+    DataFluo2 = []
+    IzeroFEL = []
+ 
+    correlation1 = []
+    correlation2 = []
+
+    for i, step in enumerate(scan):
+       check_files_and_data(step)
+       clear_output(wait=True)
+       print (json_file)
+       filename = scan.files[i][0].split('/')[-1].split('.')[0]
+
+       results,_ = load_data_compact(channels, step)
+    
+       Fluo_shot1 = results[diode1]
+       Fluo_shot2 = results[diode2]
+       IzeroFEL_shot = results[Izero]
+    
+       ######################################
+       ### filter Diode1 data
+       ######################################
+
+       Diode1_shot_filter, Izero_filter = correlation_filter_static(Fluo_shot1, IzeroFEL_shot, quantile)
+       Diode1_shot_filter = Diode1_shot_filter / Izero_filter
+
+       ######################################
+       ### filter Diode2 data
+       ######################################
+
+       Diode2_shot_filter, Izero_filter = correlation_filter_static(Fluo_shot2, IzeroFEL_shot, quantile)
+       Diode2_shot_filter = Diode2_shot_filter / Izero_filter
+
+       ######################################
+       ### make dataframes Diode1
+       ######################################
+
+       df_fluo1 = pd.DataFrame(Diode1_shot_filter)
+       DataFluo1.append(np.nanquantile(df_fluo1, [0.5, 0.5 - quantile/2, 0.5 + quantile/2]))
+
+       ######################################
+       ### make dataframes Diode2
+       ######################################
+
+       df_fluo2 = pd.DataFrame(Diode2_shot_filter)
+       DataFluo2.append(np.nanquantile(df_fluo2, [0.5, 0.5 - quantile/2, 0.5 + quantile/2]))
+
+       correlation1.append(pearsonr(IzeroFEL_shot,Fluo_shot1)[0])
+       correlation2.append(pearsonr(IzeroFEL_shot,Fluo_shot2)[0])
+       IzeroFEL.append(np.mean(IzeroFEL_shot))
+	
+       print ('Step {} of {}: Processed {}'.format(i+1, len(scan.files), filename))
+       print ("correlation Diode1 (all shots) = {}".format(pearsonr(IzeroFEL_shot,Fluo_shot1)[0]))
+       print ("correlation Diode2 (all shots) = {}".format(pearsonr(IzeroFEL_shot,Fluo_shot2)[0]))
+    
+    Adjustable = Energy_eV[:np.shape(DataFluo1)[0]]
+    
+    DataFluo1 = np.asarray(DataFluo1)
+    DataFluo2 = np.asarray(DataFluo2)
+    IzeroFEL = np.asarray(Izero)
+    correlation1 = np.asarray(correlation1)
+    correlation2 = np.asarray(correlation2)
+
+    return (DataFluo1, DataFluo2, IzeroFEL, correlation1, correlation2, Adjustable)
 
 ######################################
 
