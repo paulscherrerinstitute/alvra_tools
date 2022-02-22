@@ -161,7 +161,7 @@ def XAS_scan_1diode_static(json_file, diode, Izero, quantile):
        print ('Step {} of {}: Processed {}'.format(i+1, len(scan.files), filename))
        print ("correlation Diode (all shots) = {}".format(pearsonr(IzeroFEL_shot,Fluo_shot)[0]))
     
-    Adjustable = Energy_eV[:np.shape(DataFluo)[0]]
+    Adjustable = Adjustable[:np.shape(DataFluo)[0]]
     
     DataFluo = np.asarray(DataFluo)
     IzeroFEL = np.asarray(Izero)
