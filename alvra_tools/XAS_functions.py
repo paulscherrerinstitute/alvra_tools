@@ -188,6 +188,7 @@ def XAS_scan_1diode(json_file, diode, Izero, quantile):
     Izero_unpump = []
 
     correlation = []
+    goodshots = []
 
     for i, step in enumerate(scan):
        check_files_and_data(step)
@@ -224,7 +225,8 @@ def XAS_scan_1diode(json_file, diode, Izero, quantile):
 
        df_pump_probe_APD1 = pd.DataFrame(Pump_probe_shot)
        Pump_probe.append(np.nanquantile(df_pump_probe_APD1, [0.5, 0.5 - quantile/2, 0.5 + quantile/2]))
-
+       
+       goodshots.append(len(Pump_probe_shot))
        correlation.append(pearsonr(IzeroFEL_pump_shot,Fluo_pump_shot)[0])
        Izero_pump.append(np.mean(IzeroFEL_pump_shot))
        Izero_unpump.append(np.mean(IzeroFEL_unpump_shot))
@@ -242,7 +244,7 @@ def XAS_scan_1diode(json_file, diode, Izero, quantile):
     Izero_unpump = np.asarray(Izero_unpump)
     correlation = np.asarray(correlation)
 
-    return (DataFluo_pump, DataFluo_unpump, Pump_probe, Izero_pump, Izero_unpump, correlation, Adjustable)
+    return (DataFluo_pump, DataFluo_unpump, Pump_probe, Izero_pump, Izero_unpump, correlation, Adjustable, goodshots)
 
 ######################################
 
@@ -344,6 +346,9 @@ def XAS_scan_2diodes(json_file, diode1, diode2, Izero, quantile):
     correlation1 = []
     correlation2 = []
 
+    goodshots1 = []
+    goodshots2 = []
+
     for i, step in enumerate(scan):
        check_files_and_data(step)
        clear_output(wait=True)
@@ -402,7 +407,9 @@ def XAS_scan_2diodes(json_file, diode1, diode2, Izero, quantile):
 
        df_pump_probe_2 = pd.DataFrame(Pump_probe_2_shot)
        Pump_probe2.append(np.nanquantile(df_pump_probe_2, [0.5, 0.5 - quantile/2, 0.5 + quantile/2]))
-
+       
+       goodshots1.append(len(Pump_probe_1_shot))
+       goodshots2.append(len(Pump_probe_2_shot))
        correlation1.append(pearsonr(IzeroFEL_pump_shot,Fluo1_pump_shot)[0])
        correlation2.append(pearsonr(IzeroFEL_pump_shot,Fluo2_pump_shot)[0])
        Izero_pump.append(np.mean(IzeroFEL_pump_shot))
@@ -412,7 +419,7 @@ def XAS_scan_2diodes(json_file, diode1, diode2, Izero, quantile):
        print ("correlation Diode1 (all shots) = {}".format(pearsonr(IzeroFEL_pump_shot,Fluo1_pump_shot)[0]))
        print ("correlation Diode2 (all shots) = {}".format(pearsonr(IzeroFEL_pump_shot,Fluo2_pump_shot)[0]))
     
-    Adjustable = Adjustable[:np.shape(Pump_probe)[0]]
+    Adjustable = Adjustable[:np.shape(Pump_probe1)[0]]
     
     DataFluo1_pump = np.asarray(DataFluo1_pump)
     DataFluo1_unpump = np.asarray(DataFluo1_unpump)
@@ -427,7 +434,7 @@ def XAS_scan_2diodes(json_file, diode1, diode2, Izero, quantile):
     correlation1 = np.asarray(correlation1)
     correlation2 = np.asarray(correlation2)
 
-    return (DataFluo1_pump, DataFluo1_unpump, Pump_probe1, DataFluo2_pump, DataFluo2_unpump, Pump_probe2, Izero_pump, Izero_unpump, correlation1, correlation2, Adjustable)
+    return (DataFluo1_pump, DataFluo1_unpump, Pump_probe1, DataFluo2_pump, DataFluo2_unpump, Pump_probe2, Izero_pump, Izero_unpump, correlation1, correlation2, Adjustable, goodshots1, goodshots2)
 
 ######################################
 
