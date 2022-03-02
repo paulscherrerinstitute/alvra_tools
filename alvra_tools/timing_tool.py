@@ -63,7 +63,7 @@ def arrivalTimes(filter_name, px2fs, backgrounds, signals, background_from_fit, 
     edgepos, edgewfm, peakwfm = edge(filter_name, backgrounds, signals, background_from_fit, peakback)   
 
     arrivalTimes = (p0 - edgepos)*px2fs
-    arrivalAmplitudes = np.max(peakwfm, axis = -1) * 11500    
+    arrivalAmplitudes = np.max(peakwfm[:,500:1500], axis = -1) * 11500    
     
     return arrivalTimes, arrivalAmplitudes, edgewfm, peakwfm
 
