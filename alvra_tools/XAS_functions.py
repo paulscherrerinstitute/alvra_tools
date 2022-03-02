@@ -380,6 +380,8 @@ def XAS_scan_2diodes(json_file, diode1, diode2, Izero, quantile):
     
        Diode2_pump_shot_filter, Diode2_unpump_shot_filter, Izero_pump_filter, Izero_unpump_filter = correlation_filter(Fluo2_pump_shot, Fluo2_unpump_shot, IzeroFEL_pump_shot, IzeroFEL_unpump_shot, quantile)
        Diode2_pump_shot_filter = Diode2_pump_shot_filter / Izero_pump_filter
+       Diode2_unpump_shot_filter = Diode2_unpump_shot_filter / Izero_unpump_filter
+
        Pump_probe_2_shot = Diode2_pump_shot_filter - Diode2_unpump_shot_filter
 
        ######################################
