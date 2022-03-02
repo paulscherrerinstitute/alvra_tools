@@ -629,16 +629,21 @@ def XAS_delayscan_noTT_2diodes(json_file, diode1, diode2, Izero, quantile):
        print ('Step {} of {}: Processed {}'.format(i+1, len(scan.files), filename))
        print ("correlation Diode1 (all shots) = {}".format(pearsonr(IzeroFEL_pump_shot,Fluo1_pump_shot)[0]))
        print ("correlation Diode2 (all shots) = {}".format(pearsonr(IzeroFEL_pump_shot,Fluo2_pump_shot)[0]))
-    
-    Delay_mm = Delay_mm[:np.shape(Pump_probe)[0]]
-    
-    DataFluo_pump = np.asarray(DataFluo_pump)
-    DataFluo_unpump = np.asarray(DataFluo_unpump)
-    Pump_probe = np.asarray(Pump_probe)
+
+    Delay_mm = Delay_mm[:np.shape(Pump_probe1)[0]]
+
+    DataFluo1_pump = np.asarray(DataFluo1_pump)
+    DataFluo1_unpump = np.asarray(DataFluo1_unpump)
+    Pump_probe1 = np.asarray(Pump_probe1)
+
+    DataFluo2_pump = np.asarray(DataFluo2_pump)
+    DataFluo2_unpump = np.asarray(DataFluo2_unpump)
+    Pump_probe2 = np.asarray(Pump_probe2)
 
     Izero_pump = np.asarray(Izero_pump)
     Izero_unpump = np.asarray(Izero_unpump)
-    correlation = np.asarray(correlation)
+    correlation1 = np.asarray(correlation1)
+    correlation2 = np.asarray(correlation2)
 
     return (DataFluo1_pump, DataFluo1_unpump, Pump_probe1, DataFluo2_pump, DataFluo2_unpump, Pump_probe2, Izero_pump, Izero_unpump, correlation1, correlation2, Delay_mm, Delay_fs, goodshots1, goodshots2)
 
