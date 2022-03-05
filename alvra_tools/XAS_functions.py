@@ -632,7 +632,7 @@ def XAS_delayscan_noTT_2diodes(json_file, diode1, diode2, Izero, quantile):
        print ("correlation Diode2 (all shots) = {}".format(pearsonr(IzeroFEL_pump_shot,Fluo2_pump_shot)[0]))
 
     Delay_mm = Delay_mm[:np.shape(Pump_probe1)[0]]
-    Delay_fs = Delay_fs[:np.shape(Pump_probe)[0]]
+    Delay_fs = Delay_fs[:np.shape(Pump_probe1)[0]]
 
     DataFluo1_pump = np.asarray(DataFluo1_pump)
     DataFluo1_unpump = np.asarray(DataFluo1_unpump)
