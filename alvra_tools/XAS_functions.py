@@ -512,6 +512,7 @@ def XAS_delayscan_noTT(json_file, diode, Izero, quantile):
        goodshots.append(len(Pump_probe_shot))
     
     Delay_mm = Delay_mm[:np.shape(Pump_probe)[0]]
+    Delay_fs = Delay_fs[:np.shape(Pump_probe)[0]]
     
     DataFluo_pump = np.asarray(DataFluo_pump)
     DataFluo_unpump = np.asarray(DataFluo_unpump)
