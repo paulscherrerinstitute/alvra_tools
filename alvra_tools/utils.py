@@ -76,7 +76,6 @@ def make_roi(roi):
     r1 = slice(*roi[:2])
     return r0, r1
 
-
 def errfunc_fwhm(x, x0, amplitude, width, offset):
     return offset + amplitude*erf((x0-x)*2*np.sqrt(np.log(2))/(np.abs(width)))         #d is fwhm
 
@@ -133,6 +132,7 @@ def estimate_conv_exp_gauss_heaviside_parameters(x,y):
     width = np.diff(x).mean()
     offset = y.min()
     lifetime = 0.25
+    return x0, amplitude, width,offset,lifetime
 
 
 def conv_exp_gauss_heaviside2(x,x0,amplitude,width,offset,lifetime,a,b):
@@ -150,7 +150,24 @@ def estimate_conv_exp_gauss_heaviside2_parameters(x,y):
     lifetime = 0.25
     a = 0
     b = 0
+    return x0, amplitude, width,offset,lifetime, a, b
 
+def model_decay_2exp(x, x0, amp1, amp2, amp3, tau1, tau2, sigma, offset):
+    first_exp  = 0.5*(amp1 * np.exp((x0-x)/tau1 + 0.5*(sigma/tau1)**2)) * (1 + erf((x-(x0+sigma**2/tau1))/sigma*np.sqrt(2)))
+    second_exp = 0.5*(amp2 * np.exp((x0-x)/tau2 + 0.5*(sigma/tau2)**2)) * (1 + erf((x-(x0+sigma**2/tau2))/sigma*np.sqrt(2)))
+    third_erf  = 0.5* offset * (1 + erf((x-x0)/(sigma*np.sqrt(2))))
+    return first_exp + second_exp + third_erf
+
+def estimate_model_decay_2exp_parameters(x,y):
+    x0 = 0
+    amp1 = y.max()
+    amp2 = y.max()/2
+    amp3 = y.max()/2
+    tau1 = x.mean()/2
+    tau2 = x.mean()
+    sigma = np.diff(x).mean() 
+    offset = y.min()
+    
 
 def mm2fs(x, t0_mm):
      return (x-t0_mm)*2/(299792458*1e3*1e-15)
