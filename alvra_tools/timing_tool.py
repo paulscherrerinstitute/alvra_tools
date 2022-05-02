@@ -6,6 +6,7 @@ from scipy.interpolate import interp1d
 from scipy.signal import tukey
 from scipy.ndimage import gaussian_filter1d
 from scipy.ndimage import convolve1d
+from datetime import datetime
 
 #spectrometer wavelength calibration / frequency conversion
 lambdas = 467.55 + 0.07219*np.arange(0,2047) # calibration from 23-9-2020
@@ -28,7 +29,35 @@ nus_baby = 299792458 / (lambdas_baby * 10**-9) # frequency space, uneven, baby
 nus_new_baby = np.linspace(nus_baby[0], nus_baby[-1], num=2048, endpoint=True) # frequency space, even, baby
 derivFilter = np.concatenate((tukey(2000)[0:500], np.ones(2048-1000), tukey(2000)[1500:2000])) # to get rid of the edges
 
+#########################################################
 
+def get_arrTimes(results_PumpProbe, step, TT, target, calibration):
+    sig = results_PumpProbe[TT[0]].pump
+    print ("Sig {} pump ={}".format(TT[0], np.shape(sig))) 
+    if len(TT) > 1:
+        back = results_PumpProbe[TT[1]].pump
+        print ("Bkg {}={}".format(TT[1], np.shape(back)))
+            
+        bkg_files = find_backgrounds(step.fnames[0],'/scratch')
+        print ("Bkg files recorded at {}".format(datetime.fromtimestamp(bkg_files[2])))
+        print (bkg_files[0])
+        print (bkg_files[1])
+        background_from_fit = np.loadtxt(bkg_files[0])
+        peakback = np.loadtxt(bkg_files[1])
+
+        arrTimes, arrTimesAmp, sigtraces, peaktraces = arrivalTimes(target, calibration, back, sig, background_from_fit, peakback)
+
+    else:
+        back = results_PumpProbe[TT[0]].unpump 
+        print ("Bkg {} unpump ={}".format(TT[0], np.shape(back)))
+            
+        back_avg = np.mean(back, axis = 0)
+
+        arrTimes, arrTimesAmp, sigtraces, peaktraces = arrivalTimes_selfRef(target, calibration, back_avg, sig) 
+
+    return arrTimes, arrTimesAmp, sigtraces, peaktraces
+
+#########################################################
 
 def arrivalTimes_selfRef(filter_name, px2fs, background_avg, signals):
     """
@@ -48,6 +77,7 @@ def arrivalTimes_selfRef(filter_name, px2fs, background_avg, signals):
 
     return arrivalTimes, arrivalAmplitudes, edgewfm, peakwfm
 
+#########################################################
 
 def arrivalTimes(filter_name, px2fs, backgrounds, signals, background_from_fit, peakback):
     """
@@ -67,9 +97,13 @@ def arrivalTimes(filter_name, px2fs, backgrounds, signals, background_from_fit, 
     
     return arrivalTimes, arrivalAmplitudes, edgewfm, peakwfm
 
+#########################################################
+
 def _get_base_folder(fname):
     fname = fname.split(os.sep)
     return os.sep.join(fname[:5])
+
+#########################################################
 
 def find_backgrounds(fname, path):
     fpath = pathlib.Path(fname)
@@ -98,6 +132,7 @@ def find_backgrounds(fname, path):
 
     return background, peak_background, fmtime
 
+#########################################################
 
 def edge_selfRef(filter_name, back_avg, signals):
     """
@@ -133,6 +168,7 @@ def edge_selfRef(filter_name, back_avg, signals):
 
     return peak2, sig6, sig5gaussO1
 
+#########################################################
 
 def edge(filter_name, backgrounds, signals, background_from_fit, peakback):
     """

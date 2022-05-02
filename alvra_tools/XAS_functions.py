@@ -12,6 +12,7 @@ import itertools
 from alvra_tools.load_data import *
 from alvra_tools.channels import *
 from alvra_tools.utils import *
+from alvra_tools.timing_tool import *
 
 ######################################
 
@@ -78,6 +79,39 @@ def correlation_filter(FluoData_pump, FluoData_unpump, Izero_pump, Izero_unpump,
 
 ######################################
 
+def correlation_filter_TT(FluoData_pump, FluoData_unpump, Izero_pump, Izero_unpump, arrTimes, delay_fs, quantile):
+    
+    FluoData_pump_norm = FluoData_pump / Izero_pump
+    FluoData_unpump_norm = FluoData_unpump / Izero_unpump
+
+    qnt_low_pump = np.nanquantile(FluoData_pump_norm, 0.5 - quantile/2)
+    qnt_high_pump = np.nanquantile(FluoData_pump_norm, 0.5 + quantile/2)
+    qnt_low_unpump = np.nanquantile(FluoData_unpump_norm, 0.5 - quantile/2)
+    qnt_high_unpump = np.nanquantile(FluoData_unpump_norm, 0.5 + quantile/2)
+
+    condition_pump_low = FluoData_pump_norm > qnt_low_pump
+    condition_pump_high = FluoData_pump_norm < qnt_high_pump
+    condition_unpump_low = FluoData_unpump_norm > qnt_low_unpump
+    condition_unpump_high = FluoData_unpump_norm < qnt_high_unpump
+
+    correlation_filter = condition_pump_low & condition_pump_high & condition_unpump_low & condition_unpump_high
+    
+    FluoData_pump_filter = FluoData_pump[correlation_filter]
+    FluoData_unpump_filter = FluoData_unpump[correlation_filter]
+    Izero_pump_filter = Izero_pump[correlation_filter]
+    Izero_unpump_filter = Izero_unpump[correlation_filter]
+    arrTimes_filter = arrTimes[correlation_filter]
+    delay_fs_filter = delay_fs[correlation_filter]
+
+    #FluoData_pump_filter_norm = FluoData_pump_filter / Izero_pump_filter
+    #FluoData_unpump_filter_norm = FluoData_unpump_filter / Izero_unpump_filter
+
+    print ('{} shots out of {} survived'.format(np.shape(FluoData_pump_filter), np.shape(FluoData_pump)))
+
+    return (FluoData_pump_filter, FluoData_unpump_filter, Izero_pump_filter, Izero_unpump_filter, arrTimes_filter, delay_fs_filter)
+
+######################################
+
 def Get_correlation_from_scan_static(scan, index, diode, Izero, quantile):
     channels = [channel_Events, diode, Izero]
 
@@ -101,7 +135,7 @@ def Get_correlation_from_scan(scan, index, diode, Izero, quantile):
     channels_all = channels_pp
 
     data = scan[index]
-    results,_,_,_ = load_data_compact_laser_pump(channels_pp, channels_all, data)
+    results,_,_,_ = load_data_compact_pump_probe(channels_pp, channels_all, data)
     data.close()
     
     clear_output(wait=True)
@@ -133,8 +167,9 @@ def XAS_scan_1diode_static(json_file, diode, Izero, quantile):
     for i, step in enumerate(scan):
        check_files_and_data(step)
        clear_output(wait=True)
-       print (json_file)
        filename = scan.files[i][0].split('/')[-1].split('.')[0]
+       print ('Processing: {}'.format(json_file.split('/')[-3]))
+       print ('Step {} of {}: Processing {}'.format(i+1, len(scan.files), filename))
 
        results,_ = load_data_compact(channels, step)
     
@@ -193,10 +228,11 @@ def XAS_scan_1diode(json_file, diode, Izero, quantile):
     for i, step in enumerate(scan):
        check_files_and_data(step)
        clear_output(wait=True)
-       print (json_file)
        filename = scan.files[i][0].split('/')[-1].split('.')[0]
+       print ('Processing: {}'.format(json_file.split('/')[-3]))
+       print ('Step {} of {}: Processing {}'.format(i+1, len(scan.files), filename))
 
-       resultsPP, results, _, _ = load_data_compact_laser_pump(channels_pp, channels_all, step)
+       resultsPP, results, _, _ = load_data_compact_pump_probe(channels_pp, channels_all, step)
     
        IzeroFEL_pump_shot = resultsPP[Izero].pump
        IzeroFEL_unpump_shot = resultsPP[Izero].unpump
@@ -266,8 +302,9 @@ def XAS_scan_2diodes_static(json_file, diode1, diode2, Izero, quantile):
     for i, step in enumerate(scan):
        check_files_and_data(step)
        clear_output(wait=True)
-       print (json_file)
        filename = scan.files[i][0].split('/')[-1].split('.')[0]
+       print ('Processing: {}'.format(json_file.split('/')[-3]))
+       print ('Step {} of {}: Processing {}'.format(i+1, len(scan.files), filename))
 
        results,_ = load_data_compact(channels, step)
     
@@ -311,7 +348,7 @@ def XAS_scan_2diodes_static(json_file, diode1, diode2, Izero, quantile):
        print ("correlation Diode1 (all shots) = {}".format(pearsonr(IzeroFEL_shot,Fluo_shot1)[0]))
        print ("correlation Diode2 (all shots) = {}".format(pearsonr(IzeroFEL_shot,Fluo_shot2)[0]))
     
-    Adjustable = Energy_eV[:np.shape(DataFluo1)[0]]
+    Adjustable = Adjustable[:np.shape(DataFluo1)[0]]
     
     DataFluo1 = np.asarray(DataFluo1)
     DataFluo2 = np.asarray(DataFluo2)
@@ -352,10 +389,11 @@ def XAS_scan_2diodes(json_file, diode1, diode2, Izero, quantile):
     for i, step in enumerate(scan):
        check_files_and_data(step)
        clear_output(wait=True)
-       print (json_file)
        filename = scan.files[i][0].split('/')[-1].split('.')[0]
+       print ('Processing: {}'.format(json_file.split('/')[-3]))
+       print ('Step {} of {}: Processing {}'.format(i+1, len(scan.files), filename))
 
-       resultsPP, results, _, _ = load_data_compact_laser_pump(channels_pp, channels_all, step)
+       resultsPP, results, _, _ = load_data_compact_pump_probe(channels_pp, channels_all, step)
     
        IzeroFEL_pump_shot = resultsPP[Izero].pump
        IzeroFEL_unpump_shot = resultsPP[Izero].unpump
@@ -469,10 +507,11 @@ def XAS_delayscan_noTT(json_file, diode, Izero, quantile):
     for i, step in enumerate(scan):
        check_files_and_data(step)
        clear_output(wait=True)
-       print (json_file)
        filename = scan.files[i][0].split('/')[-1].split('.')[0]
+       print ('Processing: {}'.format(json_file.split('/')[-3]))
+       print ('Step {} of {}: Processing {}'.format(i+1, len(scan.files), filename))
       
-       resultsPP, results, _, _ = load_data_compact_laser_pump(channels_pp, channels_all, step)
+       resultsPP, results, _, _ = load_data_compact_pump_probe(channels_pp, channels_all, step)
 
        IzeroFEL_pump_shot = resultsPP[Izero].pump
        IzeroFEL_unpump_shot = resultsPP[Izero].unpump
@@ -562,10 +601,11 @@ def XAS_delayscan_noTT_2diodes(json_file, diode1, diode2, Izero, quantile):
     for i, step in enumerate(scan):
        check_files_and_data(step)
        clear_output(wait=True)
-       print (json_file)
        filename = scan.files[i][0].split('/')[-1].split('.')[0]
+       print ('Processing: {}'.format(json_file.split('/')[-3]))
+       print ('Step {} of {}: Processing {}'.format(i+1, len(scan.files), filename))
       
-       resultsPP, results, _, _ = load_data_compact_laser_pump(channels_pp, channels_all, step)
+       resultsPP, results, _, _ = load_data_compact_pump_probe(channels_pp, channels_all, step)
 
        IzeroFEL_pump_shot = resultsPP[Izero].pump
        IzeroFEL_unpump_shot = resultsPP[Izero].unpump
@@ -651,9 +691,218 @@ def XAS_delayscan_noTT_2diodes(json_file, diode1, diode2, Izero, quantile):
 
 ######################################
 
-#def XAS_delayscan_PSEN(json_file, diode, Izero,   quantile):
+TT_PSEN119 = [channel_PSEN119_signal, channel_PSEN119_bkg] 
+TT_PSEN124 = [channel_PSEN125_signal]
+TT_PSEN126 = [channel_PSEN125_signal, channel_PSEN125_bkg, channel_PSEN125_arrTimes, channel_PSEN125_arrTimesAmp, channel_PSEN125_peaks, channel_PSEN125_edges]
 
+def XAS_delayscan_PSEN(json_file, TT, channel_delay_motor, diode, Izero, timezero_mm, quantile, target, calibration, filterTime=2000, filterAmp=0):
+    channels_pp = [channel_Events, diode, Izero, channel_delay_motor] + TT
+    channels_all = channels_pp
 
+    from sfdata import SFScanInfo
+    scan = SFScanInfo(json_file)
 
+    if ' as delay' in scan.parameters['name'][0]:
+        print ('Scan is done with the stage in fs')
+        Delay_fs = scan.readbacks
+        Delay_mm = fs2mm(scan.readbacks,0)
+    else:
+        print ('Scan is done with the stage in mm')
+        Delay_fs = mm2fs(scan.readbacks,0)
+        Delay_mm = scan.readbacks
 
+    Izero_pump = []
+    Izero_unpump = []
+
+    DataFluo_pump = []
+    DataFluo_unpump = []
+    Pump_probe = []
+
+    Delay_fs_stage = []
+    arrTimes_scan = []
+    arrTimesAmp_scan = []
+    Delays_fs_scan = []
+    Pump_probe_scan = []
+
+    correlation = []
+    goodshots = []
+
+    for i, step in enumerate(scan):
+       check_files_and_data(step)
+       clear_output(wait=True)
+       filename = scan.files[i][0].split('/')[-1].split('.')[0]
+       print ('Processing: {}'.format(json_file.split('/')[-3]))
+       print ('Step {} of {}: Processing {}'.format(i+1, len(scan.files), filename))
+      
+       resultsPP, results, _, _ = load_data_compact_pump_probe(channels_pp, channels_all, step)
+
+       IzeroFEL_pump_shot = resultsPP[Izero].pump
+       IzeroFEL_unpump_shot = resultsPP[Izero].unpump
+       Fluo_pump_shot = resultsPP[diode].pump
+       Fluo_unpump_shot = resultsPP[diode].unpump
+
+       delay_shot = resultsPP[channel_delay_motor].pump
+       delay_shot_fs = mm2fs(delay_shot, timezero_mm)
+       Delay_fs_stage.append(delay_shot_fs.mean())
+
+       arrTimes, arrTimesAmp, sigtraces, peaktraces = get_arrTimes(resultsPP, step, TT, target, calibration)
+
+       ######################################
+       ### filter Diode1 data
+       ######################################
+    
+       Diode_pump_shot_filter, Diode_unpump_shot_filter, Izero_pump_filter, Izero_unpump_filter, arrTimes_filter, delay_shot_fs_filter = correlation_filter_TT(Fluo_pump_shot, Fluo_unpump_shot, IzeroFEL_pump_shot, IzeroFEL_unpump_shot, arrTimes, delay_shot_fs, quantile)
+       Diode_pump_shot_filter = Diode_pump_shot_filter / Izero_pump_filter
+       Diode_unpump_shot_filter = Diode_unpump_shot_filter / Izero_unpump_filter
+
+       Pump_probe_shot = Diode_pump_shot_filter - Diode_unpump_shot_filter
+        
+       Delays_fs_scan.append(delay_shot_fs_filter)
+       arrTimes_scan.append(arrTimes_filter)
+       Pump_probe_scan.append(Pump_probe_shot)
+
+       df_pump = pd.DataFrame(Diode_pump_shot_filter)
+       DataFluo_pump.append(np.nanquantile(df_pump, [0.5, 0.5 - quantile/2, 0.5 + quantile/2]))
+    
+       df_unpump = pd.DataFrame(Diode_unpump_shot_filter)
+       DataFluo_unpump.append(np.nanquantile(df_unpump, [0.5, 0.5 - quantile/2, 0.5 + quantile/2]))       
+
+       df_pump_probe = pd.DataFrame(Pump_probe_shot)
+       Pump_probe.append(np.nanquantile(df_pump_probe, [0.5, 0.5 - quantile/2, 0.5 + quantile/2]))
+
+       print ('Step {} of {}: Processed {}'.format(i+1, len(scan.files), filename))
+       print ("correlation Diode (all shots) = {}".format(pearsonr(IzeroFEL_pump_shot,Fluo_pump_shot)[0]))
+
+       goodshots.append(len(Pump_probe_shot))
+
+    Delay_mm = Delay_mm[:np.shape(Pump_probe)[0]]
+    Delay_fs = Delay_fs[:np.shape(Pump_probe)[0]]
+
+    Delays_fs_scan = np.asarray(list(itertools.chain.from_iterable(Delays_fs_scan)))
+    arrTimes_scan = np.asarray(list(itertools.chain.from_iterable(arrTimes_scan)))
+    Pump_probe_scan = np.asarray(list(itertools.chain.from_iterable(Pump_probe_scan)))
+
+    Delays_fs_scan = np.asarray(Delays_fs_scan)
+    arrTimes_scan = np.asarray(arrTimes_scan)
+    Pump_probe_scan = np.asarray(Pump_probe_scan)
+
+    DataFluo_pump = np.asarray(DataFluo_pump)
+    DataFluo_unpump = np.asarray(DataFluo_unpump)
+    Pump_probe = np.asarray(Pump_probe)
+    Izero_pump = np.asarray(Izero_pump)
+    Izero_unpump = np.asarray(Izero_unpump)
+    correlation = np.asarray(correlation)
+
+    Delays_corr_scan = Delays_fs_scan + arrTimes_scan
+    
+    return (Delays_fs_scan, Delays_corr_scan, DataFluo_pump, DataFluo_unpump, Pump_probe, Pump_probe_scan, Izero_pump, Izero_unpump, correlation, Delay_mm, Delay_fs, goodshots)
+    
+######################################
+
+def XAS_delayscan_PSEN_bs(json_file, TT, channel_delay_motor, diode, Izero, timezero_mm, quantile, filterTime=2000, filterAmp=0):
+    channels_pp = [channel_Events, diode, Izero, channel_delay_motor] + TT
+    channels_all = channels_pp
+
+    from sfdata import SFScanInfo
+    scan = SFScanInfo(json_file)
+
+    if ' as delay' in scan.parameters['name'][0]:
+        print ('Scan is done with the stage in fs')
+        Delay_fs = scan.readbacks
+        Delay_mm = fs2mm(scan.readbacks,0)
+    else:
+        print ('Scan is done with the stage in mm')
+        Delay_fs = mm2fs(scan.readbacks,0)
+        Delay_mm = scan.readbacks
+
+    Izero_pump = []
+    Izero_unpump = []
+
+    DataFluo_pump = []
+    DataFluo_unpump = []
+    Pump_probe = []
+
+    Delay_fs_stage = []
+    arrTimes_scan = []
+    arrTimesAmp_scan = []
+    Delays_fs_scan = []
+    Pump_probe_scan = []
+
+    correlation = []
+    goodshots = []
+
+    for i, step in enumerate(scan):
+       check_files_and_data(step)
+       clear_output(wait=True)
+       filename = scan.files[i][0].split('/')[-1].split('.')[0]
+       print ('Processing: {}'.format(json_file.split('/')[-3]))
+       print ('Step {} of {}: Processing {}'.format(i+1, len(scan.files), filename))
+      
+       resultsPP, results, _, _ = load_data_compact_pump_probe(channels_pp, channels_all, step)
+
+       IzeroFEL_pump_shot = resultsPP[Izero].pump
+       IzeroFEL_unpump_shot = resultsPP[Izero].unpump
+       Fluo_pump_shot = resultsPP[diode].pump
+       Fluo_unpump_shot = resultsPP[diode].unpump
+
+       delay_shot = resultsPP[channel_delay_motor].pump
+       delay_shot_fs = mm2fs(delay_shot, timezero_mm)
+       Delay_fs_stage.append(delay_shot_fs.mean())
+
+       arrTimes = resultsPP[channel_PSEN125_arrTimes].pump
+       arrTimesAmp = resultsPP[channel_PSEN125_arrTimesAmp].pump
+       sigtraces = resultsPP[channel_PSEN125_edges].pump
+       peaktraces = resultsPP[channel_PSEN125_peaks].pump
+
+       #arrTimes, arrTimesAmp, sigtraces, peaktraces = get_arrTimes(resultsPP, step, TT, target, calibration)
+
+       ######################################
+       ### filter Diode1 data
+       ######################################
+    
+       Diode_pump_shot_filter, Diode_unpump_shot_filter, Izero_pump_filter, Izero_unpump_filter, arrTimes_filter, delay_shot_fs_filter = correlation_filter_TT(Fluo_pump_shot, Fluo_unpump_shot, IzeroFEL_pump_shot, IzeroFEL_unpump_shot, arrTimes, delay_shot_fs, quantile)
+       Diode_pump_shot_filter = Diode_pump_shot_filter / Izero_pump_filter
+       Diode_unpump_shot_filter = Diode_unpump_shot_filter / Izero_unpump_filter
+
+       Pump_probe_shot = Diode_pump_shot_filter - Diode_unpump_shot_filter
+        
+       Delays_fs_scan.append(delay_shot_fs_filter)
+       arrTimes_scan.append(arrTimes_filter)
+       Pump_probe_scan.append(Pump_probe_shot)
+
+       df_pump = pd.DataFrame(Diode_pump_shot_filter)
+       DataFluo_pump.append(np.nanquantile(df_pump, [0.5, 0.5 - quantile/2, 0.5 + quantile/2]))
+    
+       df_unpump = pd.DataFrame(Diode_unpump_shot_filter)
+       DataFluo_unpump.append(np.nanquantile(df_unpump, [0.5, 0.5 - quantile/2, 0.5 + quantile/2]))       
+
+       df_pump_probe = pd.DataFrame(Pump_probe_shot)
+       Pump_probe.append(np.nanquantile(df_pump_probe, [0.5, 0.5 - quantile/2, 0.5 + quantile/2]))
+
+       print ('Step {} of {}: Processed {}'.format(i+1, len(scan.files), filename))
+       print ("correlation Diode (all shots) = {}".format(pearsonr(IzeroFEL_pump_shot,Fluo_pump_shot)[0]))
+
+       goodshots.append(len(Pump_probe_shot))
+
+    Delay_mm = Delay_mm[:np.shape(Pump_probe)[0]]
+    Delay_fs = Delay_fs[:np.shape(Pump_probe)[0]]
+
+    Delays_fs_scan = np.asarray(list(itertools.chain.from_iterable(Delays_fs_scan)))
+    arrTimes_scan = np.asarray(list(itertools.chain.from_iterable(arrTimes_scan)))
+    Pump_probe_scan = np.asarray(list(itertools.chain.from_iterable(Pump_probe_scan)))
+
+    Delays_fs_scan = np.asarray(Delays_fs_scan)
+    arrTimes_scan = np.asarray(arrTimes_scan)
+    Pump_probe_scan = np.asarray(Pump_probe_scan)
+
+    DataFluo_pump = np.asarray(DataFluo_pump)
+    DataFluo_unpump = np.asarray(DataFluo_unpump)
+    Pump_probe = np.asarray(Pump_probe)
+    Izero_pump = np.asarray(Izero_pump)
+    Izero_unpump = np.asarray(Izero_unpump)
+    correlation = np.asarray(correlation)
+
+    Delays_corr_scan = Delays_fs_scan + arrTimes_scan
+    
+    return (Delays_fs_scan, Delays_corr_scan, DataFluo_pump, DataFluo_unpump, Pump_probe, Pump_probe_scan, Izero_pump, Izero_unpump, correlation, Delay_mm, Delay_fs, goodshots)
 

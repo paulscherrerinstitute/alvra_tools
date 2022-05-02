@@ -61,7 +61,8 @@ def _get_reprates_from_file(JF_file, nshots):
     Laser    = Event_code[:,18]
     Darkshot = Event_code[:,21]
     
-    FEL = np.logical_and(FEL_raw, np.logical_not(Ppicker))
+    #FEL = np.logical_and(FEL_raw, np.logical_not(Ppicker))
+    FEL = FEL_raw
     
     if Darkshot.mean()==0:
         laser_reprate = (1 / Laser.mean() - 1).round().astype(int)
@@ -378,7 +379,7 @@ def load_crop_JF_batches_on_off_2rois(fname, roi1, roi2, reprate_FEL, reprate_la
 
     return images_on_roi1, images_on_roi2, pulse_ids_on, images_off_roi1, images_off_roi2, pulse_ids_off
 
-
+########################################################################################
 
 
 def load_crop_JF_batches_on_off2(fname, roi1, roi2, reprate_FEL, reprate_laser, 
@@ -418,7 +419,7 @@ def load_crop_JF_batches_on_off2(fname, roi1, roi2, reprate_FEL, reprate_laser,
     
     return images_on_roi1, images_on_roi2, pulse_ids_on, images_off_roi1, images_off_roi2, pulse_ids_off
 
-
+########################################################################################
 
 def load_crop_JF_data_on_off(fname, roi1, roi2, reprate_FEL, reprate_laser,
                              gain_file=None, pedestal_file=None, nshots=None):
@@ -442,6 +443,7 @@ def load_crop_JF_data_on_off(fname, roi1, roi2, reprate_FEL, reprate_laser,
 
     return images_on_roi1, images_on_roi2, pulse_ids_on, images_off_roi1, images_off_roi2, pulse_ids_off
 
+########################################################################################
 
 def load_crop_JF_data(fname, roi1, roi2,roi3,roi4,
                              gain_file=None, pedestal_file=None, nshots=None):
@@ -457,7 +459,7 @@ def load_crop_JF_data(fname, roi1, roi2,roi3,roi4,
     
     return images_roi1, images_roi2, images_roi3, images_roi4, pulse_ids
 
-
+########################################################################################
 
 def read_and_crop_jf(channel_jf, roi1=None, roi2=None, roi3=None, roi4=None, batch_size=100):
     images_roi1 = [] # performance here can be improved by using a np array and fill it, see ch.apply_in_batches()
@@ -496,6 +498,7 @@ def check_file_and_data(filename, nshots=None):
         
         return combined
 
+########################################################################################
 
 def check_files_and_data(data, nshots=None):
     #with SFDataFiles(filenames) as data:
@@ -506,6 +509,7 @@ def check_files_and_data(data, nshots=None):
     dataOK = checkData.all()
     return dataOK
 
+########################################################################################
 
 def check_channels(data, asked_channels, name):
     asked_channels = set(asked_channels)
@@ -518,6 +522,7 @@ def check_channels(data, asked_channels, name):
         asked_channels = list(inters)
     return list(asked_channels)
 
+########################################################################################
 
 def load_data_compact(channel_list, data):
     #with SFDataFiles(datafiles) as data:#, SFDataFile(filename_camera) as data_camera:
@@ -533,7 +538,8 @@ def load_data_compact(channel_list, data):
     FEL_raw = Event_code[:,12] #Event 12: BAM bunch 1
     Ppicker = Event_code[:,200]    
 
-    FEL = np.logical_and(FEL_raw, np.logical_not(Ppicker))
+    #FEL = np.logical_and(FEL_raw, np.logical_not(Ppicker))
+    FEL = FEL_raw
 
     index_light = FEL == 1
 
@@ -548,6 +554,8 @@ def load_data_compact(channel_list, data):
         result[ch] = ch_out
 
     return result, pids
+
+########################################################################################
 
 def load_data_compact_JF(channel_list, data, roi1, roi2, roi3, roi4):
     #with SFDataFiles(datafiles) as data:#, SFDataFile(filename_camera) as data_camera:
@@ -582,6 +590,7 @@ def load_data_compact_JF(channel_list, data, roi1, roi2, roi3, roi4):
 
     return result
 
+########################################################################################
 
 def load_data_compact_FEL_pump(channels_pump_unpump, channels_pump, data):  
     #with SFDataFiles(datafiles) as data:
@@ -601,7 +610,8 @@ def load_data_compact_FEL_pump(channels_pump_unpump, channels_pump, data):
     Laser    = Event_code[:,18]
     Darkshot = Event_code[:,21]
 
-    FEL = np.logical_and(FEL_raw, Ppicker)
+    #FEL = np.logical_and(FEL_raw, Ppicker)
+    FEL = FEL_raw
 
     if Darkshot.mean()==0:
         laser_reprate = Laser.mean().round().astype(int)
@@ -661,7 +671,7 @@ def load_data_compact_FEL_pump(channels_pump_unpump, channels_pump, data):
 #    return result_pp, result_pump, FEL_reprate, laser_reprate
     return result_pp, result_pump, final_pids_pump, final_pids_unpump
 
-  
+########################################################################################
 
 def load_data_compact_laser_pump(channels_pump_unpump, channels_FEL, data):
     #with SFDataFiles(datafiles) as data:
@@ -689,7 +699,8 @@ def load_data_compact_laser_pump(channels_pump_unpump, channels_FEL, data):
     Laser    = Event_code[:,18]
     Darkshot = Event_code[:,21]
 
-    FEL = np.logical_and(FEL_raw, np.logical_not(Ppicker))
+    #FEL = np.logical_and(FEL_raw, np.logical_not(Ppicker))
+    FEL = FEL_raw
 
     if Darkshot.mean()==0:
         laser_reprate = (1 / Laser.mean() - 1).round().astype(int)
@@ -736,6 +747,7 @@ def load_data_compact_laser_pump(channels_pump_unpump, channels_FEL, data):
 
     return result_pp, result_FEL, pids_pump, pids_unpump
 
+########################################################################################
 
 def load_data_compact_laser_pump_JF(channels_pump_unpump, channels_FEL, data, roi1=None, roi2=None, roi3=None, roi4=None):
     #with SFDataFiles(datafiles) as data:
@@ -830,6 +842,77 @@ def load_data_compact_laser_pump_JF(channels_pump_unpump, channels_FEL, data, ro
 
     return result_pp, result_FEL, pids_pump, pids_unpump
 
+########################################################################################
+
+def load_data_compact_pump_probe(channels_pump_unpump, channels_FEL, data):
+   
+    channels_pump_unpump = check_channels(data, channels_pump_unpump, "pump unpump")
+    channels_FEL = check_channels(data, channels_FEL, "FEL")
+
+    subset_FEL = data[channels_FEL]
+    subset_FEL.print_stats(show_complete=True)
+    
+    Event_code = subset_FEL[channel_Events].data
+    FEL      = Event_code[:,12] #Event 12: BAM bunch 1
+    
+    Deltap_FEL = (1 / FEL.mean()).round().astype(int) #Get the FEL rep rate from the Event code
+    FEL_reprate = 100 / Deltap_FEL
+    print ('FEL rep rate is {} Hz'.format(FEL_reprate))
+    
+    subset_FEL.drop_missing()
+
+    Event_code = subset_FEL[channel_Events].data
+    
+    FEL_raw  = Event_code[:,12] #Event 12: BAM bunch 1
+    Ppicker  = Event_code[:,200]
+    Laser    = Event_code[:,18]
+    Darkshot = Event_code[:,21]
+
+    FEL = np.logical_and(FEL_raw, np.logical_not(Ppicker))
+    #FEL = FEL_raw
+
+    if Darkshot.mean()==0:
+        laser_reprate = (1 / Laser.mean()).round().astype(int)
+        index_light = np.logical_and.reduce((FEL, Laser))
+        index_dark  = np.logical_and.reduce((FEL, np.logical_not(Laser)))
+    else:
+        laser_reprate = (Laser.mean() / Darkshot.mean()).round().astype(int) 
+        index_light = np.logical_and.reduce((FEL, Laser, np.logical_not(Darkshot)))
+        index_dark = np.logical_and.reduce((FEL, Laser, Darkshot))
+
+    print ('Laser rep rate is {} Hz (delayed or dark)'.format(100 / laser_reprate))
+    print ('Pump scheme is {}:1'.format(laser_reprate - 1))
+
+    result_pp = {}
+    for ch in channels_pump_unpump:
+        ch_pump   = subset_FEL[ch].data[index_light]
+        pids_pump   = subset_FEL[ch].pids[index_light]
+
+        ch_unpump = subset_FEL[ch].data[index_dark]
+        pids_unpump = subset_FEL[ch].pids[index_dark]
+
+        correct_pids_pump   = pids_unpump + Deltap_FEL
+        final_pids, indPump, indUnPump = np.intersect1d(pids_pump, correct_pids_pump, return_indices=True)
+
+        if (((100 / Deltap_FEL) / (laser_reprate - 1)) == FEL_reprate):
+            ch_pump   = ch_pump[indPump]
+            ch_unpump = ch_unpump[indUnPump] 
+
+        ppdata = namedtuple("PPData", ["pump", "unpump"])
+        result_pp[ch] = ppdata(pump=ch_pump, unpump=ch_unpump)
+
+
+    result_FEL = {}
+    for ch in channels_FEL:
+        result_FEL[ch] = subset_FEL[ch].data 
+
+    print ("Loaded {} pump and {} unpump shots".format(len(ch_pump), len(ch_unpump)))
+
+    return result_pp, result_FEL, pids_pump, pids_unpump
+
+########################################################################################
+########################################################################################
+########################################################################################
 
 def load_YAG_events2(filename, modulo = 2, nshots=None):
     
