@@ -151,11 +151,11 @@ def Get_correlation_from_scan(scan, index, diode, Izero, quantile):
     
 ######################################
 
-def XAS_scan_1diode_static(json_file, diode, Izero, quantile):
+def XAS_scan_1diode_static(scan, diode, Izero, quantile):
     channels = [channel_Events, diode, Izero]
 
-    from sfdata import SFScanInfo
-    scan = SFScanInfo(json_file)
+#    from sfdata import SFScanInfo
+#    scan = SFScanInfo(json_file)
 
     Adjustable = scan.readbacks
 
@@ -168,7 +168,7 @@ def XAS_scan_1diode_static(json_file, diode, Izero, quantile):
        check_files_and_data(step)
        clear_output(wait=True)
        filename = scan.files[i][0].split('/')[-1].split('.')[0]
-       print ('Processing: {}'.format(json_file.split('/')[-3]))
+       print ('Processing: {}'.format(scan.fname.split('/')[-3]))
        print ('Step {} of {}: Processing {}'.format(i+1, len(scan.files), filename))
 
        results,_ = load_data_compact(channels, step)
@@ -206,12 +206,12 @@ def XAS_scan_1diode_static(json_file, diode, Izero, quantile):
 
 ######################################
 
-def XAS_scan_1diode(json_file, diode, Izero, quantile):
+def XAS_scan_1diode(scan, diode, Izero, quantile):
     channels_pp = [channel_Events, diode, Izero]
     channels_all = channels_pp    
 
-    from sfdata import SFScanInfo
-    scan = SFScanInfo(json_file)
+#    from sfdata import SFScanInfo
+#    scan = SFScanInfo(json_file)
 
     Adjustable = scan.readbacks
 
@@ -229,7 +229,7 @@ def XAS_scan_1diode(json_file, diode, Izero, quantile):
        check_files_and_data(step)
        clear_output(wait=True)
        filename = scan.files[i][0].split('/')[-1].split('.')[0]
-       print ('Processing: {}'.format(json_file.split('/')[-3]))
+       print ('Processing: {}'.format(scan.fname.split('/')[-3]))
        print ('Step {} of {}: Processing {}'.format(i+1, len(scan.files), filename))
 
        resultsPP, results, _, _ = load_data_compact_pump_probe(channels_pp, channels_all, step)
@@ -284,11 +284,11 @@ def XAS_scan_1diode(json_file, diode, Izero, quantile):
 
 ######################################
 
-def XAS_scan_2diodes_static(json_file, diode1, diode2, Izero, quantile):
+def XAS_scan_2diodes_static(scan, diode1, diode2, Izero, quantile):
     channels = [channel_Events, diode1, diode2, Izero]
 
-    from sfdata import SFScanInfo
-    scan = SFScanInfo(json_file)
+#    from sfdata import SFScanInfo
+#    scan = SFScanInfo(json_file)
 
     Adjustable = scan.readbacks
 
@@ -303,7 +303,7 @@ def XAS_scan_2diodes_static(json_file, diode1, diode2, Izero, quantile):
        check_files_and_data(step)
        clear_output(wait=True)
        filename = scan.files[i][0].split('/')[-1].split('.')[0]
-       print ('Processing: {}'.format(json_file.split('/')[-3]))
+       print ('Processing: {}'.format(scan.fname.split('/')[-3]))
        print ('Step {} of {}: Processing {}'.format(i+1, len(scan.files), filename))
 
        results,_ = load_data_compact(channels, step)
@@ -360,12 +360,12 @@ def XAS_scan_2diodes_static(json_file, diode1, diode2, Izero, quantile):
 
 ######################################
 
-def XAS_scan_2diodes(json_file, diode1, diode2, Izero, quantile):
+def XAS_scan_2diodes(scan, diode1, diode2, Izero, quantile):
     channels_pp = [channel_Events, diode1, diode2, Izero]
     channels_all = channels_pp   
 
-    from sfdata import SFScanInfo
-    scan = SFScanInfo(json_file)
+#    from sfdata import SFScanInfo
+#    scan = SFScanInfo(json_file)
 
     Adjustable = scan.readbacks
 
@@ -390,7 +390,7 @@ def XAS_scan_2diodes(json_file, diode1, diode2, Izero, quantile):
        check_files_and_data(step)
        clear_output(wait=True)
        filename = scan.files[i][0].split('/')[-1].split('.')[0]
-       print ('Processing: {}'.format(json_file.split('/')[-3]))
+       print ('Processing: {}'.format(scan.fname.split('/')[-3]))
        print ('Step {} of {}: Processing {}'.format(i+1, len(scan.files), filename))
 
        resultsPP, results, _, _ = load_data_compact_pump_probe(channels_pp, channels_all, step)
@@ -478,12 +478,12 @@ def XAS_scan_2diodes(json_file, diode1, diode2, Izero, quantile):
 
 ######################################
 
-def XAS_delayscan_noTT(json_file, diode, Izero, quantile):
+def XAS_delayscan_noTT(scan, diode, Izero, quantile):
     channels_pp = [channel_Events, diode, Izero]
     channels_all = channels_pp
 
-    from sfdata import SFScanInfo
-    scan = SFScanInfo(json_file)
+#    from sfdata import SFScanInfo
+#    scan = SFScanInfo(json_file)
 
     if ' as delay' in scan.parameters['name'][0]:
         print ('Scan is done with the stage in fs')
@@ -508,7 +508,7 @@ def XAS_delayscan_noTT(json_file, diode, Izero, quantile):
        check_files_and_data(step)
        clear_output(wait=True)
        filename = scan.files[i][0].split('/')[-1].split('.')[0]
-       print ('Processing: {}'.format(json_file.split('/')[-3]))
+       print ('Processing: {}'.format(scan.fname.split('/')[-3]))
        print ('Step {} of {}: Processing {}'.format(i+1, len(scan.files), filename))
       
        resultsPP, results, _, _ = load_data_compact_pump_probe(channels_pp, channels_all, step)
@@ -565,12 +565,12 @@ def XAS_delayscan_noTT(json_file, diode, Izero, quantile):
 
 ######################################
 
-def XAS_delayscan_noTT_2diodes(json_file, diode1, diode2, Izero, quantile):
+def XAS_delayscan_noTT_2diodes(scan, diode1, diode2, Izero, quantile):
     channels_pp = [channel_Events, diode1, diode2, Izero]
     channels_all = channels_pp
 
-    from sfdata import SFScanInfo
-    scan = SFScanInfo(json_file)
+#    from sfdata import SFScanInfo
+#    scan = SFScanInfo(json_file)
 
     if ' as delay' in scan.parameters['name'][0]:
         print ('Scan is done with the stage in fs')
@@ -602,7 +602,7 @@ def XAS_delayscan_noTT_2diodes(json_file, diode1, diode2, Izero, quantile):
        check_files_and_data(step)
        clear_output(wait=True)
        filename = scan.files[i][0].split('/')[-1].split('.')[0]
-       print ('Processing: {}'.format(json_file.split('/')[-3]))
+       print ('Processing: {}'.format(scan.fname.split('/')[-3]))
        print ('Step {} of {}: Processing {}'.format(i+1, len(scan.files), filename))
       
        resultsPP, results, _, _ = load_data_compact_pump_probe(channels_pp, channels_all, step)
@@ -695,12 +695,12 @@ TT_PSEN119 = [channel_PSEN119_signal, channel_PSEN119_bkg]
 TT_PSEN124 = [channel_PSEN125_signal]
 TT_PSEN126 = [channel_PSEN125_signal, channel_PSEN125_bkg, channel_PSEN125_arrTimes, channel_PSEN125_arrTimesAmp, channel_PSEN125_peaks, channel_PSEN125_edges]
 
-def XAS_delayscan_PSEN(json_file, TT, channel_delay_motor, diode, Izero, timezero_mm, quantile, target, calibration, filterTime=2000, filterAmp=0):
+def XAS_delayscan_PSEN(scan, TT, channel_delay_motor, diode, Izero, timezero_mm, quantile, target, calibration, filterTime=2000, filterAmp=0):
     channels_pp = [channel_Events, diode, Izero, channel_delay_motor] + TT
     channels_all = channels_pp
 
-    from sfdata import SFScanInfo
-    scan = SFScanInfo(json_file)
+#    from sfdata import SFScanInfo
+#    scan = SFScanInfo(json_file)
 
     if ' as delay' in scan.parameters['name'][0]:
         print ('Scan is done with the stage in fs')
@@ -731,7 +731,7 @@ def XAS_delayscan_PSEN(json_file, TT, channel_delay_motor, diode, Izero, timezer
        check_files_and_data(step)
        clear_output(wait=True)
        filename = scan.files[i][0].split('/')[-1].split('.')[0]
-       print ('Processing: {}'.format(json_file.split('/')[-3]))
+       print ('Processing: {}'.format(scan.fname.split('/')[-3]))
        print ('Step {} of {}: Processing {}'.format(i+1, len(scan.files), filename))
       
        resultsPP, results, _, _ = load_data_compact_pump_probe(channels_pp, channels_all, step)
@@ -799,12 +799,12 @@ def XAS_delayscan_PSEN(json_file, TT, channel_delay_motor, diode, Izero, timezer
     
 ######################################
 
-def XAS_delayscan_PSEN_bs(json_file, TT, channel_delay_motor, diode, Izero, timezero_mm, quantile, filterTime=2000, filterAmp=0):
+def XAS_delayscan_PSEN_bs(scan, TT, channel_delay_motor, diode, Izero, timezero_mm, quantile, filterTime=2000, filterAmp=0):
     channels_pp = [channel_Events, diode, Izero, channel_delay_motor] + TT
     channels_all = channels_pp
 
-    from sfdata import SFScanInfo
-    scan = SFScanInfo(json_file)
+    #from sfdata import SFScanInfo
+    #scan = SFScanInfo(json_file)
 
     if ' as delay' in scan.parameters['name'][0]:
         print ('Scan is done with the stage in fs')
@@ -835,7 +835,7 @@ def XAS_delayscan_PSEN_bs(json_file, TT, channel_delay_motor, diode, Izero, time
        check_files_and_data(step)
        clear_output(wait=True)
        filename = scan.files[i][0].split('/')[-1].split('.')[0]
-       print ('Processing: {}'.format(json_file.split('/')[-3]))
+       print ('Processing: {}'.format(scan.fname.split('/')[-3]))
        print ('Step {} of {}: Processing {}'.format(i+1, len(scan.files), filename))
       
        resultsPP, results, _, _ = load_data_compact_pump_probe(channels_pp, channels_all, step)
