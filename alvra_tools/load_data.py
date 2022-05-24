@@ -109,6 +109,15 @@ def _make_empty_image(image, module_map):
     return np.zeros((512 * len(module_map), 1024), dtype=image.dtype)
 
 
+def get_timezero_NBS(json_file):
+    from sfdata import SFScanInfo
+    scan = SFScanInfo(json_file)
+    fn = scan.files[0][0].replace('.BSDATA.h5','*').replace('.PVCHANNELS.h5','*').replace('.CAMERAS.h5','*').replace('.*JF*.h5','*')
+    with SFDataFiles(fn) as sfd:
+        ch = sfd['SARES11-CVME-EVR0:DUMMY_PV2_NBS']
+        t0mm = ch.data[0]
+    return t0mm
+
 def load_corr_JF_data(fname, nshots=None):
     with h5py.File(fname, "r") as f:
 
