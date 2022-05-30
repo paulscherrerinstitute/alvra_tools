@@ -176,10 +176,10 @@ def XES_static_4ROIs(fname, pgroup, roi1, roi2, roi3, roi4, thr_low, thr_high, n
     imgs_roi3_thr = threshold(imgs_roi3, thr_low, thr_high)
     imgs_roi4_thr = threshold(imgs_roi4, thr_low, thr_high)
 
-    imgs_roi1_thr_sum = imgs_roi1_thr.sum(axis = 0)
-    imgs_roi2_thr_sum = imgs_roi2_thr.sum(axis = 0)
-    imgs_roi3_thr_sum = imgs_roi3_thr.sum(axis = 0)
-    imgs_roi4_thr_sum = imgs_roi4_thr.sum(axis = 0)
+    imgs_roi1_thr_sum = np.average(imgs_roi1_thr, axis = 0)
+    imgs_roi2_thr_sum = np.average(imgs_roi2_thr, axis = 0)
+    imgs_roi3_thr_sum = np.average(imgs_roi3_thr, axis = 0)
+    imgs_roi4_thr_sum = np.average(imgs_roi4_thr, axis = 0)
 
     image_array = [imgs_roi1_thr_sum, imgs_roi2_thr_sum, imgs_roi3_thr_sum, imgs_roi4_thr_sum]
     correct_array = []
@@ -232,20 +232,20 @@ def XES_PumpProbe_4ROIs(fname, pgroup, roi1, roi2, roi3, roi4, thr_low, thr_high
     imgs_on_roi3_thr = threshold(imgs_on_roi3, thr_low, thr_high)
     imgs_on_roi4_thr = threshold(imgs_on_roi4, thr_low, thr_high)
 
-    imgs_on_roi1_thr_sum = imgs_on_roi1_thr.sum(axis = 0)
-    imgs_on_roi2_thr_sum = imgs_on_roi2_thr.sum(axis = 0)
-    imgs_on_roi3_thr_sum = imgs_on_roi3_thr.sum(axis = 0)
-    imgs_on_roi4_thr_sum = imgs_on_roi4_thr.sum(axis = 0)
+    imgs_on_roi1_thr_sum = np.average(imgs_on_roi1_thr, axis = 0)
+    imgs_on_roi2_thr_sum = np.average(imgs_on_roi2_thr, axis = 0)
+    imgs_on_roi3_thr_sum = np.average(imgs_on_roi3_thr, axis = 0)
+    imgs_on_roi4_thr_sum = np.average(imgs_on_roi4_thr, axis = 0)
 
     imgs_off_roi1_thr = threshold(imgs_off_roi1, thr_low, thr_high)
     imgs_off_roi2_thr = threshold(imgs_off_roi2, thr_low, thr_high)
     imgs_off_roi3_thr = threshold(imgs_off_roi3, thr_low, thr_high)
     imgs_off_roi4_thr = threshold(imgs_off_roi4, thr_low, thr_high)
 
-    imgs_off_roi1_thr_sum = imgs_off_roi1_thr.sum(axis = 0)
-    imgs_off_roi2_thr_sum = imgs_off_roi2_thr.sum(axis = 0)
-    imgs_off_roi3_thr_sum = imgs_off_roi3_thr.sum(axis = 0)
-    imgs_off_roi4_thr_sum = imgs_off_roi4_thr.sum(axis = 0)
+    imgs_off_roi1_thr_sum = np.average(imgs_off_roi1_thr, axis = 0)
+    imgs_off_roi2_thr_sum = np.average(imgs_off_roi2_thr, axis = 0)
+    imgs_off_roi3_thr_sum = np.average(imgs_off_roi3_thr, axis = 0)
+    imgs_off_roi4_thr_sum = np.average(imgs_off_roi4_thr, axis = 0)
 
     image_on_array = [imgs_on_roi1_thr_sum, imgs_on_roi2_thr_sum, imgs_on_roi3_thr_sum, imgs_on_roi4_thr_sum]
     image_off_array = [imgs_off_roi1_thr_sum, imgs_off_roi2_thr_sum, imgs_off_roi3_thr_sum, imgs_off_roi4_thr_sum]
@@ -286,6 +286,70 @@ def XES_PumpProbe_4ROIs(fname, pgroup, roi1, roi2, roi3, roi4, thr_low, thr_high
 
 ######################################
 
+def XES_delayscan_4ROIs(scan, pgroup, roi1, roi2, roi3, roi4, thr_low, thr_high, nshots, correctFlag, binsize, nsteps=None):
+    clock_int = clock.Clock()
+
+#    from sfdata import SFScanInfo
+#    scan = SFScanInfo(json_file)
+
+    if ' as delay' in scan.parameters['name'][0]:
+        print ('Scan is done with the stage in fs')
+        Delay_fs = scan.readbacks
+        Delay_mm = fs2mm(scan.readbacks,0)
+    else:
+        print ('Scan is done with the stage in mm')
+        Delay_fs = mm2fs(scan.readbacks,0)
+        Delay_mm = scan.readbacks
+
+    XES_roi1_ON = []
+    XES_roi2_ON = []
+    XES_roi3_ON = []
+    XES_roi4_ON = []
+
+    XES_roi1_OFF = []
+    XES_roi2_OFF = []
+    XES_roi3_OFF = []
+    XES_roi4_OFF = []
+
+    for i, step in enumerate(scan.files[:nsteps]):
+
+        JF_file = [f for f in step if "JF02" in f][0]
+
+        print("File {} out of {}:".format(i+1, int(len(scan.files) if nsteps is None else nsteps)))
+
+        spec_roi1_ON, spec_roi2_ON, spec_roi3_ON, spec_roi4_ON, pids_on, \
+        spec_roi1_OFF, spec_roi2_OFF, spec_roi3_OFF, spec_roi4_OFF, pids_off = \
+        XES_PumpProbe_4ROIs(JF_file, pgroup, roi1, roi2, roi3, roi4, thr_low, thr_high, nshots, correctFlag, binsize)
+
+        XES_roi1_ON.append(spec_roi1_ON)
+        XES_roi2_ON.append(spec_roi2_ON)
+        XES_roi3_ON.append(spec_roi3_ON)
+        XES_roi4_ON.append(spec_roi4_ON)
+
+        XES_roi1_OFF.append(spec_roi1_OFF)
+        XES_roi2_OFF.append(spec_roi2_OFF)
+        XES_roi3_OFF.append(spec_roi3_OFF)
+        XES_roi4_OFF.append(spec_roi4_OFF)
+
+        clear_output(wait=True)
+        print ("It took", clock_int.tick(), "seconds to process this file")
+
+    XES_roi1_ON = np.asarray(XES_roi1_ON)
+    XES_roi2_ON = np.asarray(XES_roi2_ON)
+    XES_roi3_ON = np.asarray(XES_roi3_ON)
+    XES_roi4_ON = np.asarray(XES_roi4_ON)
+
+    XES_roi1_OFF = np.asarray(XES_roi1_OFF)
+    XES_roi2_OFF = np.asarray(XES_roi2_OFF)
+    XES_roi3_OFF = np.asarray(XES_roi3_OFF)
+    XES_roi4_OFF = np.asarray(XES_roi4_OFF)
+
+    print ("\nJob done! It took", clock_int.tock(), "seconds to process", len(scan.files), "file(s)")
+    return XES_roi1_ON, XES_roi2_ON, XES_roi3_ON, XES_roi4_ON, pids_on, XES_roi1_OFF, XES_roi2_OFF, XES_roi3_OFF, XES_roi4_OFF, pids_off, Delay_fs, Delay_mm
+
+
+######################################
+
 def RIXS_static_4ROIs(json_file, pgroup, roi1, roi2, roi3, roi4, thr_low, thr_high, nshots, correctFlag, binsize):
     clock_int = clock.Clock()
     from sfdata import SFScanInfo
@@ -298,7 +362,8 @@ def RIXS_static_4ROIs(json_file, pgroup, roi1, roi2, roi3, roi4, thr_low, thr_hi
     RIXS_roi4 = []
 
     for i, step in enumerate(scan.files):
-        JF_file = [f for f in step if "JF02T09V02" in f][0]
+        
+        JF_file = [f for f in step if "JF02" in f][0]
   
         print("File {} out of {}:".format(i+1, len(scan.files)))
         
@@ -323,7 +388,7 @@ def RIXS_static_4ROIs(json_file, pgroup, roi1, roi2, roi3, roi4, thr_low, thr_hi
     
 ######################################
 
-def RIXS_PumpProbe_4ROIs(json_file, pgroup, roi1, roi2, roi3, roi4, thr_low, thr_high, nshots):
+def RIXS_PumpProbe_4ROIs(json_file, pgroup, roi1, roi2, roi3, roi4, thr_low, thr_high, nshots, correctFlag, binsize):
     clock_int = clock.Clock()
     from sfdata import SFScanInfo
     scan = SFScanInfo(json_file)
@@ -340,13 +405,13 @@ def RIXS_PumpProbe_4ROIs(json_file, pgroup, roi1, roi2, roi3, roi4, thr_low, thr
     RIXS_roi4_OFF = []
 
     for i, step in enumerate(scan.files):
-        JF_file = [f for f in step if "JF02T09V02" in f][0]
+        JF_file = [f for f in step if "JF02" in f][0]
   
         print("File {} out of {}:".format(i+1, len(scan.files)))
 
         spec_roi1_ON, spec_roi2_ON, spec_roi3_ON, spec_roi4_ON, pids_on, \
         spec_roi1_OFF, spec_roi2_OFF, spec_roi3_OFF, spec_roi4_OFF, pids_off = \
-        XES_PumpProbe_4ROIs(JF_file, pgroup, roi1, roi2, roi3, roi4, thr_low, thr_high, nshots)
+        XES_PumpProbe_4ROIs(JF_file, pgroup, roi1, roi2, roi3, roi4, thr_low, thr_high, nshots, correctFlag, binsize)
 
         RIXS_roi1_ON.append(spec_roi1_ON)
         RIXS_roi2_ON.append(spec_roi2_ON)
@@ -374,6 +439,7 @@ def RIXS_PumpProbe_4ROIs(json_file, pgroup, roi1, roi2, roi3, roi4, thr_low, thr
     print ("\nJob done! It took", clock_int.tock(), "seconds to process", len(scan.files), "file(s)")
     return RIXS_roi1_ON, RIXS_roi2_ON, RIXS_roi3_ON, RIXS_roi4_ON, pids_on, RIXS_roi1_OFF, RIXS_roi2_OFF, RIXS_roi3_OFF, RIXS_roi4_OFF, pids_off, Energy_eV
 
+######################################
 
 
  
