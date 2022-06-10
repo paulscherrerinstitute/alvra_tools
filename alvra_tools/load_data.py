@@ -56,7 +56,7 @@ def _get_reprates_from_file(JF_file, nshots):
     subset.drop_missing()
         
     Event_code = subset[channel_Events].data
-    FEL_raw  = Event_code[:,12] #Event 12: BAM bunch 1
+    FEL_raw  = Event_code[:,13] #Event 13: changed from 12 on June 22
     Ppicker  = Event_code[:,200] 
     Laser    = Event_code[:,18]
     Darkshot = Event_code[:,21]
@@ -544,7 +544,7 @@ def load_data_compact(channel_list, data):
     subset.drop_missing()
 
     Event_code = subset[channel_Events].data
-    FEL_raw = Event_code[:,12] #Event 12: BAM bunch 1
+    FEL_raw  = Event_code[:,13] #Event 13: changed from 12 on June 22
     Ppicker = Event_code[:,200]    
 
     #FEL = np.logical_and(FEL_raw, np.logical_not(Ppicker))
@@ -577,7 +577,7 @@ def load_data_compact_JF(channel_list, data, roi1, roi2, roi3, roi4):
     subset.drop_missing()
 
     Event_code = subset[channel_Events].data
-    FEL = Event_code[:,12] #Event 12: BAM bunch 1
+    FEL = Event_code[:,13] #Event 13: changed from 12 on June 22
 
     index_light = FEL == 1
 
@@ -614,7 +614,7 @@ def load_data_compact_FEL_pump(channels_pump_unpump, channels_pump, data):
 
     Event_code = subset_unpump[channel_Events].data
 
-    FEL_raw  = Event_code[:,12] #Event 12: BAM bunch 1
+    FEL_raw  = Event_code[:,13] #Event 13: changed from 12 on June 22
     Ppicker  = Event_code[:,200] 
     Laser    = Event_code[:,18]
     Darkshot = Event_code[:,21]
@@ -693,7 +693,7 @@ def load_data_compact_laser_pump(channels_pump_unpump, channels_FEL, data):
 #     subset_FEL.drop_missing()
     
     Event_code = subset_FEL[channel_Events].data
-    FEL      = Event_code[:,12] #Event 12: BAM bunch 1
+    FEL = Event_code[:,13] #Event 13: changed from 12 on June 22
     
     Deltap_FEL = (1 / FEL.mean()).round().astype(int) #Get the FEL rep rate from the Event code
     FEL_reprate = 100 / Deltap_FEL
@@ -703,7 +703,7 @@ def load_data_compact_laser_pump(channels_pump_unpump, channels_FEL, data):
 
     Event_code = subset_FEL[channel_Events].data
     
-    FEL_raw  = Event_code[:,12] #Event 12: BAM bunch 1
+    FEL_raw  = Event_code[:,13] #Event 13: changed from 12 on June 22
     Ppicker  = Event_code[:,200]
     Laser    = Event_code[:,18]
     Darkshot = Event_code[:,21]
@@ -767,7 +767,7 @@ def load_data_compact_laser_pump_JF(channels_pump_unpump, channels_FEL, data, ro
     subset_FEL.print_stats(show_complete=True)
     
     Event_code = subset_FEL[channel_Events].data
-    FEL      = Event_code[:,12] #Event 12: BAM bunch 1
+    FEL = Event_code[:,13] #Event 13: changed from 12 on June 22
     
     Deltap_FEL = (1 / FEL.mean()).round().astype(int) #Get the FEL rep rate from the Event code
     FEL_reprate = 100 / Deltap_FEL
@@ -777,7 +777,7 @@ def load_data_compact_laser_pump_JF(channels_pump_unpump, channels_FEL, data, ro
 
     Event_code = subset_FEL[channel_Events].data
 
-    FEL      = Event_code[:,12] #Event 12: BAM bunch 1
+    FEL      = Event_code[:,13] #Event 13: changed from 12 on June 22
     Laser    = Event_code[:,18]
     Darkshot = Event_code[:,21]
 
@@ -862,7 +862,7 @@ def load_data_compact_pump_probe(channels_pump_unpump, channels_FEL, data):
     subset_FEL.print_stats(show_complete=True)
     
     Event_code = subset_FEL[channel_Events].data
-    FEL      = Event_code[:,12] #Event 12: BAM bunch 1
+    FEL = Event_code[:,13] #Event 13: changed from 12 on June 22
     
     Deltap_FEL = (1 / FEL.mean()).round().astype(int) #Get the FEL rep rate from the Event code
     FEL_reprate = 100 / Deltap_FEL
@@ -872,13 +872,13 @@ def load_data_compact_pump_probe(channels_pump_unpump, channels_FEL, data):
 
     Event_code = subset_FEL[channel_Events].data
     
-    FEL_raw  = Event_code[:,12] #Event 12: BAM bunch 1
+    FEL_raw  = Event_code[:,13] #Event 13: changed from 12 on June 22
     Ppicker  = Event_code[:,200]
     Laser    = Event_code[:,18]
     Darkshot = Event_code[:,21]
 
-    FEL = np.logical_and(FEL_raw, np.logical_not(Ppicker))
-    #FEL = FEL_raw
+    #FEL = np.logical_and(FEL_raw, np.logical_not(Ppicker))
+    FEL = FEL_raw
 
     if Darkshot.mean()==0:
         laser_reprate = (1 / Laser.mean()).round().astype(int)
