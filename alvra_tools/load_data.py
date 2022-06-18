@@ -853,6 +853,182 @@ def load_data_compact_laser_pump_JF(channels_pump_unpump, channels_FEL, data, ro
 
 ########################################################################################
 
+def load_data_compact_laser_pump_JF_noPair(channels_pump_unpump, channels_FEL, data, roi1=None, roi2=None, roi3=None, roi4=None):
+    #with SFDataFiles(datafiles) as data:
+    channels_pump_unpump = check_channels(data, channels_pump_unpump, "pump unpump")
+    channels_FEL = check_channels(data, channels_FEL, "FEL")
+
+    subset_FEL = data[channels_FEL]
+    subset_FEL.print_stats(show_complete=True)
+    
+    Event_code = subset_FEL[channel_Events].data
+    FEL = Event_code[:,13] #Event 13: changed from 12 on June 22
+    
+    Deltap_FEL = (1 / FEL.mean()).round().astype(int) #Get the FEL rep rate from the Event code
+    FEL_reprate = 100 / Deltap_FEL
+    print ('Probe rep rate (FEL) is {} Hz'.format(FEL_reprate))
+    
+    subset_FEL.drop_missing()
+
+    Event_code = subset_FEL[channel_Events].data
+
+    FEL      = Event_code[:,13] #Event 13: changed from 12 on June 22
+    Laser    = Event_code[:,18]
+    Darkshot = Event_code[:,21]
+
+    if Darkshot.mean()==0:
+        laser_reprate = (1 / Laser.mean() - 1).round().astype(int)
+        index_light = np.logical_and.reduce((FEL, Laser))
+        index_dark  = np.logical_and.reduce((FEL, np.logical_not(Laser)))
+    else:
+        laser_reprate = (Laser.mean() / Darkshot.mean() - 1).round().astype(int)
+
+        index_light = np.logical_and.reduce((FEL, Laser, np.logical_not(Darkshot)))
+        index_dark = np.logical_and.reduce((FEL, Laser, Darkshot))
+
+    print ('Pump scheme is {}:1'.format(laser_reprate))
+
+    result_pp = {}
+    
+    for chname in channels_pump_unpump:
+        ch = subset_FEL[chname]
+        
+        pids_pump = ch.pids[index_light]
+        pids_unpump = ch.pids[index_dark]
+        
+        ppdata = namedtuple("PPData", ["pump", "unpump"])  
+        
+        if "JF" in chname: # or something more clever here!
+            fel_data_imgs1, fel_data_imgs2, fel_data_imgs3, fel_data_imgs4 = read_and_crop_jf(ch, roi1, roi2, roi3, roi4)
+            
+            fel_data_imgs1_pump   = fel_data_imgs1[index_light]
+            fel_data_imgs1_unpump = fel_data_imgs1[index_dark]
+            fel_data_imgs2_pump   = fel_data_imgs2[index_light]
+            fel_data_imgs2_unpump = fel_data_imgs2[index_dark]
+            fel_data_imgs3_pump   = fel_data_imgs3[index_light]
+            fel_data_imgs3_unpump = fel_data_imgs3[index_dark]
+            fel_data_imgs4_pump   = fel_data_imgs4[index_light]
+            fel_data_imgs4_unpump = fel_data_imgs4[index_dark]
+            result_pp["JFroi1"] = ppdata(pump=fel_data_imgs1_pump, unpump=fel_data_imgs1_unpump)
+            result_pp["JFroi2"] = ppdata(pump=fel_data_imgs2_pump, unpump=fel_data_imgs2_unpump)
+            result_pp["JFroi3"] = ppdata(pump=fel_data_imgs3_pump, unpump=fel_data_imgs3_unpump)
+            result_pp["JFroi4"] = ppdata(pump=fel_data_imgs4_pump, unpump=fel_data_imgs4_unpump)
+        else:
+            fel_data = ch.data
+            ch_pump   = fel_data[index_light]
+            ch_unpump = fel_data[index_dark]
+            result_pp[chname] = ppdata(pump=ch_pump, unpump=ch_unpump)
+            
+        #result_pp[ch] = ppdata(pump=ch_pump, unpump=ch_unpump)
+
+    result_FEL = {}
+    for chname in channels_FEL:
+        ch = subset_FEL[chname]
+        if "JF" in chname: # or something more clever here!
+            fel_data_imgs1, fel_data_imgs2, fel_data_imgs3, fel_data_imgs4 = read_and_crop_jf(ch, roi1, roi2, roi3, roi4)
+            result_FEL["JFroi1"]=fel_data_imgs1
+            result_FEL["JFroi2"]=fel_data_imgs2
+            result_FEL["JFroi3"]=fel_data_imgs3
+            result_FEL["JFroi4"]=fel_data_imgs4
+        else:
+            result_FEL[chname] = ch.data
+ 
+
+    print ("Loaded {} pump and {} unpump shots".format(len(ch_pump), len(ch_unpump)))
+
+    return result_pp, result_FEL, pids_pump, pids_unpump
+
+########################################################################################
+
+def load_data_compact_pump_probe_JF(channels_pump_unpump, channels_FEL, data, roi1=None, roi2=None, roi3=None, roi4=None):
+    
+    channels_pump_unpump = check_channels(data, channels_pump_unpump, "pump unpump")
+    channels_FEL = check_channels(data, channels_FEL, "FEL")
+
+    subset_FEL = data[channels_FEL]
+    subset_FEL.print_stats(show_complete=True)
+    
+    Event_code = subset_FEL[channel_Events].data
+    FEL = Event_code[:,13] #Event 13: changed from 12 on June 22
+    
+    Deltap_FEL = (1 / FEL.mean()).round().astype(int) #Get the FEL rep rate from the Event code
+    FEL_reprate = 100 / Deltap_FEL
+    print ('Probe rep rate (FEL) is {} Hz'.format(FEL_reprate))
+    
+    subset_FEL.drop_missing()
+
+    Event_code = subset_FEL[channel_Events].data
+
+    FEL      = Event_code[:,13] #Event 13: changed from 12 on June 22
+    Laser    = Event_code[:,18]
+    Darkshot = Event_code[:,21]
+
+    if Darkshot.mean()==0:
+        laser_reprate = (1 / Laser.mean() - 1).round().astype(int)
+        index_light = np.logical_and.reduce((FEL, Laser))
+        index_dark  = np.logical_and.reduce((FEL, np.logical_not(Laser)))
+    else:
+        laser_reprate = (Laser.mean() / Darkshot.mean() - 1).round().astype(int)
+        index_light = np.logical_and.reduce((FEL, Laser, np.logical_not(Darkshot)))
+        index_dark = np.logical_and.reduce((FEL, Laser, Darkshot))
+
+    print ('Laser rep rate is {} Hz (delayed or dark)'.format(100 / laser_reprate))
+    print ('Pump scheme is {}:1'.format(laser_reprate - 1))
+
+    result_pp = {}
+    
+    for chname in channels_pump_unpump:
+        ch = subset_FEL[chname]
+        
+        pids_pump = ch.pids[index_light]
+        pids_unpump = ch.pids[index_dark]
+        correct_pids_pump = pids_unpump + Deltap_FEL
+        final_pids, indPump, indUnPump = np.intersect1d(pids_pump, correct_pids_pump, return_indices=True)
+        
+        ppdata = namedtuple("PPData", ["pump", "unpump"])  
+        
+        if "JF" in chname: # or something more clever here!
+            fel_data_imgs1, fel_data_imgs2, fel_data_imgs3, fel_data_imgs4 = read_and_crop_jf(ch, roi1, roi2, roi3, roi4)
+            
+            fel_data_imgs1_pump   = fel_data_imgs1[index_light][indPump]
+            fel_data_imgs1_unpump = fel_data_imgs1[index_dark][indUnPump]
+            fel_data_imgs2_pump   = fel_data_imgs2[index_light][indPump]
+            fel_data_imgs2_unpump = fel_data_imgs2[index_dark][indUnPump]
+            fel_data_imgs3_pump   = fel_data_imgs3[index_light][indPump]
+            fel_data_imgs3_unpump = fel_data_imgs3[index_dark][indUnPump]
+            fel_data_imgs4_pump   = fel_data_imgs4[index_light][indPump]
+            fel_data_imgs4_unpump = fel_data_imgs4[index_dark][indUnPump]
+            result_pp["JFroi1"] = ppdata(pump=fel_data_imgs1_pump, unpump=fel_data_imgs1_unpump)
+            result_pp["JFroi2"] = ppdata(pump=fel_data_imgs2_pump, unpump=fel_data_imgs2_unpump)
+            result_pp["JFroi3"] = ppdata(pump=fel_data_imgs3_pump, unpump=fel_data_imgs3_unpump)
+            result_pp["JFroi4"] = ppdata(pump=fel_data_imgs4_pump, unpump=fel_data_imgs4_unpump)
+        else:
+            fel_data = ch.data
+            ch_pump   = fel_data[index_light][indPump]
+            ch_unpump = fel_data[index_dark][indUnPump]
+            result_pp[chname] = ppdata(pump=ch_pump, unpump=ch_unpump)
+            
+        #result_pp[ch] = ppdata(pump=ch_pump, unpump=ch_unpump)
+
+    result_FEL = {}
+    for chname in channels_FEL:
+        ch = subset_FEL[chname]
+        if "JF" in chname: # or something more clever here!
+            fel_data_imgs1, fel_data_imgs2, fel_data_imgs3, fel_data_imgs4 = read_and_crop_jf(ch, roi1, roi2, roi3, roi4)
+            result_FEL["JFroi1"]=fel_data_imgs1
+            result_FEL["JFroi2"]=fel_data_imgs2
+            result_FEL["JFroi3"]=fel_data_imgs3
+            result_FEL["JFroi4"]=fel_data_imgs4
+        else:
+            result_FEL[chname] = ch.data
+ 
+
+    print ("Loaded {} pump and {} unpump shots".format(len(ch_pump), len(ch_unpump)))
+
+    return result_pp, result_FEL, pids_pump, pids_unpump
+
+########################################################################################
+
 def load_data_compact_pump_probe(channels_pump_unpump, channels_FEL, data):
    
     channels_pump_unpump = check_channels(data, channels_pump_unpump, "pump unpump")
