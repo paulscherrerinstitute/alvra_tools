@@ -314,8 +314,8 @@ def XES_delayscan_4ROIs(scan, pgroup, roi1, roi2, roi3, roi4, thr_low, thr_high,
     for i, step in enumerate(scan[:nsteps]):
 
         JF_file = [f for f in step if "JF02" in f][0]
-
-        print("File {} out of {}:".format(i+1, int(len(scan.files) if nsteps is None else nsteps)))
+        ff = scan.files[i][0].split('/')[-1].split('.')[0]
+        print("File {} out of {}: {}".format(i+1, int(len(scan.files) if nsteps is None else nsteps), ff))
 
         spec_roi1_ON, spec_roi2_ON, spec_roi3_ON, spec_roi4_ON, pids_on, \
         spec_roi1_OFF, spec_roi2_OFF, spec_roi3_OFF, spec_roi4_OFF, pids_off = \
@@ -470,7 +470,7 @@ def XES_delayscan_4ROIs_sfdata(scan, pgroup, roi1, roi2, roi3, roi4, thr_low, th
 #    for i, step in enumerate(scan):
 
         JF_file = [f for f in step if "JF02" in f][0]
-        ff = scan.files[0][0].split('/')[-1].split('.')[0]
+        ff = scan.files[i][0].split('/')[-1].split('.')[0]
         print("File {} out of {}: {}".format(i+1, int(len(scan.files) if nsteps is None else nsteps), ff))
 
         spec_roi1_ON, spec_roi2_ON, spec_roi3_ON, spec_roi4_ON, pids_on, \
@@ -542,8 +542,8 @@ def XES_delayscan_TT_4ROIs(scan, pgroup, TT, channel_delay_motor, timezero_mm, r
     for i, step in enumerate(scan[:nsteps]):
 
         JF_file = [f for f in step if "JF02" in f][0]
-
-        print("File {} out of {}:".format(i+1, int(len(scan.files) if nsteps is None else nsteps)))
+        ff = scan.files[i][0].split('/')[-1].split('.')[0]
+        print("File {} out of {}: {}".format(i+1, int(len(scan.files) if nsteps is None else nsteps), ff))
 
         resultsPP,_,_,_ = load_data_compact_laser_pump_JF_noPair(channels_pp, channels_all, step, roi1, roi2, roi3, roi4)
 
@@ -600,15 +600,25 @@ def XES_delayscan_TT_4ROIs(scan, pgroup, TT, channel_delay_motor, timezero_mm, r
 
     Delays_corr_scan = Delays_fs_scan + arrTimes_scan
 
-    XES_roi1_ON = np.asarray(list(itertools.chain.from_iterable(XES_roi1_ON)))
-    XES_roi2_ON = np.asarray(list(itertools.chain.from_iterable(XES_roi2_ON)))
-    XES_roi3_ON = np.asarray(list(itertools.chain.from_iterable(XES_roi3_ON)))
-    XES_roi4_ON = np.asarray(list(itertools.chain.from_iterable(XES_roi4_ON)))
+    XES_roi1_ON = np.asarray(XES_roi1_ON)
+    XES_roi2_ON = np.asarray(XES_roi2_ON)
+    XES_roi3_ON = np.asarray(XES_roi3_ON)
+    XES_roi4_ON = np.asarray(XES_roi4_ON)
     
-    XES_roi1_OFF = np.asarray(list(itertools.chain.from_iterable(XES_roi1_OFF)))
-    XES_roi2_OFF = np.asarray(list(itertools.chain.from_iterable(XES_roi2_OFF)))
-    XES_roi3_OFF = np.asarray(list(itertools.chain.from_iterable(XES_roi3_OFF)))
-    XES_roi4_OFF = np.asarray(list(itertools.chain.from_iterable(XES_roi4_OFF)))
+    XES_roi1_OFF = np.asarray(XES_roi1_OFF)
+    XES_roi2_OFF = np.asarray(XES_roi2_OFF)
+    XES_roi3_OFF = np.asarray(XES_roi3_OFF)
+    XES_roi4_OFF = np.asarray(XES_roi4_OFF)
+
+    #XES_roi1_ON = np.asarray(list(itertools.chain.from_iterable(XES_roi1_ON)))
+    #XES_roi2_ON = np.asarray(list(itertools.chain.from_iterable(XES_roi2_ON)))
+    #XES_roi3_ON = np.asarray(list(itertools.chain.from_iterable(XES_roi3_ON)))
+    #XES_roi4_ON = np.asarray(list(itertools.chain.from_iterable(XES_roi4_ON)))
+    
+    #XES_roi1_OFF = np.asarray(list(itertools.chain.from_iterable(XES_roi1_OFF)))
+    #XES_roi2_OFF = np.asarray(list(itertools.chain.from_iterable(XES_roi2_OFF)))
+    #XES_roi3_OFF = np.asarray(list(itertools.chain.from_iterable(XES_roi3_OFF)))
+    #XES_roi4_OFF = np.asarray(list(itertools.chain.from_iterable(XES_roi4_OFF)))
 
     print ("\nJob done! It took", clock_int.tock(), "seconds to process", int(len(scan.files) if nsteps is None else nsteps), "file(s)")
     return Delays_fs_scan, Delays_corr_scan, XES_roi1_ON, XES_roi2_ON, XES_roi3_ON, XES_roi4_ON, XES_roi1_OFF, XES_roi2_OFF, XES_roi3_OFF, XES_roi4_OFF, Delay_fs, Delay_mm
