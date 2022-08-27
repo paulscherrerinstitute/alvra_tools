@@ -1,6 +1,9 @@
 import numpy as np
+import glob, h5py, time
 from scipy.special import erf
 from scipy.optimize import curve_fit
+from datetime import datetime
+
 
 class Fit:
     
@@ -18,6 +21,38 @@ class Fit:
     
     def eval(self, x):
         return self.func(x, *self.popt)
+
+def better_p0(p0, index, value):
+    mod = list(p0)
+    mod[index] = value
+    return tuple(mod)
+
+def timestamp(json_file):
+    file_split = json_file.split('/')[:-1]
+    path_to_bsdata = '/'.join([*file_split[:-1], 'data', '*BSDATA.h5'])
+    
+    timestamp_s = []
+    
+    for file in glob.glob(path_to_bsdata):
+        with h5py.File(file) as f:
+            timestamp_ns = f['SAR-CVME-TIFALL5:EvtSet']['timestamp'][:]
+            timestamp_s.append(np.mean(timestamp_ns) * 1e-9)
+    timestamp_s = np.mean(timestamp_s)
+    timestamp_datetime = datetime.fromtimestamp(timestamp_s)
+    return np.datetime64(timestamp_datetime)
+
+def timestamp_hms(json_file):
+    file_split = json_file.split('/')[:-1]
+    path_to_bsdata = '/'.join([*file_split[:-1], 'data', '*BSDATA.h5'])
+    
+    timestamp_s = []
+    
+    for file in glob.glob(path_to_bsdata):
+        with h5py.File(file) as f:
+            timestamp_ns = f['SAR-CVME-TIFALL5:EvtSet']['timestamp'][:]
+            timestamp_s.append(np.mean(timestamp_ns) * 1e-9)
+    timestamp_s = np.mean(timestamp_s)
+    return time.strftime('%H:%M:%S', time.localtime(timestamp_s) )
 
 
 def _bin(a, binning):
@@ -180,7 +215,4 @@ def fs2mm(x,t0_fs):
 def cut(arr, minlen):
     return np.array([i[:minlen] for i in arr])
 
-def better_p0(p0, index, value):
-    mod = list(p0)
-    mod[index] = value
-    return tuple(mod)
+
