@@ -20,12 +20,12 @@ TT_PSEN126 = [channel_PSEN125_signal, channel_PSEN125_bkg, channel_PSEN125_arrTi
 
 #########################################################
 
-def TT_statistics_scan(json_file, TT, target, calibration):
+def TT_statistics_scan(scan, TT, target, calibration):
     channel_list_pp = [channel_Events] + TT
     channel_list_all = channel_list_pp
     
-    from sfdata import SFScanInfo
-    scan = SFScanInfo(json_file)
+    #from sfdata import SFScanInfo
+    #scan = SFScanInfo(json_file)
     
     arrTimes_scan = []
     arrTimesAmp_scan = []
@@ -34,7 +34,7 @@ def TT_statistics_scan(json_file, TT, target, calibration):
         check_files_and_data(step)
         clear_output(wait=True)
         filename = scan.files[i][0].split('/')[-1].split('.')[0]
-        print ('Processing: {}'.format(json_file.split('/')[-3]))
+        print ('Processing: {}'.format(scan.fname.split('/')[-3]))
         print ('Step {} of {}: Processing {}'.format(i+1, len(scan.files), filename))
         
         resultsPP, results_FEL, _, _ = load_data_compact_pump_probe(channel_list_pp, channel_list_all, step)
@@ -51,12 +51,12 @@ def TT_statistics_scan(json_file, TT, target, calibration):
                  
 #########################################################
 
-def Two_TT_statistics_scan(json_file, TT1, TT2, target_1, calibration_1, target_2, calibration_2):
+def Two_TT_statistics_scan(scan, TT1, TT2, target_1, calibration_1, target_2, calibration_2):
     channel_list_pp = [channel_Events, channel_PSEN_signal, channel_PSEN_bkg, channel_cam125_signal]
     channel_list_all = channel_list_pp
     
-    from sfdata import SFScanInfo
-    scan = SFScanInfo(json_file)
+    #from sfdata import SFScanInfo
+    #scan = SFScanInfo(json_file)
     
     arrTimes_1_scan = []
     arrTimesAmp_1_scan = []
@@ -67,7 +67,7 @@ def Two_TT_statistics_scan(json_file, TT1, TT2, target_1, calibration_1, target_
         check_files_and_data(step)
         clear_output(wait=True)
         filename = scan.files[i][0].split('/')[-1].split('.')[0]
-        print ('Processing: {}'.format(json_file.split('/')[-3]))
+        print ('Processing: {}'.format(scan.fname.split('/')[-3]))
         print ('Step {} of {}: Processing {}'.format(i+1, len(scan.files), filename))
         
         resultsPP, results_FEL, _, _ = load_data_compact_pump_probe(channel_list_pp, channel_list_all, step)
@@ -91,12 +91,12 @@ arrTimes_2, arrTimesAmp_2, arrTimes_2_scan, arrTimesAmp_2_scan, peaktraces_2
 
 #########################################################
 
-def YAG_scan_noTT(json_file, quantile):
+def YAG_scan_noTT(scan, quantile):
     channel_list_pp = [channel_Events, channel_LaserDiode, channel_Laser_refDiode]
     channel_list_all = channel_list_pp
 
-    from sfdata import SFScanInfo
-    scan = SFScanInfo(json_file)
+    #from sfdata import SFScanInfo
+    #scan = SFScanInfo(json_file)
 
     if ' as delay' in scan.parameters['name'][0]:
     	print ('Scan is done with the stage in fs')
@@ -117,7 +117,7 @@ def YAG_scan_noTT(json_file, quantile):
         check_files_and_data(step)
         clear_output(wait=True)
         filename = scan.files[i][0].split('/')[-1].split('.')[0]
-        print ('Processing: {}'.format(json_file.split('/')[-3]))
+        print ('Processing: {}'.format(scan.fname.split('/')[-3]))
         print ('Step {} of {}: Processing {}'.format(i+1, len(scan.files), filename))
         resultsPP, results_FEL, pids_pump, pids_unpump = load_data_compact_pump_probe(channel_list_pp, channel_list_all, step)
 
@@ -160,13 +160,13 @@ def YAG_scan_noTT(json_file, quantile):
 
 #########################################################
 
-def YAG_scan_one_TT(json_file, TT, channel_delay_motor, timezero_mm, quantile, target, calibration, filterTime=2000, filterAmp=0):
+def YAG_scan_one_TT(scan, TT, channel_delay_motor, timezero_mm, quantile, target, calibration, filterTime=2000, filterAmp=0):
     
     channel_list_pp = [channel_Events, channel_LaserDiode, channel_Laser_refDiode, channel_delay_motor] + TT
     channel_list_all = channel_list_pp
 
-    from sfdata import SFScanInfo
-    scan = SFScanInfo(json_file)
+    #from sfdata import SFScanInfo
+    #scan = SFScanInfo(json_file)
    
     if ' as delay' in scan.parameters['name'][0]:
         print ('Scan is done with the stage in fs')
@@ -188,7 +188,7 @@ def YAG_scan_one_TT(json_file, TT, channel_delay_motor, timezero_mm, quantile, t
         check_files_and_data(step)
         clear_output(wait=True)
         filename = scan.files[i][0].split('/')[-1].split('.')[0]
-        print ('Processing: {}'.format(json_file.split('/')[-3]))
+        print ('Processing: {}'.format(scan.fname.split('/')[-3]))
         print ('Step {} of {}: Processing {}'.format(i+1, len(scan.files), filename))
         
         resultsPP, results_FEL, _, _ = load_data_compact_pump_probe(channel_list_pp, channel_list_all, step)
@@ -236,13 +236,13 @@ def YAG_scan_one_TT(json_file, TT, channel_delay_motor, timezero_mm, quantile, t
 
 #########################################################
 
-def YAG_scan_one_TT_bs(json_file, TT, channel_delay_motor, timezero_mm, quantile, filterTime=2000, filterAmp=0):
+def YAG_scan_one_TT_bs(scan, TT, channel_delay_motor, timezero_mm, quantile, filterTime=2000, filterAmp=0):
     
     channel_list_pp = [channel_Events, channel_LaserDiode, channel_Laser_refDiode, channel_delay_motor] + TT
     channel_list_all = channel_list_pp
 
-    from sfdata import SFScanInfo
-    scan = SFScanInfo(json_file)
+    #from sfdata import SFScanInfo
+    #scan = SFScanInfo(json_file)
    
     if ' as delay' in scan.parameters['name'][0]:
         print ('Scan is done with the stage in fs')
@@ -264,7 +264,7 @@ def YAG_scan_one_TT_bs(json_file, TT, channel_delay_motor, timezero_mm, quantile
         check_files_and_data(step)
         clear_output(wait=True)
         filename = scan.files[i][0].split('/')[-1].split('.')[0]
-        print ('Processing: {}'.format(json_file.split('/')[-3]))
+        print ('Processing: {}'.format(scan.fname.split('/')[-3]))
         print ('Step {} of {}: Processing {}'.format(i+1, len(scan.files), filename))
         
         resultsPP, results_FEL, _, _ = load_data_compact_pump_probe(channel_list_pp, channel_list_all, step)
@@ -317,7 +317,7 @@ def YAG_scan_one_TT_bs(json_file, TT, channel_delay_motor, timezero_mm, quantile
 
 #########################################################
 
-def YAG_scan_two_TT(json_file, TT1, TT2, channel_delay_motor, timezero_mm, quantile, 
+def YAG_scan_two_TT(scan, TT1, TT2, channel_delay_motor, timezero_mm, quantile, 
                     target_1, calibration_1, target_2, calibration_2,
                     filterTime_1=2000, filterAmp_1=0, filterTime_2=2000, filterAmp_2=0):
     
@@ -325,8 +325,8 @@ def YAG_scan_two_TT(json_file, TT1, TT2, channel_delay_motor, timezero_mm, quant
                      
     channel_list_all = channel_list_pp
 
-    from sfdata import SFScanInfo
-    scan = SFScanInfo(json_file)
+    #from sfdata import SFScanInfo
+    #scan = SFScanInfo(json_file)
     
     if ' as delay' in scan.parameters['name'][0]:
         print ('Scan is done with the stage in fs')
@@ -351,7 +351,7 @@ def YAG_scan_two_TT(json_file, TT1, TT2, channel_delay_motor, timezero_mm, quant
         check_files_and_data(step)
         clear_output(wait=True)
         filename = scan.files[i][0].split('/')[-1].split('.')[0]
-        print ('Processing: {}'.format(json_file.split('/')[-3]))
+        print ('Processing: {}'.format(scan.fname.split('/')[-3]))
         print ('Step {} of {}: Processing {}'.format(i+1, len(scan.files), filename))
         
         resultsPP, results_FEL,_, _ = load_data_compact_pump_probe(channel_list_pp, channel_list_all, step)
