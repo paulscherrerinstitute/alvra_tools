@@ -623,6 +623,100 @@ def XES_delayscan_TT_4ROIs(scan, pgroup, TT, channel_delay_motor, timezero_mm, r
     print ("\nJob done! It took", clock_int.tock(), "seconds to process", int(len(scan.files) if nsteps is None else nsteps), "file(s)")
     return Delays_fs_scan, Delays_corr_scan, XES_roi1_ON, XES_roi2_ON, XES_roi3_ON, XES_roi4_ON, XES_roi1_OFF, XES_roi2_OFF, XES_roi3_OFF, XES_roi4_OFF, Delay_fs, Delay_mm
 
+######################################
+
+def XES_delayscan_TT_reduced(scan, pgroup, TT, channel_delay_motor, timezero_mm, thr_low, thr_high, nshots, nsteps=None):
+    from collections import defaultdict
+
+    clock_int = clock.Clock()
+    channels_pp = [channel_Events, channel_delay_motor, 'JF02T09V03'] + TT
+    channels_all = channels_pp
+
+    if ' as delay' in scan.parameters['name'][0]:
+        print ('Scan is done with the stage in fs')
+        Delay_fs = scan.readbacks
+        Delay_mm = fs2mm(scan.readbacks,0)
+    else:
+        print ('Scan is done with the stage in mm')
+        Delay_fs = mm2fs(scan.readbacks,0)
+        Delay_mm = scan.readbacks
+
+    Delay_fs_stage = []
+    arrTimes_scan = []
+    arrTimesAmp_scan = []
+    Delays_fs_scan = []
+
+    XES_spectra_on = defaultdict(list)
+    XES_spectra_off = defaultdict(list)
+
+    for i, step in enumerate(scan[:nsteps]):
+
+        ff = scan.files[i][0].split('/')[-1].split('.')[0]
+        print("File {} out of {}: {}".format(i+1, int(len(scan.files) if nsteps is None else nsteps), ff))
+
+        subset = step[channels_all]
+        subset.print_stats(show_complete=True)
+        subset.drop_missing()
+        valid_idx = subset['JF02T09V03'].valid
+
+        Event_code = subset[channel_Events].data
+
+        FEL      = Event_code[:,13] #Event 13: changed from 12 on June 22
+        Laser    = Event_code[:,18]
+        Darkshot = Event_code[:,21]
+
+        if Darkshot.mean()==0:
+            laser_reprate = (1 / Laser.mean() - 1).round().astype(int)
+            index_light = np.logical_and.reduce((FEL, Laser))
+            index_dark  = np.logical_and.reduce((FEL, np.logical_not(Laser)))
+        else:
+            laser_reprate = (Laser.mean() / Darkshot.mean() - 1).round().astype(int)
+            index_light = np.logical_and.reduce((FEL, Laser, np.logical_not(Darkshot)))
+            index_dark = np.logical_and.reduce((FEL, Laser, Darkshot))
+
+        delay_shot = step[channel_delay_motor][index_light]
+        delay_shot_fs = mm2fs(delay_shot, timezero_mm)
+        Delay_fs_stage.append(delay_shot_fs.mean())
+
+        arrTimes = step[channel_PSEN125_arrTimes][index_light]
+        arrTimesAmp = step[channel_PSEN125_arrTimesAmp][index_light]
+        sigtraces = step[channel_PSEN125_edges][index_light]
+        peaktraces = step[channel_PSEN125_peaks][index_light]
+
+        spec_roi_on = 8*[0]
+        spec_roi_off = 8*[0]
+        roi_name = []	
+	
+        for nroi in range(8):
+            imgs = step['JF02T09V03'].juf[f'data_roi_{nroi}'][valid_idx]
+
+            imgs_on = imgs[index_light]
+            imgs_on = threshold(imgs_on, thr_low, thr_high)
+            spec_roi_on[nroi] = imgs_on.sum(axis=1)
+        
+            imgs_off = imgs[index_dark]
+            imgs_off = threshold(imgs_off, thr_low, thr_high)
+            spec_roi_off[nroi] = imgs_off.sum(axis=1)
+        
+            roi_name.append(f'roi_{nroi}')
+
+        for nroi,roi in enumerate(roi_name):
+            XES_spectra_on[roi].append(spec_roi_on[nroi])
+            XES_spectra_off[roi].append(spec_roi_off[nroi])
+
+        Delays_fs_scan.append(delay_shot_fs)
+        arrTimes_scan.append(arrTimes)
+
+        clear_output(wait=True)
+        print ("It took", clock_int.tick(), "seconds to process this file")
+
+    Delays_fs_scan = np.asarray(list(itertools.chain.from_iterable(Delays_fs_scan)))
+    arrTimes_scan = np.asarray(list(itertools.chain.from_iterable(arrTimes_scan)))
+    Delays_corr_scan = Delays_fs_scan + arrTimes_scan
+
+    print ("\nJob done! It took", clock_int.tock(), "seconds to process", int(len(scan.files) if nsteps is None else nsteps), "file(s)")
+    return Delays_fs_scan, Delays_corr_scan, XES_spectra_on, XES_spectra_off, Delay_fs, Delay_mm
+
 
 ######################################
 
