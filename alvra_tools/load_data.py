@@ -108,6 +108,16 @@ def _get_detector_name(f):
 def _make_empty_image(image, module_map):
     return np.zeros((512 * len(module_map), 1024), dtype=image.dtype)
 
+def remove_JF_from_scan(scan):
+    for i, files in enumerate(scan.files):
+        new_files = []
+        for sc_file in files:
+            if "JF" in sc_file:
+                continue
+            new_files.append(sc_file)
+        scan.files[i] = new_files
+    return scan
+
 def get_timezero_NBS(json_file):
     from sfdata import SFScanInfo
     scan = SFScanInfo(json_file)
