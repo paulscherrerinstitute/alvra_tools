@@ -762,7 +762,9 @@ def load_data_compact_laser_pump(channels_pump_unpump, channels_FEL, data):
 
         if (((100 / Deltap_FEL) / laser_reprate) == FEL_reprate):
             ch_pump   = ch_pump[indPump]
-            ch_unpump = ch_unpump[indUnPump] 
+            ch_unpump = ch_unpump[indUnPump]
+            pids_pump=pids_pump[indPump]
+            pids_unpump=pids_unpump[indUnPump]
 
         ppdata = namedtuple("PPData", ["pump", "unpump"])
         result_pp[ch] = ppdata(pump=ch_pump, unpump=ch_unpump)
