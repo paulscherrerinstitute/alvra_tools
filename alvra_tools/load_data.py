@@ -830,6 +830,9 @@ def load_data_compact_laser_pump_JF(channels_pump_unpump, channels_FEL, data, ro
         pids_unpump = ch.pids[index_dark]
         correct_pids_pump = pids_unpump + Deltap_FEL
         final_pids, indPump, indUnPump = np.intersect1d(pids_pump, correct_pids_pump, return_indices=True)
+
+        pids_pump=pids_pump[indPump]
+        pids_unpump=pids_unpump[indUnPump]
         
         ppdata = namedtuple("PPData", ["pump", "unpump"])  
         
@@ -1006,6 +1009,9 @@ def load_data_compact_pump_probe_JF(channels_pump_unpump, channels_FEL, data, ro
         pids_unpump = ch.pids[index_dark]
         correct_pids_pump = pids_unpump + Deltap_FEL
         final_pids, indPump, indUnPump = np.intersect1d(pids_pump, correct_pids_pump, return_indices=True)
+
+        pids_pump=pids_pump[indPump]
+        pids_unpump=pids_unpump[indUnPump]
         
         ppdata = namedtuple("PPData", ["pump", "unpump"])  
         
@@ -1100,6 +1106,9 @@ def load_data_compact_pump_probe(channels_pump_unpump, channels_FEL, data):
 
         correct_pids_pump   = pids_unpump + Deltap_FEL
         final_pids, indPump, indUnPump = np.intersect1d(pids_pump, correct_pids_pump, return_indices=True)
+        
+        pids_pump=pids_pump[indPump]
+        pids_unpump=pids_unpump[indUnPump]
 
         if (((100 / Deltap_FEL) / (laser_reprate - 1)) == FEL_reprate):
             ch_pump   = ch_pump[indPump]
