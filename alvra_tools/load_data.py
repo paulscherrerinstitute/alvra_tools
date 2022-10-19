@@ -180,6 +180,7 @@ def load_JF_static(fname, pgroup, gain_file=None, pedestal_file=None, nshots=Non
 
 def load_JF_static_batches(fname, pgroup, gain_file=None, pedestal_file=None, nshots=None, batch_size = 1000):
     fname = _correct_path(fname, pgroup)
+
     with ju.File(fname, gain_file=gain_file, pedestal_file=pedestal_file) as juf:
         pulse_ids = juf["pulse_id"][:nshots].T[0]
 
@@ -621,8 +622,13 @@ def load_data_compact_JF(channel_list, data, roi1, roi2, roi3, roi4):
 
 ########################################################################################
 
-def load_data_compact_FEL_pump(channels_pump_unpump, channels_pump, data):  
+def load_data_compact_FEL_pump(channels_pump_unpump, channels_pump, data, offsets=None):  
     #with SFDataFiles(datafiles) as data:
+
+    offsets = offsets or {}
+    for chname, value in offsets.items():
+        data[chname].offset = value
+    
     channels_pump_unpump = check_channels(data, channels_pump_unpump, "pump unpump")
     channels_pump = check_channels(data, channels_pump, "pump")
 
@@ -702,8 +708,13 @@ def load_data_compact_FEL_pump(channels_pump_unpump, channels_pump, data):
 
 ########################################################################################
 
-def load_data_compact_laser_pump(channels_pump_unpump, channels_FEL, data):
+def load_data_compact_laser_pump(channels_pump_unpump, channels_FEL, data, offsets=None):
     #with SFDataFiles(datafiles) as data:
+    
+    offsets = offsets or {}
+    for chname, value in offsets.items():
+        data[chname].offset = value  
+    
     channels_pump_unpump = check_channels(data, channels_pump_unpump, "pump unpump")
     channels_FEL = check_channels(data, channels_FEL, "FEL")
 
@@ -750,12 +761,17 @@ def load_data_compact_laser_pump(channels_pump_unpump, channels_FEL, data):
     print ('Pump scheme is {}:1'.format(laser_reprate))
 
     result_pp = {}
-    for ch in channels_pump_unpump:
-        ch_pump   = subset_FEL[ch].data[index_light]
-        pids_pump   = subset_FEL[ch].pids[index_light]
 
-        ch_unpump = subset_FEL[ch].data[index_dark]
-        pids_unpump = subset_FEL[ch].pids[index_dark]
+    for ch in channels_pump_unpump:
+
+        data = subset_FEL[ch].data
+        pids = subset_FEL[ch].pids
+
+        ch_pump   = data[index_light]
+        pids_pump   = pids[index_light]
+
+        ch_unpump = data[index_dark]
+        pids_unpump = pids[index_dark]
 
         correct_pids_pump   = pids_unpump + Deltap_FEL
         final_pids, indPump, indUnPump = np.intersect1d(pids_pump, correct_pids_pump, return_indices=True)
@@ -780,8 +796,13 @@ def load_data_compact_laser_pump(channels_pump_unpump, channels_FEL, data):
 
 ########################################################################################
 
-def load_data_compact_laser_pump_JF(channels_pump_unpump, channels_FEL, data, roi1=None, roi2=None, roi3=None, roi4=None):
+def load_data_compact_laser_pump_JF(channels_pump_unpump, channels_FEL, data, offsets=None, roi1=None, roi2=None, roi3=None, roi4=None):
     #with SFDataFiles(datafiles) as data:
+
+    offsets = offsets or {}
+    for chname, value in offsets.items():
+        data[chname].offset = value
+   
     channels_pump_unpump = check_channels(data, channels_pump_unpump, "pump unpump")
     channels_FEL = check_channels(data, channels_FEL, "FEL")
 
@@ -878,8 +899,13 @@ def load_data_compact_laser_pump_JF(channels_pump_unpump, channels_FEL, data, ro
 
 ########################################################################################
 
-def load_data_compact_laser_pump_JF_noPair(channels_pump_unpump, channels_FEL, data, roi1=None, roi2=None, roi3=None, roi4=None):
+def load_data_compact_laser_pump_JF_noPair(channels_pump_unpump, channels_FEL, data, offsets=None, roi1=None, roi2=None, roi3=None, roi4=None):
     #with SFDataFiles(datafiles) as data:
+
+    offsets = offsets or {}
+    for chname, value in offsets.items():
+        data[chname].offset = value
+
     channels_pump_unpump = check_channels(data, channels_pump_unpump, "pump unpump")
     channels_FEL = check_channels(data, channels_FEL, "FEL")
 
@@ -965,8 +991,12 @@ def load_data_compact_laser_pump_JF_noPair(channels_pump_unpump, channels_FEL, d
 
 ########################################################################################
 
-def load_data_compact_pump_probe_JF(channels_pump_unpump, channels_FEL, data, roi1=None, roi2=None, roi3=None, roi4=None):
+def load_data_compact_pump_probe_JF(channels_pump_unpump, channels_FEL, data, offsets=None, roi1=None, roi2=None, roi3=None, roi4=None):
     
+    offsets = offsets or {}
+    for chname, value in offsets.items():
+        data[chname].offset = value
+
     channels_pump_unpump = check_channels(data, channels_pump_unpump, "pump unpump")
     channels_FEL = check_channels(data, channels_FEL, "FEL")
 
@@ -1057,7 +1087,11 @@ def load_data_compact_pump_probe_JF(channels_pump_unpump, channels_FEL, data, ro
 
 ########################################################################################
 
-def load_data_compact_pump_probe(channels_pump_unpump, channels_FEL, data):
+def load_data_compact_pump_probe(channels_pump_unpump, channels_FEL, data, offsets=None):
+
+    offsets = offsets or {}
+    for chname, value in offsets.items():
+        data[chname].offset = value
    
     channels_pump_unpump = check_channels(data, channels_pump_unpump, "pump unpump")
     channels_FEL = check_channels(data, channels_FEL, "FEL")
