@@ -866,7 +866,26 @@ def RIXS_PumpProbe_4ROIs(json_file, pgroup, roi1, roi2, roi3, roi4, thr_low, thr
 
 ######################################
 
+def save_data_XES_timescans(reducedir, run_name, delaymm, delayfs, spec_array_ON, spec_array_OFF):
 
+    np.save(reducedir+run_name+'/delays_fs.npy', delayfs)
+    np.save(reducedir+run_name+'/delays_mm.npy', delaymm)
+
+    for i, spectrum in enumerate(spec_array_ON):
+        np.save(reducedir+run_name+'/spectrum_roi{}_ON.npy'.format(i+1), spectrum)
+
+    for i, spectrum in enumerate(spec_array_OFF):
+        np.save(reducedir+run_name+'/spectrum_roi{}_OFF.npy'.format(i+1), spectrum)
+    
+######################################
+
+def save_data_XES(reducedir, run_name, spec_array_ON, spec_array_OFF):
+
+    for i, spectrum in enumerate(spec_array_ON):
+        np.save(reducedir+run_name+'/spectrum_roi{}_ON.npy'.format(i+1), spectrum)
+
+    for i, spectrum in enumerate(spec_array_OFF):
+        np.save(reducedir+run_name+'/spectrum_roi{}_OFF.npy'.format(i+1), spectrum)
  
     
 

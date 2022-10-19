@@ -908,6 +908,19 @@ def XAS_delayscan_PSEN_bs(scan, TT, channel_delay_motor, diode, Izero, timezero_
 
 ######################################
 
+def save_run_array_XANES(reducedir, run_name, En, D1p, D1u, PP1, gs1):
+    run_array = {}
+    run_array[run_name.split('-')[0]] = {"name": run_name,
+                                    "DataDiode1_pump": D1p, 
+                                    "DataDiode1_unpump" : D1u, 
+                                    "Pump_probe_Diode1" : PP1, 
+                                    "goodshots1" : gs1,
+                                    "Energy_eV" : En}
+
+    np.save(reducedir+run_name+'/run_array', run_array)
+
+######################################
+
 def save_data_XANES(reducedir, run_name, En, D1p, D1u, PP1, gs1):
     run_array = {}
     run_array[run_name.split('-')[0]] = {"name": run_name,
@@ -923,6 +936,20 @@ def save_data_XANES(reducedir, run_name, En, D1p, D1u, PP1, gs1):
     np.save(reducedir+run_name+'/XANES_DataDiode1_pump', D1p)
     np.save(reducedir+run_name+'/XANES_DataDiode1_unpump', D1u)
     np.save(reducedir+run_name+'/XANES_Pump_probe_Diode1', PP1)
+
+    np.save(reducedir+run_name+'/run_array', run_array)
+
+######################################
+
+def save_run_array_timescans(reducedir, run_name, delaymm, delayfs, D1p, D1u, PP1, gs1):
+    run_array = {}
+    run_array[run_name.split('-')[0]] = {"name": run_name,
+                                    "DataDiode1_pump": D1p, 
+                                    "DataDiode1_unpump" : D1u, 
+                                    "Pump_probe_Diode1" : PP1, 
+                                    "goodshots1" : gs1,
+                                    "Delay_mm" : delaymm,
+                                    "Delay_fs" : delayfs}
 
     np.save(reducedir+run_name+'/run_array', run_array)
 
@@ -946,6 +973,23 @@ def save_data_timescans(reducedir, run_name, delaymm, delayfs, D1p, D1u, PP1, gs
     np.save(reducedir+run_name+'/timescan_DataDiode1_unpump', D1u)
     np.save(reducedir+run_name+'/timescan_Pump_probe_Diode1', PP1)
 
+    np.save(reducedir+run_name+'/run_array', run_array)
+
+######################################
+
+def save_run_array_XANES_2diodes(reducedir, run_name, En, D1p, D1u, PP1, gs1, D2p, D2u, PP2, gs2):
+    run_array = {}
+    run_array[run_name.split('-')[0]] = {"name": run_name,
+                                    "DataDiode1_pump": D1p, 
+                                    "DataDiode1_unpump" : D1u, 
+                                    "Pump_probe_Diode1" : PP1, 
+                                    "goodshots1" : gs1,
+                                    "DataDiode2_pump": D2p, 
+                                    "DataDiode2_unpump" : D2u, 
+                                    "Pump_probe_Diode2" : PP2, 
+                                    "goodshots2" : gs2,
+                                    "Energy_eV" : En}
+   
     np.save(reducedir+run_name+'/run_array', run_array)
 
 ######################################
@@ -978,6 +1022,25 @@ def save_data_XANES_2diodes(reducedir, run_name, En, D1p, D1u, PP1, gs1, D2p, D2
     np.save(reducedir+run_name+'/run_array', run_array)
 
 ######################################
+
+def save_run_array_timescans_2diodes(reducedir, run_name, delaymm, delayfs, D1p, D1u, PP1, gs1):
+    run_array = {}
+    run_array[run_name.split('-')[0]] = {"name": run_name,
+                                    "DataDiode1_pump": D1p, 
+                                    "DataDiode1_unpump" : D1u, 
+                                    "Pump_probe_Diode1" : PP1, 
+                                    "goodshots1" : gs1,
+                                    "DataDiode2_pump": D2p, 
+                                    "DataDiode2_unpump" : D2u, 
+                                    "Pump_probe_Diode2" : PP2, 
+                                    "goodshots2" : gs2,
+                                    "Delay_mm" : delaymm,
+                                    "Delay_fs" : delayfs}
+   
+    np.save(reducedir+run_name+'/run_array', run_array)
+
+######################################
+
 
 def save_data_timescans_2diodes(reducedir, run_name, delaymm, delayfs, D1p, D1u, PP1, gs1, D2p, D2u, PP2, gs2):
     run_array = {}
