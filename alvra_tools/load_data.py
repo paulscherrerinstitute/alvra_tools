@@ -554,8 +554,13 @@ def check_channels(data, asked_channels, name):
 
 ########################################################################################
 
-def load_data_compact(channel_list, data):
+def load_data_compact(channel_list, data, offsets = None):
     #with SFDataFiles(datafiles) as data:#, SFDataFile(filename_camera) as data_camera:
+
+    offsets = offsets or {}
+    for chname, value in offsets.items():
+        data[chname].offset = value
+
     channel_list = check_channels(data, channel_list, "channels")
 
     channel_list_complete = [channel_Events] + channel_list
@@ -587,8 +592,13 @@ def load_data_compact(channel_list, data):
 
 ########################################################################################
 
-def load_data_compact_JF(channel_list, data, roi1, roi2, roi3, roi4):
+def load_data_compact_JF(channel_list, data, roi1, roi2, roi3, roi4, offset = None):
     #with SFDataFiles(datafiles) as data:#, SFDataFile(filename_camera) as data_camera:
+
+    offsets = offsets or {}
+    for chname, value in offsets.items():
+        data[chname].offset = value
+
     channel_list = check_channels(data, channel_list, "channels")
 
     channel_list_complete = [channel_Events] + channel_list
