@@ -3,6 +3,7 @@ import glob, h5py, time
 from scipy.special import erf
 from scipy.optimize import curve_fit
 from datetime import datetime
+import colorcet as cc
 
 
 class Fit:
@@ -214,5 +215,20 @@ def fs2mm(x,t0_fs):
 
 def cut(arr, minlen):
     return np.array([i[:minlen] for i in arr])
+
+def color_enumerate(iterable, start=0, cmap=cc.cm.rainbow):
+    """
+    same functionality as enumerate, but additionally yields sequential colors from
+    a given cmap
+    """
+
+    n = start
+    try:
+        length = len(iterable)
+    except TypeError:
+        length = len(list(iterable))
+    for item in iterable:
+        yield n, cmap(n/(length-0.99)), item
+        n += 1
 
 
