@@ -1,5 +1,6 @@
 import h5py
 import numpy as np
+import time
 
 import jungfrau_utils as ju
 from sfdata import SFDataFile, SFDataFiles
@@ -128,6 +129,28 @@ def get_timezero_NBS(json_file):
         ch = sfd['SARES11-CVME-EVR0:DUMMY_PV2_NBS']
         t0mm = ch.data[0]
     return t0mm
+
+def get_filesizes(step):
+    for file in step.fnames:
+        exists = os.path.isfile(file)
+        if exists:
+            if 'BSDATA' in file:
+                bsfile=str(file)
+                size = os.stat(bsfile).st_size
+                break
+            else: 
+                size = np.NaN
+        else:
+            size = np.NaN
+    return size
+
+def get_filesize_diff(step):
+    s1 = get_filesizes(step)
+    time.sleep(0.1)
+    s2 = get_filesizes(step)
+    if s1==s2:
+        return True
+    return False
 
 #def get_timezero_NBS(json_file):
 #    from sfdata import SFScanInfo
