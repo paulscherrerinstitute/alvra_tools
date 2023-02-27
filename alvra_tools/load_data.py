@@ -152,6 +152,14 @@ def get_filesize_diff(step):
         return True
     return False
 
+def Get_ROI_names(step, detector):
+    channels =[]
+    for n in step.names:
+        if "ROI_" in n:
+            tag = n.split('_')[-1]
+            channels.append((detector+":ROI_{}".format(tag)))
+    return channels
+
 #def get_timezero_NBS(json_file):
 #    from sfdata import SFScanInfo
 #    scan = SFScanInfo(json_file)
