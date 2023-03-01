@@ -10,6 +10,7 @@ from glob import glob
 from .channels import *
 from .utils import crop_roi, make_roi
 from sfdata.utils import cprint, print_line
+from collections import defaultdict
 
 
 def _correct_path(f, pgroup):
@@ -156,7 +157,7 @@ def Get_ROI_names(step, detector):
     channels =[]
     for n in step.names:
         if "ROI_" in n:
-            tag = n.split('_')[-1]
+            tag = n.split('ROI_')[-1]
             channels.append((detector+":ROI_{}".format(tag)))
     return channels
 
@@ -613,11 +614,20 @@ def load_data_compact(channel_list, data, offsets = None):
     print ('FEL rep rate is {} Hz'.format(100 / Deltap))
 
     result = {}
+    meta = defaultdict(list)
+
     for ch in channel_list_complete:
         dat = subset[ch].data
         pids = subset[ch].pids[index_light]
         ch_out   = dat[index_light]
         result[ch] = ch_out
+	
+        if subset[ch].meta:
+            chmeta = subset[ch].meta
+            for k,v in chmeta.items():
+                meta[ch + "-" + k] = v
+    
+    result["meta"] = meta
 
     return result, pids
 
@@ -1172,6 +1182,7 @@ def load_data_compact_pump_probe(channels_pump_unpump, channels_FEL, data, offse
     print ('Pump scheme is {}:1'.format(laser_reprate - 1))
 
     result_pp = {}
+    meta = defaultdict(list)
     for ch in channels_pump_unpump:
         ch_pump   = subset_FEL[ch].data[index_light]
         pids_pump   = subset_FEL[ch].pids[index_light]
@@ -1191,7 +1202,13 @@ def load_data_compact_pump_probe(channels_pump_unpump, channels_FEL, data, offse
 
         ppdata = namedtuple("PPData", ["pump", "unpump"])
         result_pp[ch] = ppdata(pump=ch_pump, unpump=ch_unpump)
+        
+        if subset_FEL[ch].meta:
+            chmeta = subset_FEL[ch].meta
+            for k,v in chmeta.items():
+                meta[ch + "-" + k] = v
 
+    result_pp["meta"] = meta
 
     result_FEL = {}
     for ch in channels_FEL:
