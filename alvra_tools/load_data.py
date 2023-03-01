@@ -622,12 +622,12 @@ def load_data_compact(channel_list, data, offsets = None):
         ch_out   = dat[index_light]
         result[ch] = ch_out
 	
-        if subset[ch].meta:
-            chmeta = subset[ch].meta
+        if subset_FEL[ch].meta:
+            chmeta = subset_FEL[ch].meta
             for k,v in chmeta.items():
-                meta[ch + "-" + k] = v
-    
-    result["meta"] = meta
+                meta[ch + "-" + k] = v[()]
+
+    result_pp["meta"] = meta
 
     return result, pids
 
@@ -1206,7 +1206,7 @@ def load_data_compact_pump_probe(channels_pump_unpump, channels_FEL, data, offse
         if subset_FEL[ch].meta:
             chmeta = subset_FEL[ch].meta
             for k,v in chmeta.items():
-                meta[ch + "-" + k] = v
+                meta[ch + "-" + k] = v[()]
 
     result_pp["meta"] = meta
 
