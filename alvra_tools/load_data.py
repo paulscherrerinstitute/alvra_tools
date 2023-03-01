@@ -627,7 +627,7 @@ def load_data_compact(channel_list, data, offsets = None):
             for k,v in chmeta.items():
                 meta[ch + "-" + k] = v[()]
 
-    result_pp["meta"] = meta
+    result["meta"] = meta
 
     return result, pids
 
