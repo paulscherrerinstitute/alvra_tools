@@ -9,6 +9,7 @@ from datetime import datetime
 from scipy.stats.stats import pearsonr
 from scipy.signal import find_peaks
 import itertools
+from collections import defaultdict
 
 from alvra_tools import clock
 from alvra_tools.load_data import *
@@ -206,6 +207,46 @@ def XES_static_4ROIs(fname, pgroup, roi1, roi2, roi3, roi4, thr_low, thr_high, n
 
 ######################################
 
+def XES_static_ROIs(scan, channels_list, thr_low, thr_high):
+    
+    s = scan[0]
+    channels_ROI = Get_ROI_names(s, "JF02T09V03")
+    channels_list = channels_list + channels_ROI
+    
+    check_files_and_data(s)
+    check = get_filesize_diff(s)
+    if check:
+        clear_output(wait=True)
+        filename = scan.files[0][0].split('/')[-1].split('.')[0]
+        print ('Processing: {}'.format(scan.fname.split('/')[-3]))
+        #print ('Step {} of {}: Processing {}'.format(i+1, len(scan.files), filename))
+	     
+        results, _ = load_data_compact(channels_list, s)
+	    
+        thresholded = {}
+        averaged = {}
+        spectrum = {}
+        tags = []
+        
+        for roi in channels_ROI:
+            data = results[roi]
+            avg  = np.average(data, axis = 0)
+            thr  = threshold(data, thr_low, thr_high)
+            spec = avg.sum(axis=0)
+            
+            tag = roi#.split(':')[-1]
+            
+            thresholded[tag] = thr
+            averaged[tag] = avg
+            spectrum[tag] = spec
+            tags.append(tag)
+	    
+    meta = results["meta"]
+
+    return(spectrum, averaged, thresholded, tags, meta)
+
+######################################
+
 def XES_PumpProbe_4ROIs(fname, pgroup, roi1, roi2, roi3, roi4, thr_low, thr_high, nshots, correctFlag, binsize):
     clock_int = clock.Clock()
 
@@ -283,6 +324,64 @@ def XES_PumpProbe_4ROIs(fname, pgroup, roi1, roi2, roi3, roi4, thr_low, thr_high
     print ('Loaded {} images ON, {} images OFF'.format(imgs_on_roi1.shape[0],imgs_off_roi1.shape[0]))
     print ("It took", clock_int.tick(), "seconds to process this file")
     return spec_roi1_ON, spec_roi2_ON, spec_roi3_ON, spec_roi4_ON, pids_on, spec_roi1_OFF, spec_roi2_OFF, spec_roi3_OFF, spec_roi4_OFF, pids_off
+
+######################################
+
+def XES_PumpProbe_ROIs(scan, channels_list, thr_low, thr_high, index=None):
+    s = scan[index]
+    channels_ROI = Get_ROI_names(s, "JF02T09V03")
+    channels_pp = [channel_Events] + channels_list + channels_ROI
+    channels_all = channels_pp
+    step = scan[index]
+
+    check_files_and_data(step)
+    check = get_filesize_diff(step)  
+    if check:
+        clear_output(wait=True)
+        filename = scan.files[index][0].split('/')[-1].split('.')[0]
+        print ('Processing: {}'.format(scan.fname.split('/')[-3]))
+        print ('Step {} of {}: filename {}'.format(index+1, len(scan.files), filename))
+
+        resultsPP, results, _, _ = load_data_compact_pump_probe(channels_pp, channels_all, step)
+
+        thresholded_on = {}
+        averaged_on = {}
+        spectrum_on = {}
+		
+        thresholded_off = {}
+        averaged_off = {}
+        spectrum_off = {}
+
+        tags = []
+		
+        for roi in channels_ROI:
+            data_on = resultsPP[roi].pump
+            data_off = resultsPP[roi].unpump
+		    
+            avg_on  = np.average(data_on, axis = 0)
+            thr_on  = threshold(data_on, thr_low, thr_high)
+            spec_on = avg_on.sum(axis=0)
+		    
+            avg_off  = np.average(data_off, axis = 0)
+            thr_off  = threshold(data_off, thr_low, thr_high)
+            spec_off = avg_off.sum(axis=0)
+		    
+            tag = roi#.split(':')[-1]
+    
+            thresholded_on[tag] = thr_on
+            averaged_on[tag] = avg_on
+            spectrum_on[tag] = spec_on
+		    
+            thresholded_off[tag] = thr_off
+            averaged_off[tag] = avg_off
+            spectrum_off[tag] = spec_off
+		
+            tags.append(tag)
+   
+    meta = resultsPP["meta"]
+		
+    return(spectrum_on, spectrum_off, averaged_on, averaged_off, thresholded_on, thresholded_off, tags, meta)
+
 
 ######################################
 
@@ -572,8 +671,11 @@ def XES_delayscan_ROIs(scan, channels_list, thr_low, thr_high):
 
             spectra_on.append(spectrum_on)
             spectra_off.append(spectrum_off)
+
+        if i==0:
+            meta = resultsPP["meta"]
     
-    return(spectra_on, spectra_off, tags, Delay_fs, Delay_mm)
+    return(spectra_on, spectra_off, tags, Delay_fs, Delay_mm, meta)
 
 ######################################
 
