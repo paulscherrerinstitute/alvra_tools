@@ -622,8 +622,8 @@ def load_data_compact(channel_list, data, offsets = None):
         ch_out   = dat[index_light]
         result[ch] = ch_out
 	
-        if subset_FEL[ch].meta:
-            chmeta = subset_FEL[ch].meta
+        if subset[ch].meta:
+            chmeta = subset[ch].meta
             for k,v in chmeta.items():
                 meta[ch + "-" + k] = v[()]
 
