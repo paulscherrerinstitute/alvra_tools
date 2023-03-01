@@ -657,7 +657,7 @@ def XES_delayscan_ROIs(scan, channels_list, thr_low, thr_high):
                 thr_off  = threshold(data_off, thr_low, thr_high)
                 spec_off = avg_off.sum(axis=0)
 		    
-                tag = roi.split(':')[-1]
+                tag = roi#.split(':')[-1]
     
                 thresholded_on[tag] = thr_on
                 averaged_on[tag] = avg_on
