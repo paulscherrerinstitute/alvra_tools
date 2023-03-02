@@ -207,9 +207,8 @@ def XES_static_4ROIs(fname, pgroup, roi1, roi2, roi3, roi4, thr_low, thr_high, n
 
 ######################################
 
-def XES_static_ROIs(scan, channels_list, thr_low, thr_high):
-    
-    s = scan[0]
+def XES_static_ROIs(scan, channels_list, thr_low, thr_high, index=0):
+    s = scan[index]
     channels_ROI = Get_ROI_names(s, "JF02T09V03")
     channels_list = channels_list + channels_ROI
     
@@ -219,7 +218,7 @@ def XES_static_ROIs(scan, channels_list, thr_low, thr_high):
         clear_output(wait=True)
         filename = scan.files[0][0].split('/')[-1].split('.')[0]
         print ('Processing: {}'.format(scan.fname.split('/')[-3]))
-        #print ('Step {} of {}: Processing {}'.format(i+1, len(scan.files), filename))
+       print ('Step {} of {}: filename {}'.format(index+1, len(scan.files), filename))
 	     
         results, _ = load_data_compact(channels_list, s)
 	    
@@ -230,8 +229,8 @@ def XES_static_ROIs(scan, channels_list, thr_low, thr_high):
         
         for roi in channels_ROI:
             data = results[roi]
-            avg  = np.average(data, axis = 0)
             thr  = threshold(data, thr_low, thr_high)
+            avg  = np.average(thr, axis = 0)
             spec = avg.sum(axis=0)
             
             tag = roi#.split(':')[-1]
@@ -327,7 +326,7 @@ def XES_PumpProbe_4ROIs(fname, pgroup, roi1, roi2, roi3, roi4, thr_low, thr_high
 
 ######################################
 
-def XES_PumpProbe_ROIs(scan, channels_list, thr_low, thr_high, index=None):
+def XES_PumpProbe_ROIs(scan, channels_list, thr_low, thr_high, index=0):
     s = scan[index]
     channels_ROI = Get_ROI_names(s, "JF02T09V03")
     channels_pp = [channel_Events] + channels_list + channels_ROI
@@ -357,13 +356,13 @@ def XES_PumpProbe_ROIs(scan, channels_list, thr_low, thr_high, index=None):
         for roi in channels_ROI:
             data_on = resultsPP[roi].pump
             data_off = resultsPP[roi].unpump
-		    
-            avg_on  = np.average(data_on, axis = 0)
+
             thr_on  = threshold(data_on, thr_low, thr_high)
+            avg_on  = np.average(thr_on, axis = 0)
             spec_on = avg_on.sum(axis=0)
-		    
-            avg_off  = np.average(data_off, axis = 0)
+
             thr_off  = threshold(data_off, thr_low, thr_high)
+            avg_off  = np.average(thr_off, axis = 0)
             spec_off = avg_off.sum(axis=0)
 		    
             tag = roi#.split(':')[-1]
