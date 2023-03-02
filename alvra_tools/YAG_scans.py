@@ -34,17 +34,17 @@ def TT_statistics_scan(scan, TT, target, calibration):
         check_files_and_data(step)
         check = get_filesize_diff(step)
         if check:
-		clear_output(wait=True)
-		filename = scan.files[i][0].split('/')[-1].split('.')[0]
-		print ('Processing: {}'.format(scan.fname.split('/')[-3]))
-		print ('Step {} of {}: Processing {}'.format(i+1, len(scan.files), filename))
+            clear_output(wait=True)
+            filename = scan.files[i][0].split('/')[-1].split('.')[0]
+            print ('Processing: {}'.format(scan.fname.split('/')[-3]))
+            print ('Step {} of {}: Processing {}'.format(i+1, len(scan.files), filename))
 		
-		resultsPP, results_FEL, _, _ = load_data_compact_pump_probe(channel_list_pp, channel_list_all, step)
+            resultsPP, results_FEL, _, _ = load_data_compact_pump_probe(channel_list_pp, channel_list_all, step)
 
-		arrTimes, arrTimesAmp, sigtraces, peaktraces = get_arrTimes(resultsPP, TT, target, calibration)
+            arrTimes, arrTimesAmp, sigtraces, peaktraces = get_arrTimes(resultsPP, TT, target, calibration)
 		
-		arrTimes_scan.append(arrTimes)
-		arrTimesAmp_scan.append(arrTimesAmp)
+            arrTimes_scan.append(arrTimes)
+            arrTimesAmp_scan.append(arrTimesAmp)
 		
     arrTimes_scan = np.asarray(list(itertools.chain.from_iterable(arrTimes_scan)))
     arrTimesAmp_scan = np.asarray(list(itertools.chain.from_iterable(arrTimesAmp_scan)))
@@ -72,20 +72,20 @@ def Two_TT_statistics_scan(scan, TT1, TT2, target_1, calibration_1, target_2, ca
         check_files_and_data(step)
         check = get_filesize_diff(step)
         if check:
-		clear_output(wait=True)
-		filename = scan.files[i][0].split('/')[-1].split('.')[0]
-		print ('Processing: {}'.format(scan.fname.split('/')[-3]))
-		print ('Step {} of {}: Processing {}'.format(i+1, len(scan.files), filename))
+            clear_output(wait=True)
+            filename = scan.files[i][0].split('/')[-1].split('.')[0]
+            print ('Processing: {}'.format(scan.fname.split('/')[-3]))
+            print ('Step {} of {}: Processing {}'.format(i+1, len(scan.files), filename))
 		
-		resultsPP, results_FEL, _, _ = load_data_compact_pump_probe(channel_list_pp, channel_list_all, step)
+            resultsPP, results_FEL, _, _ = load_data_compact_pump_probe(channel_list_pp, channel_list_all, step)
 
-		arrTimes_1, arrTimesAmp_1, sigtraces_1, peaktraces_1 = get_arrTimes(resultsPP, TT1, target_1, calibration_1)
-		arrTimes_2, arrTimesAmp_2, sigtraces_2, peaktraces_2 = get_arrTimes(resultsPP, TT2, target_2, calibration_2)        
+            arrTimes_1, arrTimesAmp_1, sigtraces_1, peaktraces_1 = get_arrTimes(resultsPP, TT1, target_1, calibration_1)
+            arrTimes_2, arrTimesAmp_2, sigtraces_2, peaktraces_2 = get_arrTimes(resultsPP, TT2, target_2, calibration_2)        
 
-		arrTimes_1_scan.append(arrTimes_1)
-		arrTimesAmp_1_scan.append(arrTimesAmp_1)
-		arrTimes_2_scan.append(arrTimes_2)
-		arrTimesAmp_2_scan.append(arrTimesAmp_2)
+            arrTimes_1_scan.append(arrTimes_1)
+            arrTimesAmp_1_scan.append(arrTimesAmp_1)
+            arrTimes_2_scan.append(arrTimes_2)
+            arrTimesAmp_2_scan.append(arrTimesAmp_2)
         
     arrTimes_1_scan = np.asarray(list(itertools.chain.from_iterable(arrTimes_1_scan)))
     arrTimesAmp_1_scan = np.asarray(list(itertools.chain.from_iterable(arrTimesAmp_1_scan)))
@@ -126,30 +126,30 @@ def YAG_scan_noTT(scan, quantile):
         check_files_and_data(step)
         check = get_filesize_diff(step)
         if check:
-		clear_output(wait=True)
-		filename = scan.files[i][0].split('/')[-1].split('.')[0]
-		print ('Processing: {}'.format(scan.fname.split('/')[-3]))
-		print ('Step {} of {}: Processing {}'.format(i+1, len(scan.files), filename))
-		resultsPP, results_FEL, pids_pump, pids_unpump = load_data_compact_pump_probe(channel_list_pp, channel_list_all, step)
+            clear_output(wait=True)
+            filename = scan.files[i][0].split('/')[-1].split('.')[0]
+            print ('Processing: {}'.format(scan.fname.split('/')[-3]))
+            print ('Step {} of {}: Processing {}'.format(i+1, len(scan.files), filename))
+            resultsPP, results_FEL, pids_pump, pids_unpump = load_data_compact_pump_probe(channel_list_pp, channel_list_all, step)
 
 
-		Laser_pump = resultsPP[channel_LaserDiode].pump
-		Laser_ref_pump = resultsPP[channel_Laser_refDiode].pump
-		Laser_unpump = resultsPP[channel_LaserDiode].unpump
-		Laser_ref_unpump = resultsPP[channel_Laser_refDiode].unpump
+            Laser_pump = resultsPP[channel_LaserDiode].pump
+            Laser_ref_pump = resultsPP[channel_Laser_refDiode].pump
+            Laser_unpump = resultsPP[channel_LaserDiode].unpump
+            Laser_ref_unpump = resultsPP[channel_Laser_refDiode].unpump
 
-		Laser_diff = -np.log10((Laser_pump) / (Laser_unpump))
+            Laser_diff = -np.log10((Laser_pump) / (Laser_unpump))
 
-		Pump_probe_all.append(Laser_diff)
-		df_pump_probe = pd.DataFrame(Laser_diff)
-		Pump_probe.append(np.nanquantile(df_pump_probe, [0.5, 0.5 - quantile/2, 0.5 + quantile/2]))
+            Pump_probe_all.append(Laser_diff)
+            df_pump_probe = pd.DataFrame(Laser_diff)
+            Pump_probe.append(np.nanquantile(df_pump_probe, [0.5, 0.5 - quantile/2, 0.5 + quantile/2]))
 
-		Pump_probe_std.append(np.nanmean(Laser_diff))
-		Pump_probe_std_err.append(np.nanstd(Laser_diff))#/np.sqrt(len(Laser_diff)))
+            Pump_probe_std.append(np.nanmean(Laser_diff))
+            Pump_probe_std_err.append(np.nanstd(Laser_diff))#/np.sqrt(len(Laser_diff)))
 
-		Pump = np.median(Laser_pump)
-		Unpump = np.median(Laser_unpump)
-		Pump_probe_avg.append(-np.log10((Pump) / (Unpump)))
+            Pump = np.median(Laser_pump)
+            Unpump = np.median(Laser_unpump)
+            Pump_probe_avg.append(-np.log10((Pump) / (Unpump)))
 
     Delay_mm = Delay_mm[:np.shape(Pump_probe)[0]]
     Delay_fs = Delay_fs[:np.shape(Pump_probe)[0]]
@@ -201,35 +201,35 @@ def YAG_scan_one_TT(scan, TT, channel_delay_motor, timezero_mm, quantile, target
         check_files_and_data(step)
         check = get_filesize_diff(step)
         if check:
-		clear_output(wait=True)
-		filename = scan.files[i][0].split('/')[-1].split('.')[0]
-		print ('Processing: {}'.format(scan.fname.split('/')[-3]))
-		print ('Step {} of {}: Processing {}'.format(i+1, len(scan.files), filename))
+            clear_output(wait=True)
+            filename = scan.files[i][0].split('/')[-1].split('.')[0]
+            print ('Processing: {}'.format(scan.fname.split('/')[-3]))
+            print ('Step {} of {}: Processing {}'.format(i+1, len(scan.files), filename))
 		
-		resultsPP, results_FEL, _, _ = load_data_compact_pump_probe(channel_list_pp, channel_list_all, step)
+            resultsPP, results_FEL, _, _ = load_data_compact_pump_probe(channel_list_pp, channel_list_all, step)
 
-		Laser_pump = resultsPP[channel_LaserDiode].pump
-		Laser_ref_pump = resultsPP[channel_Laser_refDiode].pump
-		Laser_unpump = resultsPP[channel_LaserDiode].unpump
-		Laser_ref_unpump = resultsPP[channel_Laser_refDiode].unpump
+            Laser_pump = resultsPP[channel_LaserDiode].pump
+            Laser_ref_pump = resultsPP[channel_Laser_refDiode].pump
+            Laser_unpump = resultsPP[channel_LaserDiode].unpump
+            Laser_ref_unpump = resultsPP[channel_Laser_refDiode].unpump
 		
-		delay_shot = resultsPP[channel_delay_motor].pump
-		delay_shot_fs = mm2fs(delay_shot, timezero_mm)
-		Delay_fs_stage.append(delay_shot_fs.mean())
+            delay_shot = resultsPP[channel_delay_motor].pump
+            delay_shot_fs = mm2fs(delay_shot, timezero_mm)
+            Delay_fs_stage.append(delay_shot_fs.mean())
 
-		Laser_diff = -np.log10((Laser_pump) / (Laser_unpump))
+            Laser_diff = -np.log10((Laser_pump) / (Laser_unpump))
 
-		arrTimes, arrTimesAmp, sigtraces, peaktraces = get_arrTimes(resultsPP, step, TT, target, calibration)
+            arrTimes, arrTimesAmp, sigtraces, peaktraces = get_arrTimes(resultsPP, step, TT, target, calibration)
 		
-		index = (np.asarray(arrTimes) < filterTime) & (np.asarray(arrTimesAmp) > filterAmp)
+            index = (np.asarray(arrTimes) < filterTime) & (np.asarray(arrTimesAmp) > filterAmp)
 		
-		Delays_fs_scan.append(delay_shot_fs[index])
-		arrTimes_scan.append(arrTimes[index])
-		arrTimesAmp_scan.append(arrTimesAmp[index])
-		Pump_probe_scan.append(Laser_diff[index])
+            Delays_fs_scan.append(delay_shot_fs[index])
+            arrTimes_scan.append(arrTimes[index])
+            arrTimesAmp_scan.append(arrTimesAmp[index])
+            Pump_probe_scan.append(Laser_diff[index])
 		
-		df_pump_probe = pd.DataFrame(Laser_diff)
-		Pump_probe.append(np.nanquantile(df_pump_probe, [0.5, 0.5 - quantile/2, 0.5 + quantile/2]))
+            df_pump_probe = pd.DataFrame(Laser_diff)
+            Pump_probe.append(np.nanquantile(df_pump_probe, [0.5, 0.5 - quantile/2, 0.5 + quantile/2]))
     
     Delays_fs_scan = np.asarray(list(itertools.chain.from_iterable(Delays_fs_scan)))
     arrTimes_scan = np.asarray(list(itertools.chain.from_iterable(arrTimes_scan)))
@@ -281,40 +281,40 @@ def YAG_scan_one_TT_bs(scan, TT, channel_delay_motor, timezero_mm, quantile, fil
         check_files_and_data(step)
         check = get_filesize_diff(step)
         if check:
-		clear_output(wait=True)
-		filename = scan.files[i][0].split('/')[-1].split('.')[0]
-		print ('Processing: {}'.format(scan.fname.split('/')[-3]))
-		print ('Step {} of {}: Processing {}'.format(i+1, len(scan.files), filename))
+            clear_output(wait=True)
+            filename = scan.files[i][0].split('/')[-1].split('.')[0]
+            print ('Processing: {}'.format(scan.fname.split('/')[-3]))
+            print ('Step {} of {}: Processing {}'.format(i+1, len(scan.files), filename))
 		
-		resultsPP, results_FEL, _, _ = load_data_compact_pump_probe(channel_list_pp, channel_list_all, step)
+            resultsPP, results_FEL, _, _ = load_data_compact_pump_probe(channel_list_pp, channel_list_all, step)
 
-		Laser_pump = resultsPP[channel_LaserDiode].pump
-		Laser_ref_pump = resultsPP[channel_Laser_refDiode].pump
-		Laser_unpump = resultsPP[channel_LaserDiode].unpump
-		Laser_ref_unpump = resultsPP[channel_Laser_refDiode].unpump
+            Laser_pump = resultsPP[channel_LaserDiode].pump
+            Laser_ref_pump = resultsPP[channel_Laser_refDiode].pump
+            Laser_unpump = resultsPP[channel_LaserDiode].unpump
+            Laser_ref_unpump = resultsPP[channel_Laser_refDiode].unpump
 		
-		delay_shot = resultsPP[channel_delay_motor].pump
-		delay_shot_fs = mm2fs(delay_shot, timezero_mm)
-		Delay_fs_stage.append(delay_shot_fs.mean())
+            delay_shot = resultsPP[channel_delay_motor].pump
+            delay_shot_fs = mm2fs(delay_shot, timezero_mm)
+            Delay_fs_stage.append(delay_shot_fs.mean())
 
-		Laser_diff = -np.log10((Laser_pump) / (Laser_unpump))
+            Laser_diff = -np.log10((Laser_pump) / (Laser_unpump))
 
-		arrTimes = resultsPP[channel_PSEN125_arrTimes].pump
-		arrTimesAmp = resultsPP[channel_PSEN125_arrTimesAmp].pump
-		sigtraces = resultsPP[channel_PSEN125_edges].pump
-		peaktraces = resultsPP[channel_PSEN125_peaks].pump
+            arrTimes = resultsPP[channel_PSEN125_arrTimes].pump
+            arrTimesAmp = resultsPP[channel_PSEN125_arrTimesAmp].pump
+            sigtraces = resultsPP[channel_PSEN125_edges].pump
+            peaktraces = resultsPP[channel_PSEN125_peaks].pump
 
-		#arrTimes, arrTimesAmp, sigtraces, peaktraces = get_arrTimes(resultsPP, step, TT, target, calibration)
+            #arrTimes, arrTimesAmp, sigtraces, peaktraces = get_arrTimes(resultsPP, step, TT, target, calibration)
 		
-		index = (np.asarray(arrTimes) < filterTime) & (np.asarray(arrTimesAmp) > filterAmp)
+            index = (np.asarray(arrTimes) < filterTime) & (np.asarray(arrTimesAmp) > filterAmp)
 		
-		Delays_fs_scan.append(delay_shot_fs[index])
-		arrTimes_scan.append(arrTimes[index])
-		arrTimesAmp_scan.append(arrTimesAmp[index])
-		Pump_probe_scan.append(Laser_diff[index])
+            Delays_fs_scan.append(delay_shot_fs[index])
+            arrTimes_scan.append(arrTimes[index])
+            arrTimesAmp_scan.append(arrTimesAmp[index]) 
+            Pump_probe_scan.append(Laser_diff[index])
 		
-		df_pump_probe = pd.DataFrame(Laser_diff)
-		Pump_probe.append(np.nanquantile(df_pump_probe, [0.5, 0.5 - quantile/2, 0.5 + quantile/2]))
+            df_pump_probe = pd.DataFrame(Laser_diff)
+            Pump_probe.append(np.nanquantile(df_pump_probe, [0.5, 0.5 - quantile/2, 0.5 + quantile/2]))
     
     Delays_fs_scan = np.asarray(list(itertools.chain.from_iterable(Delays_fs_scan)))
     arrTimes_scan = np.asarray(list(itertools.chain.from_iterable(arrTimes_scan)))
@@ -372,45 +372,45 @@ def YAG_scan_two_TT(scan, TT1, TT2, channel_delay_motor, timezero_mm, quantile,
         check_files_and_data(step)
         check = get_filesize_diff(step)
         if check:
-		clear_output(wait=True)
-		filename = scan.files[i][0].split('/')[-1].split('.')[0]
-		print ('Processing: {}'.format(scan.fname.split('/')[-3]))
-		print ('Step {} of {}: Processing {}'.format(i+1, len(scan.files), filename))
+            clear_output(wait=True)
+            filename = scan.files[i][0].split('/')[-1].split('.')[0]
+            print ('Processing: {}'.format(scan.fname.split('/')[-3]))
+            print ('Step {} of {}: Processing {}'.format(i+1, len(scan.files), filename))
 		
-		resultsPP, results_FEL,_, _ = load_data_compact_pump_probe(channel_list_pp, channel_list_all, step)
+            resultsPP, results_FEL,_, _ = load_data_compact_pump_probe(channel_list_pp, channel_list_all, step)
 		
-		Izero = resultsPP[channel_Izero122].pump
-		Laser_pump = resultsPP[channel_LaserDiode].pump
-		Laser_ref_pump = resultsPP[channel_Laser_refDiode].pump
-		Laser_unpump = resultsPP[channel_LaserDiode].unpump
-		Laser_ref_unpump = resultsPP[channel_Laser_refDiode].unpump
+            Izero = resultsPP[channel_Izero122].pump
+            Laser_pump = resultsPP[channel_LaserDiode].pump
+            Laser_ref_pump = resultsPP[channel_Laser_refDiode].pump
+            Laser_unpump = resultsPP[channel_LaserDiode].unpump
+            Laser_ref_unpump = resultsPP[channel_Laser_refDiode].unpump
 		
-		delay_shot = resultsPP[channel_delay_motor].pump
-		delay_shot_fs = mm2fs(delay_shot, timezero_mm)
+            delay_shot = resultsPP[channel_delay_motor].pump
+            delay_shot_fs = mm2fs(delay_shot, timezero_mm)
 
-		Laser_diff = -np.log10((Laser_pump) / (Laser_unpump))
+            Laser_diff = -np.log10((Laser_pump) / (Laser_unpump))
 
-		arrTimes_1, arrTimesAmp_1, sigtraces_1, peaktraces_1 = get_arrTimes(resultsPP, TT1, target_1, calibration_1)
-		arrTimes_2, arrTimesAmp_2, sigtraces_2, peaktraces_2 = get_arrTimes(resultsPP, TT2, target_2, calibration_2)             
+            arrTimes_1, arrTimesAmp_1, sigtraces_1, peaktraces_1 = get_arrTimes(resultsPP, TT1, target_1, calibration_1)
+            arrTimes_2, arrTimesAmp_2, sigtraces_2, peaktraces_2 = get_arrTimes(resultsPP, TT2, target_2, calibration_2)             
 		
-		print ("arrTimes M2={}, arrTimes M1={}".format(np.shape(arrTimes_1), np.shape(arrTimes_2)))
+            print ("arrTimes M2={}, arrTimes M1={}".format(np.shape(arrTimes_1), np.shape(arrTimes_2)))
 	     
-		index_1 = (np.asarray(arrTimes_1) < filterTime_1) & (np.asarray(arrTimesAmp_1) > filterAmp_1)
-		index_2 = (np.asarray(arrTimes_2) < filterTime_2) & (np.asarray(arrTimesAmp_2) > filterAmp_2)
+            index_1 = (np.asarray(arrTimes_1) < filterTime_1) & (np.asarray(arrTimesAmp_1) > filterAmp_1)
+            index_2 = (np.asarray(arrTimes_2) < filterTime_2) & (np.asarray(arrTimesAmp_2) > filterAmp_2)
 		
-		index = np.logical_and.reduce((index_1, index_2))
+            index = np.logical_and.reduce((index_1, index_2))
 		
-		#pids_pump_scan.append(pids_pump[index]) 
-		Delays_fs_scan.append(delay_shot_fs[index])
-		arrTimes_1_scan.append(arrTimes_1[index])
-		arrTimesAmp_1_scan.append(arrTimesAmp_1[index])
-		arrTimes_2_scan.append(arrTimes_2[index])
-		arrTimesAmp_2_scan.append(arrTimesAmp_2[index])
-		Pump_probe_scan.append(Laser_diff[index])
-		Izero_scan.append(Izero[index])        
+            #pids_pump_scan.append(pids_pump[index]) 
+            Delays_fs_scan.append(delay_shot_fs[index])
+            arrTimes_1_scan.append(arrTimes_1[index])
+            arrTimesAmp_1_scan.append(arrTimesAmp_1[index])
+            arrTimes_2_scan.append(arrTimes_2[index])
+            arrTimesAmp_2_scan.append(arrTimesAmp_2[index])
+            Pump_probe_scan.append(Laser_diff[index])
+            Izero_scan.append(Izero[index])        
 
-		df_pump_probe = pd.DataFrame(Laser_diff)
-		Pump_probe.append(np.nanquantile(df_pump_probe, [0.5, 0.5 - quantile/2, 0.5 + quantile/2]))
+            df_pump_probe = pd.DataFrame(Laser_diff)
+            Pump_probe.append(np.nanquantile(df_pump_probe, [0.5, 0.5 - quantile/2, 0.5 + quantile/2]))
     
     #pids_pump_scan = np.asarray(list(itertools.chain.from_iterable(pids_pump_scan)))
     Delays_fs_scan = np.asarray(list(itertools.chain.from_iterable(Delays_fs_scan)))
