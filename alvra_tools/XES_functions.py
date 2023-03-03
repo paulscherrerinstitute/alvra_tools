@@ -218,7 +218,7 @@ def XES_static_ROIs(scan, channels_list, thr_low, thr_high, index=0):
         clear_output(wait=True)
         filename = scan.files[0][0].split('/')[-1].split('.')[0]
         print ('Processing: {}'.format(scan.fname.split('/')[-3]))
-       print ('Step {} of {}: filename {}'.format(index+1, len(scan.files), filename))
+        print ('Step {} of {}: filename {}'.format(index+1, len(scan.files), filename))
 	     
         results, _ = load_data_compact(channels_list, s)
 	    
