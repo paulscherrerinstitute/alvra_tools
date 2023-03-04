@@ -648,12 +648,12 @@ def XES_delayscan_ROIs(scan, channels_list, thr_low, thr_high):
                 data_on = resultsPP[roi].pump
                 data_off = resultsPP[roi].unpump
 		    
-                avg_on  = np.average(data_on, axis = 0)
                 thr_on  = threshold(data_on, thr_low, thr_high)
+                avg_on  = np.average(thr_on, axis = 0)
                 spec_on = avg_on.sum(axis=0)
 		    
-                avg_off  = np.average(data_off, axis = 0)
                 thr_off  = threshold(data_off, thr_low, thr_high)
+                avg_off  = np.average(thr_off, axis = 0)
                 spec_off = avg_off.sum(axis=0)
 		    
                 tag = roi#.split(':')[-1]
