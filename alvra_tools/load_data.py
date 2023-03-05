@@ -866,7 +866,7 @@ def load_data_compact_laser_pump(channels_pump_unpump, channels_FEL, data, offse
 
 ########################################################################################
 
-def load_data_compact_laser_pump_JF(channels_pump_unpump, channels_FEL, data, offsets=None, roi1=None, roi2=None, roi3=None, roi4=None):
+def load_data_compact_laser_pump_JF(channels_pump_unpump, channels_FEL, data, roi1=None, roi2=None, roi3=None, roi4=None, offsets=None):
     #with SFDataFiles(datafiles) as data:
 
     offsets = offsets or {}
@@ -969,7 +969,7 @@ def load_data_compact_laser_pump_JF(channels_pump_unpump, channels_FEL, data, of
 
 ########################################################################################
 
-def load_data_compact_laser_pump_JF_noPair(channels_pump_unpump, channels_FEL, data, offsets=None, roi1=None, roi2=None, roi3=None, roi4=None):
+def load_data_compact_laser_pump_JF_noPair(channels_pump_unpump, channels_FEL, data, roi1=None, roi2=None, roi3=None, roi4=None, offsets=None):
     #with SFDataFiles(datafiles) as data:
 
     offsets = offsets or {}
@@ -1061,7 +1061,7 @@ def load_data_compact_laser_pump_JF_noPair(channels_pump_unpump, channels_FEL, d
 
 ########################################################################################
 
-def load_data_compact_pump_probe_JF(channels_pump_unpump, channels_FEL, data, offsets=None, roi1=None, roi2=None, roi3=None, roi4=None):
+def load_data_compact_pump_probe_JF(channels_pump_unpump, channels_FEL, data, roi1=None, roi2=None, roi3=None, roi4=None, offsets=None):
     
     offsets = offsets or {}
     for chname, value in offsets.items():
