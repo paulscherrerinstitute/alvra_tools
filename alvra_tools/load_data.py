@@ -8,7 +8,7 @@ from collections import namedtuple
 from glob import glob
 
 from .channels import *
-from .utils import crop_roi, make_roi
+from .utils import crop_roi, make_roi, mm2fs, fs2mm
 from sfdata.utils import cprint, print_line
 from collections import defaultdict
 
@@ -160,6 +160,25 @@ def Get_ROI_names(step, detector):
             tag = n.split('ROI_')[-1]
             channels.append((detector+":ROI_{}".format(tag)))
     return channels
+
+
+def adjust_delayaxis(scan,readbacks,t0):
+    delay_fs = np.copy(readbacks)
+    dealy_mm = np.copy(readbacks)
+    if ' as delay' in scan.parameters['name'][0]:
+        print ('Scan is done with the stage in fs')
+        Delay_fs = scan.readbacks
+        Delay_mm = fs2mm(scan.readbacks,0)
+    else:
+        print ('Scan is done with the stage in mm')
+        Delay_fs = mm2fs(scan.readbacks,0)
+        Delay_mm = scan.readbacks
+    if scan.parameters['units'] == ['nS']:
+        Delay_fs = - scan.values
+    else:
+        Delay_fs = scan.values
+        Delay_fs = Delay_fs - mm2fs(t0, 0)
+    return (Delay_mm, Delay_fs)
 
 #def get_timezero_NBS(json_file):
 #    from sfdata import SFScanInfo
