@@ -1059,8 +1059,34 @@ def save_data_XES(reducedir, run_name, spec_array_ON, spec_array_OFF):
 
     for i, spectrum in enumerate(spec_array_OFF):
         np.save(reducedir+run_name+'/spectrum_roi{}_OFF.npy'.format(i+1), spectrum)
+
+######################################
+
+def save_data_XES_ROIs(reducedir, run_name, s_on, s_off, rois, meta):
  
-    
+    run_array = {}
+    run_array[run_name.split('-')[0]] = {"name": run_name,
+                                    "spectra_on": s_on, 
+                                    "spectra_off" : s_off, 
+                                    "ROIs" : rois, 
+                                    "meta" : meta}
+   
+    np.save(reducedir+run_name+'/run_array', run_array)
+
+######################################
+
+def save_data_XES_timescans_ROIs(reducedir, run_name, s_on, s_off, rois, delaymm, delayfs, meta):
+
+    run_array = {}
+    run_array[run_name.split('-')[0]] = {"name": run_name,
+                                    "spectra_on": s_on, 
+                                    "spectra_off" : s_off, 
+                                    "ROIs" : rois,
+                                    "Delay_mm" : delaymm,
+                                    "Delay_fs" : delayfs,
+                                    "meta" : meta}
+   
+    np.save(reducedir+run_name+'/run_array', run_array)
 
 
  
