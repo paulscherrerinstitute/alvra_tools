@@ -621,6 +621,8 @@ def XES_delayscan_ROIs(scan, channels_list, thr_low, thr_high):
 	    
     spectra_on = []
     spectra_off = []
+    spectra_shots_on = []
+    spectra_shots_off = []
 
     for i, step in enumerate(scan):
 	    
@@ -637,10 +639,12 @@ def XES_delayscan_ROIs(scan, channels_list, thr_low, thr_high):
             thresholded_on = {}
             averaged_on = {}
             spectrum_on = {}
+            spectrum_shots_on = {}
 		
             thresholded_off = {}
             averaged_off = {}
             spectrum_off = {}
+            spectrum_shots_off = {}
 
             tags = []
 		
@@ -650,10 +654,12 @@ def XES_delayscan_ROIs(scan, channels_list, thr_low, thr_high):
 		    
                 thr_on  = threshold(data_on, thr_low, thr_high)
                 avg_on  = np.average(thr_on, axis = 0)
+                spec_shots_on = thr_on.sum(axis=1)
                 spec_on = avg_on.sum(axis=0)
 		    
                 thr_off  = threshold(data_off, thr_low, thr_high)
                 avg_off  = np.average(thr_off, axis = 0)
+                spec_shots_off = thr_off.sum(axis=1)
                 spec_off = avg_off.sum(axis=0)
 		    
                 tag = roi#.split(':')[-1]
@@ -661,20 +667,108 @@ def XES_delayscan_ROIs(scan, channels_list, thr_low, thr_high):
                 thresholded_on[tag] = thr_on
                 averaged_on[tag] = avg_on
                 spectrum_on[tag] = spec_on
+                spectrum_shots_on[tag] = spec_shots_on
 		    
                 thresholded_off[tag] = thr_off
                 averaged_off[tag] = avg_off
                 spectrum_off[tag] = spec_off
+                spectrum_shots_off[tag] = spec_shots_off
 		
                 tags.append(tag)
 
             spectra_on.append(spectrum_on)
             spectra_off.append(spectrum_off)
+            spectra_shots_on.append(spectrum_shots_on)
+            spectra_shots_off.append(spectrum_shots_off)
 
         if i==0:
             meta = resultsPP["meta"]
     
-    return(spectra_on, spectra_off, tags, Delay_fs, Delay_mm, meta)
+    return(spectra_on, spectra_off, spectra_shots_on, spectra_shots_off, tags, Delay_fs, Delay_mm, meta)
+
+######################################
+
+TT_PSEN126 = [channel_PSEN125_signal, channel_PSEN125_bkg, channel_PSEN125_arrTimes, channel_PSEN125_arrTimesAmp, channel_PSEN125_peaks, channel_PSEN125_edges]
+
+def XES_delayscan_TT_ROIs(scan, channels_list, TT, channel_delay_motor, timezero_mm, thr_low, thr_high):
+        
+    s = scan[0]
+    channels_ROI = Get_ROI_names(s, "JF02T09V03")
+    channels_pp = [channel_Events, channel_delay_motor] + channels_list + channels_ROI + TT
+    channels_all = channels_pp
+
+    if ' as delay' in scan.parameters['name'][0]:
+        print ('Scan is done with the stage in fs')
+        Delay_fs = scan.readbacks
+        Delay_mm = fs2mm(scan.readbacks,0)
+    else:
+        print ('Scan is done with the stage in mm')
+        Delay_fs = mm2fs(scan.readbacks,0)
+        Delay_mm = scan.readbacks
+
+    Delay_fs_stage = []
+    arrTimes_scan = []
+    arrTimesAmp_scan = []
+    Delays_fs_scan = []
+	    
+    spectra_shots_on = []
+    spectra_shots_off = []
+
+    for i, step in enumerate(scan):
+	    
+        check_files_and_data(step)
+        check = get_filesize_diff(step)  
+        if check:
+            clear_output(wait=True)
+            filename = scan.files[i][0].split('/')[-1].split('.')[0]
+            print ('Processing: {}'.format(scan.fname.split('/')[-3]))
+            print ('Step {} of {}: Processing {}'.format(i+1, len(scan.files), filename))
+
+            resultsPP, results, _, _ = load_data_compact_pump_probe(channels_pp, channels_all, step)
+
+            delay_shot = resultsPP[channel_delay_motor].pump
+            delay_shot_fs = mm2fs(delay_shot, timezero_mm)
+            Delay_fs_stage.append(delay_shot_fs.mean())
+
+            arrTimes = resultsPP[channel_PSEN125_arrTimes].pump
+            arrTimesAmp = resultsPP[channel_PSEN125_arrTimesAmp].pump
+            sigtraces = resultsPP[channel_PSEN125_edges].pump
+            peaktraces = resultsPP[channel_PSEN125_peaks].pump
+
+            spectrum_shots_on = {}
+            spectrum_shots_off = {}
+
+            tags = []
+		
+            for roi in channels_ROI:
+                data_on = resultsPP[roi].pump
+                data_off = resultsPP[roi].unpump
+		    
+                thr_on  = threshold(data_on, thr_low, thr_high)
+                spec_shots_on = thr_on.sum(axis=1)
+                   
+                thr_off  = threshold(data_off, thr_low, thr_high)
+                spec_shots_off = thr_off.sum(axis=1)
+                    
+                tag = roi#.split(':')[-1]
+    
+                spectrum_shots_on[tag] = spec_shots_on
+                spectrum_shots_off[tag] = spec_shots_off
+		
+                tags.append(tag)
+
+            spectra_shots_on.append(spectrum_shots_on)
+            spectra_shots_off.append(spectrum_shots_off)
+        
+        Delays_fs_scan.extend(delay_shot_fs)
+        arrTimes_scan.extend(arrTimes)
+
+        if i==0:
+            meta = resultsPP["meta"]
+
+    Delays_corr_scan = np.asarray(Delays_fs_scan) + np.asarray(arrTimes_scan)
+
+    return Delays_fs_scan, Delays_corr_scan, spectra_shots_on, spectra_shots_off, tags, Delay_fs, Delay_mm, meta
 
 ######################################
 
