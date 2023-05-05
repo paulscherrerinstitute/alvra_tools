@@ -167,17 +167,19 @@ def adjust_delayaxis(scan,readbacks,t0):
     dealy_mm = np.copy(readbacks)
     if ' as delay' in scan.parameters['name'][0]:
         print ('Scan is done with the stage in fs')
-        Delay_fs = scan.readbacks
-        Delay_mm = fs2mm(scan.readbacks,0)
+        Delay_fs = readbacks
+        Delay_mm = fs2mm(readbacks,0)
     else:
         print ('Scan is done with the stage in mm')
-        Delay_fs = mm2fs(scan.readbacks,0)
-        Delay_mm = scan.readbacks
+        Delay_fs = mm2fs(readbacks,0)
+        Delay_mm = readbacks
     if scan.parameters['units'] == ['nS']:
-        Delay_fs = - scan.values
+        Delay_fs = scan.values
     else:
         Delay_fs = scan.values
         Delay_fs = Delay_fs - mm2fs(t0, 0)
+    Delay_fs = Delay_fs[:len(readbacks)]
+    Delay_mm = Delay_mm[:len(readbacks)]
     return (Delay_mm, Delay_fs)
 
 #def get_timezero_NBS(json_file):
