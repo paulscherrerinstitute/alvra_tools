@@ -8,17 +8,18 @@ import colorcet as cc
 
 class Fit:
     
-    def __init__(self, func, estim, p0=None):
+    def __init__(self, func, estim, p0=None, **kwargs):
         self.func = func
         self.estim = estim
         self.p0 = self.popt = p0
         self.pcov = None
+        self.kwargs = kwargs
    
     def estimate(self, x, y):
         self.p0 = self.popt = self.estim(x,y)
 
-    def fit(self, x, y):
-        self.popt, self.pcov = curve_fit(self.func, x, y, p0=self.p0)
+    def fit(self, x, y, **kwargs):
+        self.popt, self.pcov = curve_fit(self.func, x, y, p0=self.p0, **self.kwargs, **kwargs)
     
     def eval(self, x):
         return self.func(x, *self.popt)
