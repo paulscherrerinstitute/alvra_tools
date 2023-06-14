@@ -255,7 +255,7 @@ def YAG_scan_one_TT(scan, TT, channel_delay_motor, timezero_mm, quantile, target
 
 def YAG_scan_one_TT_bs(scan, TT, channel_delay_motor, timezero_mm, quantile, filterTime=2000, filterAmp=0):
     
-    channel_list_pp = [channel_Events, channel_LaserDiode, channel_Laser_refDiode, channel_delay_motor] + TT
+    channel_list_pp = [channel_Events, channel_LaserDiode, channel_Laser_refDiode, channel_delay_motor, channel_Izero110] + TT
     channel_list_all = channel_list_pp
 
     #from sfdata import SFScanInfo
@@ -272,7 +272,7 @@ def YAG_scan_one_TT_bs(scan, TT, channel_delay_motor, timezero_mm, quantile, fil
  
     Delay_fs_stage = []
     Pump_probe = []
-    Pump_probe_scan = []
+    Pump_probe_scan = [] 
     arrTimes_scan = []
     arrTimesAmp_scan = []
     Delays_fs_scan = []
@@ -292,12 +292,14 @@ def YAG_scan_one_TT_bs(scan, TT, channel_delay_motor, timezero_mm, quantile, fil
             Laser_ref_pump = resultsPP[channel_Laser_refDiode].pump
             Laser_unpump = resultsPP[channel_LaserDiode].unpump
             Laser_ref_unpump = resultsPP[channel_Laser_refDiode].unpump
+            Izero=resultsPP[channel_Izero110].pump
+        
 		
             delay_shot = resultsPP[channel_delay_motor].pump
             delay_shot_fs = mm2fs(delay_shot, timezero_mm)
             Delay_fs_stage.append(delay_shot_fs.mean())
 
-            Laser_diff = -np.log10((Laser_pump) / (Laser_unpump))
+            Laser_diff = -np.log10(Laser_pump / Laser_unpump)
 
             arrTimes = resultsPP[channel_PSEN125_arrTimes].pump
             arrTimesAmp = resultsPP[channel_PSEN125_arrTimesAmp].pump
@@ -334,7 +336,7 @@ def YAG_scan_one_TT_bs(scan, TT, channel_delay_motor, timezero_mm, quantile, fil
     print ('------------------------------')
     print ('Processed {} out of {} files'.format(len(Pump_probe), len(scan)))
     
-    return Delays_fs_scan, Delays_corr_scan,Pump_probe,Pump_probe_scan
+    return Delay_fs, Delays_fs_scan, Delays_corr_scan,Pump_probe,Pump_probe_scan
 
 #########################################################
 
@@ -457,9 +459,10 @@ def save_run_array_YAG(reducedir, run_name, Delmm, Delfs, PP, PPall, PPavg):
 
 #########################################################
 
-def save_run_array_YAG_TT(reducedir, run_name, Delfs, Delcorr, PP, PPscan):
+def save_run_array_YAG_TT(reducedir, run_name, Delrbk, Delfs, Delcorr, PP, PPscan):
     run_array = {}
     run_array[run_name.split('-')[0]] = {"name": run_name,
+                                    "Delay_rbk": Delrbk,
                                     "Delay_fs": Delfs,
                                     "Delay_corr": Delcorr,
                                     "Pump_probe": PP,
