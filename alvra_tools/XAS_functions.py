@@ -48,6 +48,51 @@ def correlation_filter_static(FluoData, Izero, quantile):
 
 ######################################
 
+def make_correlation_filter(arrayX, arrayY, quantile):
+
+    m,b = np.polyfit(arrayX, arrayY, 1)
+
+    line = m*arrayX+b
+    line2 = (arrayY-b)/m
+
+    projection_X = arrayY - line
+    projection_Y = arrayX - line2
+
+    qnt_low_Y  = np.nanquantile(projection_Y, 0.5 - quantile/2)
+    qnt_high_Y = np.nanquantile(projection_Y, 0.5 + quantile/2)
+    qnt_low_X  = np.nanquantile(projection_X, 0.5 - quantile/2)
+    qnt_high_X = np.nanquantile(projection_X, 0.5 + quantile/2)
+    
+    condition_low_Y  = projection_Y > qnt_low_Y
+    condition_high_Y = projection_Y < qnt_high_Y
+    condition_low_X  = projection_X > qnt_low_X
+    condition_high_X = projection_X < qnt_high_X
+
+    correlation_filter = condition_low_Y & condition_high_Y & condition_low_X & condition_high_X
+
+    return (correlation_filter)
+
+######################################
+
+def apply_filter(c_filter, arrays, printflag=False, suffix="filter", globals_dict=None):
+    if globals_dict is None:
+        print("please pass globals() as globals_dict")
+        return
+    new_ones = {}
+    for k, v in globals_dict.items():
+        if not k in arrays:
+            continue
+        n = k + "_" + suffix
+        new_ones[n] = v[c_filter]
+    if printflag:
+        print("creating the following variables:")
+        for n in sorted(new_ones):
+            print("-", n)
+    globals_dict.update(new_ones)
+    return new_ones
+
+######################################
+
 def correlation_filter(FluoData_pump, FluoData_unpump, Izero_pump, Izero_unpump, quantile):
     
     FluoData_pump_norm = FluoData_pump / Izero_pump
@@ -130,6 +175,30 @@ def Get_correlation_from_scan_static(scan, index, diode, Izero, quantile):
     
 ######################################
 
+def Get_correlation_from_scan2(scan, index, diode, Izero, quantile):
+    channels_pp = [channel_Events, diode, Izero]
+    channels_all = channels_pp
+
+    data = scan[index]
+    results,_,_,_ = load_data_compact_pump_probe(channels_pp, channels_all, data)
+    data.close()
+    
+    clear_output(wait=True)
+    
+    Fluo_pump = results[diode].pump
+    Fluo_unpump = results[diode].unpump
+    Izero_pump = results[Izero].pump
+    Izero_unpump = results[Izero].unpump
+
+    correlation_pump   = make_correlation_filter(Fluo_pump, Izero_pump, quantile)
+    correlation_umpump = make_correlation_filter(Fluo_unpump, Izero_unpump, quantile)
+
+    correlation_filter = correlation_pump & correlation_umpump
+
+    return (Fluo_pump, Fluo_unpump, Izero_pump, Izero_unpump, correlation_filter)
+
+######################################
+
 def Get_correlation_from_scan(scan, index, diode, Izero, quantile):
     channels_pp = [channel_Events, diode, Izero]
     channels_all = channels_pp
@@ -162,38 +231,38 @@ def XAS_scan_1diode_static(scan, diode, Izero, quantile):
     correlation = []
 
     for i, step in enumerate(scan):
-       check_files_and_data(step)
-       check = get_filesize_diff(step)     
-       if check:
-	       clear_output(wait=True)
-	       filename = scan.files[i][0].split('/')[-1].split('.')[0]
-	       print ('Processing: {}'.format(scan.fname.split('/')[-3]))
-	       print ('Step {} of {}: Processing {}'.format(i+1, len(scan.files), filename))
+        check_files_and_data(step)
+        check = get_filesize_diff(step)     
+        if check:
+            clear_output(wait=True)
+            filename = scan.files[i][0].split('/')[-1].split('.')[0]
+            print ('Processing: {}'.format(scan.fname.split('/')[-3]))
+            print ('Step {} of {}: Processing {}'.format(i+1, len(scan.files), filename))
 
-	       results,_ = load_data_compact(channels, step)
+            results,_ = load_data_compact(channels, step)
 	    
-	       Fluo_shot = results[diode]
-	       IzeroFEL_shot = results[Izero]
+            Fluo_shot = results[diode]
+            IzeroFEL_shot = results[Izero]
 	    
-	       ######################################
-	       ### filter Diode1 data
-	       ######################################
+            ######################################
+            ### filter Diode1 data
+            ######################################
 
-	       Diode_shot_filter, Izero_filter = correlation_filter_static(Fluo_shot, IzeroFEL_shot, quantile)
-	       Diode_shot_filter = Diode_shot_filter / Izero_filter
+            Diode_shot_filter, Izero_filter = correlation_filter_static(Fluo_shot, IzeroFEL_shot, quantile)
+            Diode_shot_filter = Diode_shot_filter / Izero_filter
 
-	       ######################################
-	       ### make dataframes Diode1
-	       ######################################
+            ######################################
+            ### make dataframes Diode1
+            ######################################
 
-	       df_fluo = pd.DataFrame(Diode_shot_filter)
-	       DataFluo.append(np.nanquantile(df_fluo, [0.5, 0.5 - quantile/2, 0.5 + quantile/2]))
+            df_fluo = pd.DataFrame(Diode_shot_filter)
+            DataFluo.append(np.nanquantile(df_fluo, [0.5, 0.5 - quantile/2, 0.5 + quantile/2]))
 
-	       correlation.append(pearsonr(IzeroFEL_shot,Fluo_shot)[0])
-	       IzeroFEL.append(np.mean(IzeroFEL_shot))
+            correlation.append(pearsonr(IzeroFEL_shot,Fluo_shot)[0])
+            IzeroFEL.append(np.mean(IzeroFEL_shot))
 		
-	       print ('Step {} of {}: Processed {}'.format(i+1, len(scan.files), filename))
-	       print ("correlation Diode (all shots) = {}".format(pearsonr(IzeroFEL_shot,Fluo_shot)[0]))
+            print ('Step {} of {}: Processed {}'.format(i+1, len(scan.files), filename))
+            print ("correlation Diode (all shots) = {}".format(pearsonr(IzeroFEL_shot,Fluo_shot)[0]))
     
     scanvar = scanvar[:np.shape(DataFluo)[0]]
     
@@ -484,8 +553,8 @@ def XAS_scanPP_2diodes_noTT(scan, diode1, diode2, Izero, quantile):
 ######################################
 
 TT_PSEN119 = [channel_PSEN119_signal, channel_PSEN119_bkg] 
-TT_PSEN124 = [channel_PSEN125_signal]
-TT_PSEN126 = [channel_PSEN125_signal, channel_PSEN125_bkg, channel_PSEN125_arrTimes, channel_PSEN125_arrTimesAmp, channel_PSEN125_peaks, channel_PSEN125_edges]
+TT_PSEN124 = [channel_PSEN124_signal, channel_PSEN124_bkg, channel_PSEN124_arrTimes, channel_PSEN124_arrTimesAmp, channel_PSEN124_peaks, channel_PSEN124_edges]
+TT_PSEN126 = [channel_PSEN126_signal, channel_PSEN126_bkg, channel_PSEN126_arrTimes, channel_PSEN126_arrTimesAmp, channel_PSEN126_peaks, channel_PSEN126_edges]
 
 def XAS_scanPP_PSEN(scan, TT, channel_delay_motor, diode, Izero, timezero_mm, quantile, target, calibration, filterTime=2000, filterAmp=0):
     channels_pp = [channel_Events, diode, Izero, channel_delay_motor] + TT
@@ -589,6 +658,17 @@ def XAS_scanPP_PSEN_bs(scan, TT, channel_delay_motor, diode, Izero, timezero_mm,
     channels_pp = [channel_Events, diode, Izero, channel_delay_motor] + TT
     channels_all = channels_pp
 
+    if TT == TT_PSEN124:
+        channel_arrTimes = channel_PSEN124_arrTimes
+        channel_arrTimesAmp = channel_PSEN124_arrTimesAmp
+        channel_edges = channel_PSEN124_edges
+        channel_peaks = channel_PSEN124_peaks
+    elif TT == TT_PSEN126:
+        channel_arrTimes = channel_PSEN126_arrTimes
+        channel_arrTimesAmp = channel_PSEN126_arrTimesAmp
+        channel_edges = channel_PSEN126_edges
+        channel_peaks = channel_PSEN126_peaks
+
     scanvar = scan.readbacks
 
     Izero_pump = []
@@ -627,10 +707,10 @@ def XAS_scanPP_PSEN_bs(scan, TT, channel_delay_motor, diode, Izero, timezero_mm,
 	       delay_shot_fs = mm2fs(delay_shot, timezero_mm)
 	       Delay_fs_stage.append(delay_shot_fs.mean())
 
-	       arrTimes = resultsPP[channel_PSEN125_arrTimes].pump
-	       arrTimesAmp = resultsPP[channel_PSEN125_arrTimesAmp].pump
-	       sigtraces = resultsPP[channel_PSEN125_edges].pump
-	       peaktraces = resultsPP[channel_PSEN125_peaks].pump
+	       arrTimes = resultsPP[channel_arrTimes].pump
+	       arrTimesAmp = resultsPP[channel_arrTimesAmp].pump
+	       sigtraces = resultsPP[channel_edges].pump
+	       peaktraces = resultsPP[channel_peaks].pump
 
 	       #arrTimes, arrTimesAmp, sigtraces, peaktraces = get_arrTimes(resultsPP, step, TT, target, calibration)
 
