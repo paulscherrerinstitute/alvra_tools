@@ -15,8 +15,8 @@ from alvra_tools.timing_tool import *
 from alvra_tools.utils import *
 
 TT_PSEN119 = [channel_PSEN119_signal, channel_PSEN119_bkg] 
-TT_PSEN124 = [channel_PSEN125_signal]
-TT_PSEN126 = [channel_PSEN125_signal, channel_PSEN125_bkg, channel_PSEN125_arrTimes, channel_PSEN125_arrTimesAmp, channel_PSEN125_peaks, channel_PSEN125_edges]
+TT_PSEN124 = [channel_PSEN124_signal, channel_PSEN124_bkg, channel_PSEN124_arrTimes, channel_PSEN124_arrTimesAmp, channel_PSEN124_peaks, channel_PSEN124_edges]
+TT_PSEN126 = [channel_PSEN126_signal, channel_PSEN126_bkg, channel_PSEN126_arrTimes, channel_PSEN126_arrTimesAmp, channel_PSEN126_peaks, channel_PSEN126_edges]
 
 #########################################################
 
@@ -257,6 +257,17 @@ def YAG_scan_one_TT_bs(scan, TT, channel_delay_motor, timezero_mm, quantile, fil
     
     channel_list_pp = [channel_Events, channel_LaserDiode, channel_Laser_refDiode, channel_delay_motor, channel_Izero110] + TT
     channel_list_all = channel_list_pp
+    
+    if TT == TT_PSEN124:
+        channel_arrTimes = channel_PSEN124_arrTimes
+        channel_arrTimesAmp = channel_PSEN124_arrTimesAmp
+        channel_edges = channel_PSEN124_edges
+        channel_peaks = channel_PSEN124_peaks
+    elif TT == TT_PSEN126:
+        channel_arrTimes = channel_PSEN126_arrTimes
+        channel_arrTimesAmp = channel_PSEN126_arrTimesAmp
+        channel_edges = channel_PSEN126_edges
+        channel_peaks = channel_PSEN126_peaks
 
     #from sfdata import SFScanInfo
     #scan = SFScanInfo(json_file)
@@ -301,10 +312,10 @@ def YAG_scan_one_TT_bs(scan, TT, channel_delay_motor, timezero_mm, quantile, fil
 
             Laser_diff = -np.log10(Laser_pump / Laser_unpump)
 
-            arrTimes = resultsPP[channel_PSEN125_arrTimes].pump
-            arrTimesAmp = resultsPP[channel_PSEN125_arrTimesAmp].pump
-            sigtraces = resultsPP[channel_PSEN125_edges].pump
-            peaktraces = resultsPP[channel_PSEN125_peaks].pump
+            arrTimes = resultsPP[channel_arrTimes].pump
+            arrTimesAmp = resultsPP[channel_arrTimesAmp].pump
+            sigtraces = resultsPP[channel_edges].pump
+            peaktraces = resultsPP[channel_peaks].pump
 
             #arrTimes, arrTimesAmp, sigtraces, peaktraces = get_arrTimes(resultsPP, step, TT, target, calibration)
 		
@@ -337,6 +348,110 @@ def YAG_scan_one_TT_bs(scan, TT, channel_delay_motor, timezero_mm, quantile, fil
     print ('Processed {} out of {} files'.format(len(Pump_probe), len(scan)))
     
     return Delay_fs, Delays_fs_scan, Delays_corr_scan,Pump_probe,Pump_probe_scan
+
+#########################################################
+
+def YAG_scan_two_TT_bs(scan, TT1, TT2, channel_delay_motor, timezero_mm, quantile, 
+                       filterTime_1=2000, filterAmp_1=-100, filterTime_2=2000, filterAmp_2=-100):
+
+    channel_list_pp = [channel_Events, channel_LaserDiode, channel_Laser_refDiode, channel_delay_motor] + TT1 + TT2
+    channel_list_all = channel_list_pp
+
+    if ' as delay' in scan.parameters['name'][0]:
+        print ('Scan is done with the stage in fs')
+        Delay_fs = scan.readbacks
+        Delay_mm = fs2mm(scan.readbacks,0)
+    else:
+        print ('Scan is done with the stage in mm')
+        Delay_fs = mm2fs(scan.readbacks,0)
+        Delay_mm = scan.readbacks
+
+    Delay_fs_stage = []
+    Pump_probe = []
+
+    Pump_probe_scan_1 = [] 
+    arrTimes_scan_1 = []
+    arrTimesAmp_scan_1 = []
+    Delays_fs_scan_1 = []
+
+    Pump_probe_scan_2 = []
+    arrTimes_scan_2 = []
+    arrTimesAmp_scan_2 = []
+    Delays_fs_scan_2 = []
+
+    for i, step in enumerate(scan):
+        check_files_and_data(step)
+        check = get_filesize_diff(step)
+        if check:
+            clear_output(wait=True)
+            filename = scan.files[i][0].split('/')[-1].split('.')[0]
+            print ('Processing: {}'.format(scan.fname.split('/')[-3]))
+            print ('Step {} of {}: Processing {}'.format(i+1, len(scan.files), filename))
+
+            resultsPP, results_FEL, _, _ = load_data_compact_pump_probe(channel_list_pp, channel_list_all, step)
+
+            Laser_pump = resultsPP[channel_LaserDiode].pump
+            Laser_ref_pump = resultsPP[channel_Laser_refDiode].pump
+            Laser_unpump = resultsPP[channel_LaserDiode].unpump
+            Laser_ref_unpump = resultsPP[channel_Laser_refDiode].unpump
+
+            Laser_diff = -np.log10((Laser_pump) / (Laser_unpump))
+
+            delay_shot = resultsPP[channel_delay_motor].pump
+            delay_shot_fs = mm2fs(delay_shot, timezero_mm)
+            Delay_fs_stage.append(delay_shot_fs.mean())
+
+            arrTimes_1 = resultsPP[channel_PSEN124_arrTimes].pump
+            arrTimesAmp_1 = resultsPP[channel_PSEN124_arrTimesAmp].pump
+            sigtraces_1 = resultsPP[channel_PSEN124_edges].pump
+            peaktraces_1 = resultsPP[channel_PSEN124_peaks].pump
+            
+            arrTimes_2 = resultsPP[channel_PSEN126_arrTimes].pump
+            arrTimesAmp_2 = resultsPP[channel_PSEN126_arrTimesAmp].pump
+            sigtraces_2 = resultsPP[channel_PSEN126_edges].pump
+            peaktraces_2 = resultsPP[channel_PSEN126_peaks].pump
+
+            index_1 = (np.asarray(arrTimes_1) < filterTime_1) & (np.asarray(arrTimesAmp_1) > filterAmp_1)
+            index_2 = (np.asarray(arrTimes_2) < filterTime_2) & (np.asarray(arrTimesAmp_2) > filterAmp_2)
+
+            Delays_fs_scan_1.extend(delay_shot_fs[index_1])
+            Delays_fs_scan_2.extend(delay_shot_fs[index_2])
+            
+            arrTimes_scan_1.extend(arrTimes_1[index_1])
+            arrTimesAmp_scan_1.extend(arrTimesAmp_1[index_1]) 
+            
+            arrTimes_scan_2.extend(arrTimes_2[index_2])
+            arrTimesAmp_scan_2.extend(arrTimesAmp_2[index_2]) 
+            
+            Pump_probe_scan_1.extend(Laser_diff[index_1])
+            Pump_probe_scan_2.extend(Laser_diff[index_2])
+            
+            df_pump_probe = pd.DataFrame(Laser_diff)
+            Pump_probe.append(np.nanquantile(df_pump_probe, [0.5, 0.5 - quantile/2, 0.5 + quantile/2]))
+    
+    Delays_fs_scan_1 = np.asarray(Delays_fs_scan_1)
+    Delays_fs_scan_2 = np.asarray(Delays_fs_scan_2)
+
+    arrTimes_scan_1 = np.asarray(arrTimes_scan_1)
+    arrTimes_scan_2 = np.asarray(arrTimes_scan_2)
+
+    arrTimesAmp_scan_1 = np.asarray(arrTimesAmp_scan_1)
+    arrTimesAmp_scan_2 = np.asarray(arrTimesAmp_scan_2)
+
+    Pump_probe_scan_1 = np.asarray(Pump_probe_scan_1)
+    Pump_probe_scan_2 = np.asarray(Pump_probe_scan_2)
+    Pump_probe = np.asarray(Pump_probe)
+
+    Delays_corr_scan_1 = Delays_fs_scan_1 + arrTimes_scan_1
+    Delays_corr_scan_2 = Delays_fs_scan_2 + arrTimes_scan_2
+
+    print ("Quantile range = {}".format(0.5 - quantile/2), 0.5 + quantile/2)
+    print ("Loaded {} files, size of the arrays = {}".format(len(scan.files), len(Pump_probe)))
+    print ('------------------------------')
+    print ('Processed {} out of {} files'.format(len(Pump_probe), len(scan)))
+    
+    return Delay_fs, Pump_probe, Delays_fs_scan_1, Delays_corr_scan_1, arrTimes_scan_1, arrTimesAmp_scan_1, Pump_probe_scan_1, Delays_fs_scan_2, Delays_corr_scan_2, arrTimes_scan_2, arrTimesAmp_scan_2, Pump_probe_scan_2
+
 
 #########################################################
 
