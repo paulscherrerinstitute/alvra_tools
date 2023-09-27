@@ -688,7 +688,7 @@ def XES_delayscan_ROIs(scan, channels_list, thr_low, thr_high):
 
 ######################################
 
-TT_PSEN126 = [channel_PSEN125_signal, channel_PSEN125_bkg, channel_PSEN125_arrTimes, channel_PSEN125_arrTimesAmp, channel_PSEN125_peaks, channel_PSEN125_edges]
+TT_PSEN126 = [channel_PSEN126_signal, channel_PSEN126_bkg, channel_PSEN126_arrTimes, channel_PSEN126_arrTimesAmp, channel_PSEN126_peaks, channel_PSEN126_edges]
 
 def XES_delayscan_TT_ROIs(scan, channels_list, TT, channel_delay_motor, timezero_mm, thr_low, thr_high):
         
@@ -730,10 +730,10 @@ def XES_delayscan_TT_ROIs(scan, channels_list, TT, channel_delay_motor, timezero
             delay_shot_fs = mm2fs(delay_shot, timezero_mm)
             Delay_fs_stage.append(delay_shot_fs.mean())
 
-            arrTimes = resultsPP[channel_PSEN125_arrTimes].pump
-            arrTimesAmp = resultsPP[channel_PSEN125_arrTimesAmp].pump
-            sigtraces = resultsPP[channel_PSEN125_edges].pump
-            peaktraces = resultsPP[channel_PSEN125_peaks].pump
+            arrTimes = resultsPP[channel_PSEN126_arrTimes].pump
+            arrTimesAmp = resultsPP[channel_PSEN126_arrTimesAmp].pump
+            sigtraces = resultsPP[channel_PSEN126_edges].pump
+            peaktraces = resultsPP[channel_PSEN126_peaks].pump
 
             spectrum_shots_on = {}
             spectrum_shots_off = {}
@@ -772,7 +772,7 @@ def XES_delayscan_TT_ROIs(scan, channels_list, TT, channel_delay_motor, timezero
 
 ######################################
 
-TT_PSEN126 = [channel_PSEN125_signal, channel_PSEN125_bkg, channel_PSEN125_arrTimes, channel_PSEN125_arrTimesAmp, channel_PSEN125_peaks, channel_PSEN125_edges]
+TT_PSEN126 = [channel_PSEN126_signal, channel_PSEN126_bkg, channel_PSEN126_arrTimes, channel_PSEN126_arrTimesAmp, channel_PSEN126_peaks, channel_PSEN126_edges]
 
 def XES_delayscan_TT_4ROIs(scan, pgroup, TT, channel_delay_motor, timezero_mm, roi1, roi2, roi3, roi4, thr_low, thr_high, nshots, nsteps=None):
     clock_int = clock.Clock()
@@ -818,10 +818,10 @@ def XES_delayscan_TT_4ROIs(scan, pgroup, TT, channel_delay_motor, timezero_mm, r
         delay_shot_fs = mm2fs(delay_shot, timezero_mm)
         Delay_fs_stage.append(delay_shot_fs.mean())
 
-        arrTimes = resultsPP[channel_PSEN125_arrTimes].pump
-        arrTimesAmp = resultsPP[channel_PSEN125_arrTimesAmp].pump
-        sigtraces = resultsPP[channel_PSEN125_edges].pump
-        peaktraces = resultsPP[channel_PSEN125_peaks].pump
+        arrTimes = resultsPP[channel_PSEN126_arrTimes].pump
+        arrTimesAmp = resultsPP[channel_PSEN126_arrTimesAmp].pump
+        sigtraces = resultsPP[channel_PSEN126_edges].pump
+        peaktraces = resultsPP[channel_PSEN126_peaks].pump
 
         XES_shot_roi1_ON_thr = threshold(resultsPP["JFroi1"].pump, thr_low, thr_high)
         XES_shot_roi2_ON_thr = threshold(resultsPP["JFroi2"].pump, thr_low, thr_high)
@@ -945,10 +945,10 @@ def XES_delayscan_TT_reduced(scan, pgroup, TT, channel_delay_motor, timezero_mm,
         delay_shot_fs = mm2fs(delay_shot, timezero_mm)
         Delay_fs_stage.append(delay_shot_fs.mean())
 
-        arrTimes = step[channel_PSEN125_arrTimes][index_light]
-        arrTimesAmp = step[channel_PSEN125_arrTimesAmp][index_light]
-        sigtraces = step[channel_PSEN125_edges][index_light]
-        peaktraces = step[channel_PSEN125_peaks][index_light]
+        arrTimes = step[channel_PSEN126_arrTimes][index_light]
+        arrTimesAmp = step[channel_PSEN126_arrTimesAmp][index_light]
+        sigtraces = step[channel_PSEN126_edges][index_light]
+        peaktraces = step[channel_PSEN126_peaks][index_light]
 
         spec_roi_on = 8*[0]
         spec_roi_off = 8*[0]
@@ -1256,6 +1256,21 @@ def save_data_XES_timescans_ROIs(reducedir, run_name, s_on, s_off, rois, delaymm
                                     "ROIs" : rois,
                                     "Delay_mm" : delaymm,
                                     "Delay_fs" : delayfs,
+                                    "meta" : meta}
+   
+    np.save(reducedir+run_name+'/run_array', run_array)
+
+######################################
+
+def save_data_XES_timescans_ROIs_TT(reducedir, run_name, all_s_on, all_s_off, rois, all_delays_stage, all_delays_corr, meta):
+
+    run_array = {}
+    run_array[run_name.split('-')[0]] = {"name": run_name,
+                                    "all_spectra_shots_on": all_s_on, 
+                                    "all_spectra_shots_off" : all_s_off, 
+                                    "ROIs" : rois,
+                                    "all_delays_fs_scan" : all_delays_stage,
+                                    "all_delays_corr_scan" : all_delays_corr,
                                     "meta" : meta}
    
     np.save(reducedir+run_name+'/run_array', run_array)
