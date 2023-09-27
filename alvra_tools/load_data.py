@@ -110,6 +110,22 @@ def _get_detector_name(f):
 def _make_empty_image(image, module_map):
     return np.zeros((512 * len(module_map), 1024), dtype=image.dtype)
 
+def get_scan_params(jsonfile):
+    from sfdata import SFScanInfo
+    scan = SFScanInfo(jsonfile)
+    if scan.parameters['scan_name'] != 'dummy':
+        if scan.parameters['units'] == ['fs']:
+            try:
+                Timezero_mm = get_timezero_NBS(jsonfile)
+                scanvar = scan.readbacks - mm2fs(Timezero_mm, 0)
+            except:
+                scanvar = scan.readbacks
+        else: 
+            scanvar = scan.readbacks
+        print ('Scan contains {} step(s), scanvar goes from {:.2f} to {:.2f} {}'.format(len(scan), scanvar[0], scanvar[-1], scan.parameters['units'][0]))
+    else:
+        print ('Scan contains {} step(s), No motors moved'.format(len(scan)))
+
 def remove_JF_from_scan(scan):
     for i, files in enumerate(scan.files):
         new_files = []
