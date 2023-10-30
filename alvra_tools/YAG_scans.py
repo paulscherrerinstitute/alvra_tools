@@ -584,5 +584,24 @@ def save_run_array_YAG_TT(reducedir, run_name, Delrbk, Delfs, Delcorr, PP, PPsca
                                     "Pump_probe_scan": PPscan}
 
     np.save(reducedir+run_name+'/run_array', run_array)
+    
+#########################################################
+    
+def save_run_array_YAG_2TTs(reducedir, run_name, Delrbk, 
+                            Delfs1, Delcorr1, PP1, PPscan1, 
+                            Delfs2, Delcorr2, PP2, PPscan2):
+    run_array = {}
+    run_array[run_name.split('-')[0]] = {"name": run_name,
+                                    "Delay_rbk": Delrbk,
+                                    "Delay_fs": Delfs1,
+                                    "Delay_corr": Delcorr1,
+                                    "Pump_probe": PP1,
+                                    "Pump_probe_scan": PPscan1,
+                                    "Delay_fs2": Delfs2,
+                                    "Delay_corr2": Delcorr2,
+                                    "Pump_probe2": PP2,
+                                    "Pump_probe_scan2": PPscan2}
+
+    np.save(reducedir+run_name+'/run_array', run_array)
 
 
