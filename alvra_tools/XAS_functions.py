@@ -91,7 +91,7 @@ def make_correlation_filter2(arrayX, arrayY, quantile):
 
     correlation_filter = condition_low_X & condition_high_X
 
-    return (correlation_filter)
+    return (correlation_filter, line)
 
 ######################################
 
@@ -172,7 +172,7 @@ def correlation_filter_TT(FluoData_pump, FluoData_unpump, Izero_pump, Izero_unpu
     #FluoData_pump_filter_norm = FluoData_pump_filter / Izero_pump_filter
     #FluoData_unpump_filter_norm = FluoData_unpump_filter / Izero_unpump_filter
 
-    print ('{} shots out of {} survived'.format(np.shape(FluoData_pump_filter), np.shape(FluoData_pump)))
+    #print ('{} shots out of {} survived'.format(np.shape(FluoData_pump_filter), np.shape(FluoData_pump)))
 
     return (FluoData_pump_filter, FluoData_unpump_filter, Izero_pump_filter, Izero_unpump_filter, arrTimes_filter, delay_fs_filter)
 
@@ -961,7 +961,7 @@ def save_data_timescans(reducedir, run_name, delaymm, delayfs, D1p, D1u, PP1, gs
 
 ######################################
 
-def save_data_timescans_TT(reducedir, run_name, delayfs, delaycorr, D1p, D1u, PP1, PPscan, gs1):
+def save_data_timescans_TT(reducedir, run_name, delaymm, delaystage, delayfs, delaycorr, D1p, D1u, PP1, PPscan, gs1):
     run_array = {}
     run_array[run_name.split('-')[0]] = {"name": run_name,
                                     "DataDiode1_pump": D1p, 
@@ -970,8 +970,12 @@ def save_data_timescans_TT(reducedir, run_name, delayfs, delaycorr, D1p, D1u, PP
                                     "Pump_probe_scan" : PPscan,
                                     "goodshots1" : gs1,
                                     "Delays_fs_scan" : delayfs,
-                                    "Delays_corr_scan" : delaycorr}
+                                    "Delays_corr_scan" : delaycorr,
+                                    "Delay_mm" : delaymm,
+                                    "Delay_fs" : delaystage}
     
+    np.save(reducedir+run_name+'/timescan_Delay_mm.npy', delaymm)
+    np.save(reducedir+run_name+'/timescan_Delay_fs.npy', delaystage)
     np.save(reducedir+run_name+'/timescan_Delay_corr.npy', delaycorr)
     np.save(reducedir+run_name+'/timescan_Delay_fs_scan.npy', delayfs)
     np.save(reducedir+run_name+'/timescan_goodshots1.npy', gs1)
@@ -1031,7 +1035,7 @@ def save_data_XANES_2diodes(reducedir, run_name, En, D1p, D1u, PP1, gs1, D2p, D2
 
 ######################################
 
-def save_run_array_timescans_2diodes(reducedir, run_name, delaymm, delayfs, D1p, D1u, PP1, gs1):
+def save_run_array_timescans_2diodes(reducedir, run_name, delaymm, delayfs, D1p, D1u, PP1, gs1, D2p, D2u, PP2, gs2):
     run_array = {}
     run_array[run_name.split('-')[0]] = {"name": run_name,
                                     "DataDiode1_pump": D1p, 
@@ -1078,7 +1082,59 @@ def save_data_timescans_2diodes(reducedir, run_name, delaymm, delayfs, D1p, D1u,
     np.save(reducedir+run_name+'/timescan_Pump_probe_Diode2', PP2)
 
     np.save(reducedir+run_name+'/run_array', run_array)
+    
+################################################
 
+def save_data_timescans_TT_2diodes(reducedir, run_name, delaymm, delaystage, delayfs, delaycorr, D1p, D1u, PP1, gs1, D2p, D2u, PP2, gs2):
+    run_array = {}
+    run_array[run_name.split('-')[0]] = {"name": run_name,
+                                    "DataDiode1_pump": D1p, 
+                                    "DataDiode1_unpump" : D1u, 
+                                    "Pump_probe_Diode1" : PP1, 
+                                    "goodshots1" : gs1,
+                                    "DataDiode2_pump": D2p, 
+                                    "DataDiode2_unpump" : D2u, 
+                                    "Pump_probe_Diode2" : PP2, 
+                                    "goodshots2" : gs2,
+                                    "Delays_fs_scan" : delayfs,
+                                    "Delays_corr_scan" : delaycorr,
+                                    "Delay_mm" : delaymm,
+                                    "Delay_fs" : delaystage}
+    
+    np.save(reducedir+run_name+'/timescan_Delay_mm.npy', delaymm)
+    np.save(reducedir+run_name+'/timescan_Delay_fs.npy', delayfs)
+    np.save(reducedir+run_name+'/timescan_Delays_corr_scan.npy', delaycorr)
+    np.save(reducedir+run_name+'/timescan_Delays_fs_scan.npy', delaystage)
+    np.save(reducedir+run_name+'/timescan_goodshots1.npy', gs1)
+    np.save(reducedir+run_name+'/timescan_goodshots2.npy', gs2)
 
+    np.save(reducedir+run_name+'/timescan_DataDiode1_pump', D1p)
+    np.save(reducedir+run_name+'/timescan_DataDiode1_unpump', D1u)
+    np.save(reducedir+run_name+'/timescan_Pump_probe_Diode1', PP1)
 
+    np.save(reducedir+run_name+'/timescan_DataDiode2_pump', D2p)
+    np.save(reducedir+run_name+'/timescan_DataDiode2_unpump', D2u)
+    np.save(reducedir+run_name+'/timescan_Pump_probe_Diode2', PP2)
+
+    np.save(reducedir+run_name+'/run_array', run_array)
+
+################################################
+
+def load_reduced_data(pgroup, loaddir, runlist):
+    from collections import defaultdict
+    titlestring = pgroup + ' --- ' +str(runlist)
+
+    d = defaultdict(list)
+    for run in runlist:
+        data = {}
+        file = glob.glob(loaddir + '/*{:04d}*/*run_array*'.format(run))
+        run_array = np.load(file[0], allow_pickle=True).item()
+        for k, v in run_array.items():
+            for key, value in v.items():
+                data[key] = value
+                if "scan" in key:
+                    d[key].extend(value)
+                else:
+                    d[key].append(value)
+    return d, titlestring
 
