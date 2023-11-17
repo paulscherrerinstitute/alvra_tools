@@ -762,7 +762,7 @@ def XAS_scanPP_PSEN(scan, TT, channel_delay_motor, diode, Izero, timezero_mm, qu
     
 ######################################
 
-def XAS_scanPP_PSEN_bs(scan, TT, channel_delay_motor, diode, Izero, timezero_mm, quantile, filterTime=2000, filterAmp=0):
+def XAS_scanPP_PSEN_bs(scan, TT, channel_delay_motor, diode, Izero, quantile, timezero_mm=None, filterTime=2000, filterAmp=0):
     channels_pp = [channel_Events, diode, Izero, channel_delay_motor] + TT
     channels_all = channels_pp
 
@@ -776,7 +776,10 @@ def XAS_scanPP_PSEN_bs(scan, TT, channel_delay_motor, diode, Izero, timezero_mm,
         channel_arrTimesAmp = channel_PSEN126_arrTimesAmp
         channel_edges = channel_PSEN126_edges
         channel_peaks = channel_PSEN126_peaks
-
+    
+    if timezero_mm is None:
+        timezero_mm = get_timezero_NBS(scan.fname)
+    
     scanvar = scan.readbacks
 
     Izero_pump = []
@@ -889,6 +892,218 @@ def XAS_scanPP_PSEN_bs(scan, TT, channel_delay_motor, diode, Izero, timezero_mm,
     print ('Processed {} out of {} files'.format(len(scanvar), len(scan)))
     
     return (Delays_fs_scan, Delays_corr_scan, DataFluo_pump, DataFluo_unpump, Pump_probe, Pump_probe_scan, Izero_pump, Izero_unpump, correlation, scanvar, goodshots)
+
+######################################
+
+def XAS_scanPP_2diodes_PSEN_bs(scan, TT, channel_delay_motor, diode1, diode2, Izero, quantile, timezero_mm=None, filterTime=2000, filterAmp=0):
+    channels_pp = [channel_Events, diode1, diode2, Izero, channel_delay_motor] + TT
+    channels_all = channels_pp
+
+    if TT == TT_PSEN124:
+        channel_arrTimes = channel_PSEN124_arrTimes
+        channel_arrTimesAmp = channel_PSEN124_arrTimesAmp
+        channel_edges = channel_PSEN124_edges
+        channel_peaks = channel_PSEN124_peaks
+    elif TT == TT_PSEN126:
+        channel_arrTimes = channel_PSEN126_arrTimes
+        channel_arrTimesAmp = channel_PSEN126_arrTimesAmp
+        channel_edges = channel_PSEN126_edges
+        channel_peaks = channel_PSEN126_peaks
+    
+    if timezero_mm is None:
+        timezero_mm = get_timezero_NBS(scan.fname)
+    
+    scanvar = scan.readbacks
+
+    Izero_pump = []
+    Izero_unpump = []
+
+    DataFluo_pump = []
+    DataFluo_unpump = []
+    Pump_probe = []
+
+    DataFluo2_pump = []
+    DataFluo2_unpump = []
+    Pump_probe2 = []
+
+    Delay_fs_stage = []
+    arrTimes_scan = []
+    arrTimesAmp_scan = []
+    Delays_fs_scan = []
+    Pump_probe_scan = []
+
+    arrTimes_scan2 = []
+    arrTimesAmp_scan2 = []
+    Delays_fs_scan2 = []
+    Pump_probe_scan2 = []
+
+    correlation = []
+    correlation2 = []
+    goodshots = []
+    goodshots2 = []
+
+    for i, step in enumerate(scan):
+        check_files_and_data(step)
+        check = get_filesize_diff(step)     
+        if check:
+            clear_output(wait=True)
+            filename = scan.files[i][0].split('/')[-1].split('.')[0]
+            print ('Processing: {}'.format(scan.fname.split('/')[-3]))
+            print ('Step {} of {}: Processing {}'.format(i+1, len(scan.files), filename))
+
+            resultsPP, results, _, _ = load_data_compact_pump_probe(channels_pp, channels_all, step)
+
+            IzeroFEL_pump_shot = resultsPP[Izero].pump
+            IzeroFEL_unpump_shot = resultsPP[Izero].unpump
+            Fluo_pump_shot = resultsPP[diode1].pump
+            Fluo_unpump_shot = resultsPP[diode1].unpump
+            Fluo2_pump_shot = resultsPP[diode2].pump
+            Fluo2_unpump_shot = resultsPP[diode2].unpump
+
+            delay_shot = resultsPP[channel_delay_motor].pump
+            delay_shot_fs = mm2fs(delay_shot, timezero_mm)
+            Delay_fs_stage.append(delay_shot_fs.mean())
+
+            arrTimes = resultsPP[channel_arrTimes].pump
+            arrTimesAmp = resultsPP[channel_arrTimesAmp].pump
+            sigtraces = resultsPP[channel_edges].pump
+            peaktraces = resultsPP[channel_peaks].pump
+
+            #arrTimes, arrTimesAmp, sigtraces, peaktraces = get_arrTimes(resultsPP, step, TT, target, calibration)
+
+            ######################################
+            ### filter Diode1 data
+            ######################################
+            
+            # correlation_filter_pump   = make_correlation_filter2(IzeroFEL_pump_shot, Fluo_pump_shot, quantile)
+            # correlation_filter_unpump = make_correlation_filter2(IzeroFEL_unpump_shot, Fluo_unpump_shot, quantile)
+            # correlation_filter = correlation_filter_pump & correlation_filter_unpump
+            # correlation_filter = make_correlation_filter2_pp(IzeroFEL_pump_shot, Fluo_pump_shot, IzeroFEL_unpump_shot, Fluo_unpump_shot, quantile)
+            # Diode_pump_shot_filter   = Fluo_pump_shot[correlation_filter]
+            # Diode_unpump_shot_filter = Fluo_unpump_shot[correlation_filter]
+            # Izero_pump_filter        = IzeroFEL_pump_shot[correlation_filter]
+            # Izero_unpump_filter      = IzeroFEL_unpump_shot[correlation_filter]
+            # delay_shot_fs_filter     = delay_shot_fs[correlation_filter]
+            # arrTimes_filter          = arrTimes[correlation_filter]
+        
+            # Izero_pump_filter, Diode_pump_shot_filter, Izero_unpump_filter, Diode_unpump_shot_filter, arrTimes_filter, delay_shot_fs_filter = make_correlation_filter2_pp(IzeroFEL_pump_shot, Fluo_pump_shot, IzeroFEL_unpump_shot, Fluo_unpump_shot, arrTimes, delay_shot_fs, quantile)
+            
+            Diode_pump_shot_filter, Diode_unpump_shot_filter, Izero_pump_filter, Izero_unpump_filter, arrTimes_filter, delay_shot_fs_filter = correlation_filter_TT(Fluo_pump_shot, Fluo_unpump_shot, IzeroFEL_pump_shot, IzeroFEL_unpump_shot, arrTimes, delay_shot_fs, quantile)
+            
+            Diode_pump_shot_filter = Diode_pump_shot_filter / Izero_pump_filter
+            Diode_unpump_shot_filter = Diode_unpump_shot_filter / Izero_unpump_filter
+
+            Pump_probe_shot = Diode_pump_shot_filter - Diode_unpump_shot_filter
+            
+            print ('{} shots out of {} survived'.format(len(Diode_pump_shot_filter), len(Fluo_pump_shot)))
+
+            Delays_fs_scan.append(delay_shot_fs_filter)
+            arrTimes_scan.append(arrTimes_filter)
+            Pump_probe_scan.append(Pump_probe_shot)
+
+            ######################################
+            ### filter Diode2 data
+            ######################################
+            
+            # correlation_filter_pump   = make_correlation_filter2(IzeroFEL_pump_shot, Fluo_pump_shot, quantile)
+            # correlation_filter_unpump = make_correlation_filter2(IzeroFEL_unpump_shot, Fluo_unpump_shot, quantile)
+            # correlation_filter = correlation_filter_pump & correlation_filter_unpump
+            # correlation_filter = make_correlation_filter2_pp(IzeroFEL_pump_shot, Fluo_pump_shot, IzeroFEL_unpump_shot, Fluo_unpump_shot, quantile)
+            # Diode_pump_shot_filter   = Fluo_pump_shot[correlation_filter]
+            # Diode_unpump_shot_filter = Fluo_unpump_shot[correlation_filter]
+            # Izero_pump_filter        = IzeroFEL_pump_shot[correlation_filter]
+            # Izero_unpump_filter      = IzeroFEL_unpump_shot[correlation_filter]
+            # delay_shot_fs_filter     = delay_shot_fs[correlation_filter]
+            # arrTimes_filter          = arrTimes[correlation_filter]
+        
+            # Izero_pump_filter, Diode_pump_shot_filter, Izero_unpump_filter, Diode_unpump_shot_filter, arrTimes_filter, delay_shot_fs_filter = make_correlation_filter2_pp(IzeroFEL_pump_shot, Fluo_pump_shot, IzeroFEL_unpump_shot, Fluo_unpump_shot, arrTimes, delay_shot_fs, quantile)
+            
+            Diode2_pump_shot_filter, Diode2_unpump_shot_filter, Izero_pump_filter, Izero_unpump_filter, arrTimes_filter2, delay_shot_fs_filter2 = correlation_filter_TT(Fluo2_pump_shot, Fluo2_unpump_shot, IzeroFEL_pump_shot, IzeroFEL_unpump_shot, arrTimes, delay_shot_fs, quantile)
+            
+            Diode2_pump_shot_filter = Diode2_pump_shot_filter / Izero_pump_filter
+            Diode2_unpump_shot_filter = Diode2_unpump_shot_filter / Izero_unpump_filter
+
+            Pump_probe_2_shot = Diode2_pump_shot_filter - Diode2_unpump_shot_filter
+            
+            print ('{} shots out of {} survived'.format(len(Diode2_pump_shot_filter), len(Fluo2_pump_shot)))
+
+            Delays_fs_scan2.append(delay_shot_fs_filter2)
+            arrTimes_scan2.append(arrTimes_filter2)
+            Pump_probe_scan2.append(Pump_probe_2_shot)
+
+            ######################################
+            ### make dataframes Diode1
+            ######################################
+
+            df_pump = pd.DataFrame(Diode_pump_shot_filter)
+            DataFluo_pump.append(np.nanquantile(df_pump, [0.5, 0.5 - quantile/2, 0.5 + quantile/2]))
+
+            df_unpump = pd.DataFrame(Diode_unpump_shot_filter)
+            DataFluo_unpump.append(np.nanquantile(df_unpump, [0.5, 0.5 - quantile/2, 0.5 + quantile/2]))       
+
+            df_pump_probe = pd.DataFrame(Pump_probe_shot)
+            Pump_probe.append(np.nanquantile(df_pump_probe, [0.5, 0.5 - quantile/2, 0.5 + quantile/2]))
+
+            ######################################
+            ### make dataframes Diode2
+            ######################################
+
+            df_pump_2 = pd.DataFrame(Diode2_pump_shot_filter)
+            DataFluo2_pump.append(np.nanquantile(df_pump_2, [0.5, 0.5 - quantile/2, 0.5 + quantile/2]))
+
+            df_unpump_2 = pd.DataFrame(Diode2_unpump_shot_filter)
+            DataFluo2_unpump.append(np.nanquantile(df_unpump_2, [0.5, 0.5 - quantile/2, 0.5 + quantile/2]))       
+
+            df_pump_probe_2 = pd.DataFrame(Pump_probe_2_shot)
+            Pump_probe2.append(np.nanquantile(df_pump_probe_2, [0.5, 0.5 - quantile/2, 0.5 + quantile/2]))
+
+            goodshots.append(len(Pump_probe_shot))
+            goodshots2.append(len(Pump_probe_2_shot))
+            correlation.append(pearsonr(IzeroFEL_pump_shot,Fluo_pump_shot)[0])
+            correlation2.append(pearsonr(IzeroFEL_pump_shot,Fluo2_pump_shot)[0])
+
+            print ('Step {} of {}: Processed {}'.format(i+1, len(scan.files), filename))
+            print ("correlation Diode1 (all shots) = {}".format(pearsonr(IzeroFEL_pump_shot,Fluo_pump_shot)[0]))
+            print ("correlation Diode2 (all shots) = {}".format(pearsonr(IzeroFEL_pump_shot,Fluo2_pump_shot)[0]))
+
+    scanvar = scanvar[:np.shape(Pump_probe)[0]]
+
+    Delays_fs_scan = np.asarray(list(itertools.chain.from_iterable(Delays_fs_scan)))
+    arrTimes_scan = np.asarray(list(itertools.chain.from_iterable(arrTimes_scan)))
+    Pump_probe_scan = np.asarray(list(itertools.chain.from_iterable(Pump_probe_scan)))
+
+    Delays_fs_scan = np.asarray(Delays_fs_scan)
+    arrTimes_scan = np.asarray(arrTimes_scan)
+    Pump_probe_scan = np.asarray(Pump_probe_scan)
+
+    Delays_fs_scan2 = np.asarray(list(itertools.chain.from_iterable(Delays_fs_scan2)))
+    arrTimes_scan2 = np.asarray(list(itertools.chain.from_iterable(arrTimes_scan2)))
+    Pump_probe_scan2 = np.asarray(list(itertools.chain.from_iterable(Pump_probe_scan2)))
+
+    Delays_fs_scan2 = np.asarray(Delays_fs_scan2)
+    arrTimes_scan2 = np.asarray(arrTimes_scan2)
+    Pump_probe_scan2 = np.asarray(Pump_probe_scan2)
+
+    DataFluo_pump = np.asarray(DataFluo_pump)
+    DataFluo_unpump = np.asarray(DataFluo_unpump)
+    Pump_probe = np.asarray(Pump_probe)
+    DataFluo2_pump = np.asarray(DataFluo2_pump)
+    DataFluo2_unpump = np.asarray(DataFluo2_unpump)
+    Pump_probe2 = np.asarray(Pump_probe2)
+    
+    Izero_pump = np.asarray(Izero_pump)
+    Izero_unpump = np.asarray(Izero_unpump)
+    correlation = np.asarray(correlation)
+    correlation2 = np.asarray(correlation2)
+
+    Delays_corr_scan  = Delays_fs_scan  + arrTimes_scan
+    Delays_corr_scan2 = Delays_fs_scan2 + arrTimes_scan2
+
+    print ('------------------------------')
+    print ('Processed {} out of {} files'.format(len(scanvar), len(scan)))
+    
+    return (Delays_fs_scan, Delays_corr_scan, DataFluo_pump, DataFluo_unpump, Pump_probe, Pump_probe_scan, Delays_fs_scan2, Delays_corr_scan2, DataFluo2_pump, DataFluo2_unpump, Pump_probe2, Pump_probe_scan2, Izero_pump, Izero_unpump, correlation, correlation2, scanvar, goodshots, goodshots2)
+
 
 ######################################
 
@@ -1119,6 +1334,98 @@ def save_data_timescans_TT_2diodes(reducedir, run_name, delaymm, delaystage, del
     np.save(reducedir+run_name+'/run_array', run_array)
 
 ################################################
+################################################
+
+def save_reduced_data_1diode(reducedir, run_name, scan, D1p, D1u, PP1, gs1, corr1):
+    t0 = get_timezero_NBS(scan.fname)
+    rdb = scan.readbacks
+    run_array = {}
+    run_array[run_name.split('-')[0]] = {"name": run_name,
+                                    "scan_params": scan.parameters,
+                                    "timezero_mm": t0,
+                                    "readbacks": rdb,
+                                    "DataDiode1_pump": D1p, 
+                                    "DataDiode1_unpump" : D1u, 
+                                    "Pump_probe_Diode1" : PP1, 
+                                    "goodshots1" : gs1,
+                                    "correlation1": corr1}
+
+    np.save(reducedir+run_name+'/run_array', run_array)
+
+################################################
+
+def save_reduced_data_1diode_TT(reducedir, run_name, scan, D1p, D1u, PP1, gs1, corr1, PPscan, delayfs, delaycorr):
+    t0 = get_timezero_NBS(scan.fname)
+    rdb = scan.readbacks
+    run_array = {}
+    run_array[run_name.split('-')[0]] = {"name": run_name,
+                                    "scan_params": scan.parameters,
+                                    "timezero_mm": t0,
+                                    "readbacks": rdb,
+                                    "DataDiode1_pump": D1p, 
+                                    "DataDiode1_unpump" : D1u, 
+                                    "Pump_probe_Diode1" : PP1, 
+                                    "goodshots1" : gs1,
+                                    "correlation1" : corr1,
+                                    "Pump_probe_scan" : PPscan,
+                                    "Delays_fs_scan" : delayfs,
+                                    "Delays_corr_scan" : delaycorr}
+
+    np.save(reducedir+run_name+'/run_array', run_array)
+
+################################################
+
+def save_reduced_data_2diodes(reducedir, run_name, scan, D1p, D1u, PP1, gs1, corr1, D2p, D2u, PP2, gs2, corr2):
+    t0 = get_timezero_NBS(scan.fname)
+    rdb = scan.readbacks
+    run_array = {}
+    run_array[run_name.split('-')[0]] = {"name": run_name,
+                                    "scan_params": scan.parameters,
+                                    "timezero_mm": t0,
+                                    "readbacks": rdb,
+                                    "DataDiode1_pump": D1p, 
+                                    "DataDiode1_unpump" : D1u, 
+                                    "Pump_probe_Diode1" : PP1, 
+                                    "goodshots1" : gs1,
+                                    "correlation1" : corr1,
+                                    "DataDiode2_pump": D2p, 
+                                    "DataDiode2_unpump" : D2u, 
+                                    "Pump_probe_Diode2" : PP2, 
+                                    "goodshots2" : gs2,
+                                    "correlation2": corr2}
+
+    np.save(reducedir+run_name+'/run_array', run_array)
+
+################################################
+
+def save_reduced_data_2diodes_TT(reducedir, run_name, scan, D1p, D1u, PP1, gs1, corr1, PPscan, D2p, D2u, PP2, gs2, corr2, PPscan2, delayfs1, delaycorr1, delayfs2, delaycorr2):
+    t0 = get_timezero_NBS(scan.fname)
+    rdb = scan.readbacks
+    run_array = {}
+    run_array[run_name.split('-')[0]] = {"name": run_name,
+                                    "scan_params": scan.parameters,
+                                    "timezero_mm": t0,
+                                    "readbacks": rdb,
+                                    "DataDiode1_pump": D1p, 
+                                    "DataDiode1_unpump" : D1u, 
+                                    "Pump_probe_Diode1" : PP1, 
+                                    "goodshots1" : gs1,
+                                    "correlation1" : corr1,
+                                    "Pump_probe_scan" : PPscan,
+                                    "DataDiode2_pump": D2p, 
+                                    "DataDiode2_unpump" : D2u, 
+                                    "Pump_probe_Diode2" : PP2, 
+                                    "goodshots2" : gs2,
+                                    "correlation2" : corr2,
+                                    "Pump_probe_scan2" : PPscan2,
+                                    "Delays_fs_scan" : delayfs1,
+                                    "Delays_corr_scan" : delaycorr1,
+                                    "Delays_fs_scan2" : delayfs2,
+                                    "Delays_corr_scan2" : delaycorr2}
+
+    np.save(reducedir+run_name+'/run_array', run_array)
+
+################################################
 
 def load_reduced_data(pgroup, loaddir, runlist):
     from collections import defaultdict
@@ -1126,15 +1433,82 @@ def load_reduced_data(pgroup, loaddir, runlist):
 
     d = defaultdict(list)
     for run in runlist:
-        data = {}
+        #data = {}
         file = glob.glob(loaddir + '/*{:04d}*/*run_array*'.format(run))
         run_array = np.load(file[0], allow_pickle=True).item()
         for k, v in run_array.items():
             for key, value in v.items():
-                data[key] = value
-                if "scan" in key:
-                    d[key].extend(value)
-                else:
+                #data[key] = value
+                if key == "timezero_mm" or key=="name":
                     d[key].append(value)
+                else:
+                    d[key].extend(value)
     return d, titlestring
+
+################################################
+
+def LoadTimescansXANES(with_TT, Two_diodes, scan, TT, channel_delay_motor, detector_XAS_1, detector_XAS_2, detector_Izero, quantile_corr, saveflag, reducedir, runname):
+    if with_TT:
+        if Two_diodes:
+            (Delays_fs_scan, Delays_corr_scan, DataDiode_pump, DataDiode_unpump, Pump_probe_Diode, Pump_probe_scan,
+             Delays_fs_scan2, Delays_corr_scan2, DataDiode2_pump, DataDiode2_unpump, Pump_probe_Diode2, Pump_probe_scan2,
+             Izero_pump, Izero_unpump, correlation, correlation2, readbacks, goodshots, goodshots2) = \
+             XAS_scanPP_2diodes_PSEN_bs(scan, TT, channel_delay_motor, detector_XAS_1, detector_XAS_2, detector_Izero, quantile_corr)
+            if saveflag:
+                os.makedirs(reducedir+runname, exist_ok=True)
+                save_reduced_data_2diodes_TT(reducedir, runname, scan, 
+                                             DataDiode_pump, DataDiode_unpump, Pump_probe_Diode, goodshots, correlation, Pump_probe_scan,
+                                             DataDiode2_pump, DataDiode2_unpump, Pump_probe_Diode2, goodshots2, correlation2, Pump_probe_scan2,
+                                             Delays_fs_scan, Delays_corr_scan, Delays_fs_scan2, Delays_corr_scan2)
+        else:
+            (Delays_fs_scan, Delays_corr_scan, DataDiode_pump, DataDiode_unpump, Pump_probe_Diode, Pump_probe_scan, 
+             Izero_pump_scan, Izero_unpump_scan, correlation, readbacks, goodshots) = \
+             XAS_scanPP_PSEN_bs(scan, TT, channel_delay_motor, detector_XAS_1, detector_Izero, quantile_corr)
+            if saveflag:
+                os.makedirs(reducedir+runname, exist_ok=True)
+                save_reduced_data_1diode_TT(reducedir, runname, scan, 
+                                            DataDiode_pump, DataDiode_unpump, Pump_probe_Diode, goodshots, correlation, Pump_probe_scan, Delays_fs_scan, Delays_corr_scan)                
+    else:
+        if Two_diodes:
+            (DataDiode1_pump, DataDiode1_unpump, Pump_probe_Diode1, 
+             DataDiode2_pump, DataDiode2_unpump, Pump_probe_Diode2, 
+             Izero_pump, Izero_unpump, correlation1, correlation2, readbacks, goodshots1, goodshots2) = \
+             XAS_scanPP_2diodes_noTT(scan, detector_XAS_1, detector_XAS_2, detector_Izero, quantile_corr)
+            if saveflag:
+                os.makedirs(reducedir+runname, exist_ok=True)
+                save_reduced_data_2diodes(reducedir, runname, scan, 
+                                          DataDiode1_pump, DataDiode1_unpump, Pump_probe_Diode1, goodshots1, correlation1,
+                                          DataDiode2_pump, DataDiode2_unpump, Pump_probe_Diode2, goodshots2, correlation2)
+                
+        else:
+            (DataDiode_pump, DataDiode_unpump, Pump_probe_Diode, 
+             Izero_pump_scan, Izero_unpump_scan, correlation, readbacks, goodshots) = \
+             XAS_scanPP_1diode_noTT(scan, detector_XAS_1, detector_Izero, quantile_corr)
+            if saveflag:
+                os.makedirs(reducedir+runname, exist_ok=True)
+                save_reduced_data_1diode(reducedir, runname, scan, 
+                                         DataDiode_pump, DataDiode_unpump, Pump_probe_Diode, goodshots, correlation)
+
+################################################
+
+def LoadXANES(Two_diodes, scan, detector_XAS_1, detector_XAS_2, detector_Izero, quantile_corr, saveflag, reducedir, runname):
+    if Two_diodes: 
+        (DataDiode1_pump, DataDiode1_unpump, Pump_probe_Diode1,
+         DataDiode2_pump, DataDiode2_unpump, Pump_probe_Diode2, 
+         Izero_pump, Izero_unpump, correlation1, correlation2, Energy_eV, goodshots1, goodshots2) = \
+        XAS_scanPP_2diodes_noTT(scan, detector_XAS_1, detector_XAS_2, detector_Izero, quantile_corr)
+        if saveflag:
+            os.makedirs(reducedir+runname, exist_ok=True)
+            save_reduced_data_2diodes(reducedir, runname, scan, 
+                                      DataDiode1_pump, DataDiode1_unpump, Pump_probe_Diode1, goodshots1, correlation1,
+                                      DataDiode2_pump, DataDiode2_unpump, Pump_probe_Diode2, goodshots2, correlation2)
+    else:
+        (DataDiode1_pump, DataDiode1_unpump, Pump_probe_Diode1,
+         Izero_pump_scan, Izero_unpump_scan, correlation1, Energy_eV, goodshots1) = \
+        XAS_scanPP_1diode_noTT(scan, detector_XAS_1, detector_Izero, quantile_corr)
+        if saveflag:
+                os.makedirs(reducedir+runname, exist_ok=True)
+                save_reduced_data_1diode(reducedir, runname, scan, 
+                                         DataDiode1_pump, DataDiode1_unpump, Pump_probe_Diode1, goodshots1, correlation1)
+
 
