@@ -178,10 +178,10 @@ def Get_ROI_names(step, detector):
     return channels
 
 
-def adjust_delayaxis(scan,readbacks,t0):
+def adjust_delayaxis(scan_params,readbacks,t0):
     delay_fs = np.copy(readbacks)
     dealy_mm = np.copy(readbacks)
-    if ' as delay' in scan.parameters['name'][0]:
+    if ' as delay' in scan_params['name'][0]:
         print ('Scan is done with the stage in fs')
         Delay_fs = readbacks
         Delay_mm = fs2mm(readbacks,0)
@@ -189,10 +189,10 @@ def adjust_delayaxis(scan,readbacks,t0):
         print ('Scan is done with the stage in mm')
         Delay_fs = mm2fs(readbacks,0)
         Delay_mm = readbacks
-    if scan.parameters['units'] == ['nS']:
-        Delay_fs = scan.values
+    if scan_params['units'] == ['nS']:
+        Delay_fs = readbacks
     else:
-        Delay_fs = scan.values
+        Delay_fs = readbacks
         Delay_fs = Delay_fs - mm2fs(t0, 0)
     Delay_fs = Delay_fs[:len(readbacks)]
     Delay_mm = Delay_mm[:len(readbacks)]
