@@ -177,6 +177,21 @@ def Get_ROI_names(step, detector):
             channels.append((detector+":ROI_{}".format(tag)))
     return channels
 
+def add_ROI_channels(step, detector):
+    fn = step.fnames[0].rsplit(".", 2)
+    fn[-2] = detector
+    fn = ".".join(fn)    
+
+    with h5py.File(fn) as f:
+        detnames = f["data"].keys()
+        detnames = sorted(detnames)
+        
+    for dn in detnames:
+        f = ju.File(fn, detector_name=dn)
+        chan = SFChannelJF(dn, f)
+        step[dn] = chan
+        step.files.append(f)
+    return detnames
 
 def adjust_delayaxis(scan_params,readbacks,t0):
     delay_fs = np.copy(readbacks)
@@ -658,11 +673,21 @@ def load_data_compact(channel_list, data, offsets = None):
         pids = subset[ch].pids[index_light]
         ch_out   = dat[index_light]
         result[ch] = ch_out
-	
-        if subset[ch].meta:
-            chmeta = subset[ch].meta
+
+        # old sfdata does not have the meta attribute, so we cannot check for it
+        try:
+            chmeta = subset[ch]._group["meta"]
+        except:
+            chmeta = None
+
+        if chmeta:
             for k,v in chmeta.items():
                 meta[ch + "-" + k] = v[()]
+	
+        #if subset[ch].meta:
+        #    chmeta = subset[ch].meta
+        #    for k,v in chmeta.items():
+        #        meta[ch + "-" + k] = v[()]
 
     result["meta"] = meta
 
@@ -1239,11 +1264,21 @@ def load_data_compact_pump_probe(channels_pump_unpump, channels_FEL, data, offse
 
         ppdata = namedtuple("PPData", ["pump", "unpump"])
         result_pp[ch] = ppdata(pump=ch_pump, unpump=ch_unpump)
-        
-        if subset_FEL[ch].meta:
-            chmeta = subset_FEL[ch].meta
+
+        # old sfdata does not have the meta attribute, so we cannot check for it
+        try:
+            chmeta = subset_FEL[ch]._group["meta"]
+        except:
+            chmeta = None
+
+        if chmeta:
             for k,v in chmeta.items():
                 meta[ch + "-" + k] = v[()]
+        
+        #if subset_FEL[ch].meta:
+        #    chmeta = subset_FEL[ch].meta
+        #    for k,v in chmeta.items():
+        #        meta[ch + "-" + k] = v[()]
 
     result_pp["meta"] = meta
 
