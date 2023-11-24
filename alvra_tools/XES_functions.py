@@ -209,14 +209,19 @@ def XES_static_4ROIs(fname, pgroup, roi1, roi2, roi3, roi4, thr_low, thr_high, n
 
 def XES_static_ROIs(scan, channels_list, thr_low, thr_high, index=0):
     s = scan[index]
-    channels_ROI = Get_ROI_names(s, "JF02T09V03")
+
+    detector = "JF02T09V03"
+#    channels_ROI = add_ROI_channels(s, detector)
+
+    channels_ROI = Get_ROI_names(s, detector)
+
     channels_list = channels_list + channels_ROI
     
     check_files_and_data(s)
     check = get_filesize_diff(s)
     if check:
         clear_output(wait=True)
-        filename = scan.files[0][0].split('/')[-1].split('.')[0]
+        filename = scan.files[index][0].split('/')[-1].split('.')[0]
         print ('Processing: {}'.format(scan.fname.split('/')[-3]))
         print ('Step {} of {}: filename {}'.format(index+1, len(scan.files), filename))
 	     
