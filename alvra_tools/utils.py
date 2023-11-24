@@ -189,11 +189,16 @@ def estimate_conv_exp_gauss_heaviside2_parameters(x,y):
     b = 0
     return x0, amplitude, width,offset,lifetime, a, b
 
-def model_decay_2exp(x, x0, amp1, amp2, amp3, tau1, tau2, sigma, offset):
-    first_exp  = 0.5*(amp1 * np.exp((x0-x)/tau1 + 0.5*(sigma/tau1)**2)) * (1 + erf((x-(x0+sigma**2/tau1))/sigma*np.sqrt(2)))
-    second_exp = 0.5*(amp2 * np.exp((x0-x)/tau2 + 0.5*(sigma/tau2)**2)) * (1 + erf((x-(x0+sigma**2/tau2))/sigma*np.sqrt(2)))
-    third_erf  = 0.5* offset * (1 + erf((x-x0)/(sigma*np.sqrt(2))))
-    return first_exp + second_exp + third_erf
+def model_decay_1exp(x, x0, sigma, amp1, tau1, C):
+    first_exp  = 0.5*(np.exp(-1/tau1*(x-x0-sigma**2/tau1))*(1 + erf((x-x0-sigma**2/tau1)/(np.sqrt(2)*sigma))))
+    total = C + amp1*first_exp# + amp2*second_exp 
+    return total
+
+def model_decay_2exp(x, x0, sigma, amp1, tau1, C, amp2, tau2):
+    first_exp  = 0.5*(np.exp(-1/tau1*(x-x0-sigma**2/tau1))*(1 + erf((x-x0-sigma**2/tau1)/(np.sqrt(2)*sigma))))
+    second_exp = 0.5*(np.exp(-1/tau2*(x-x0-sigma**2/tau2))*(1 + erf((x-x0-sigma**2/tau2)/(np.sqrt(2)*sigma))))
+    total = C + amp1*first_exp + amp2*second_exp 
+    return total
 
 def estimate_model_decay_2exp_parameters(x,y):
     x0 = 0
@@ -204,8 +209,15 @@ def estimate_model_decay_2exp_parameters(x,y):
     tau2 = x.mean()
     sigma = np.diff(x).mean() 
     offset = y.min()
-    
 
+def AsymPseudoVoigt(x, x0, amplitude, w0, a, m, slope, C):
+    w1 = 2*w0/(1+np.exp(-a*(x-x0)))
+    a1 = (1-m)*np.sqrt(4*np.log(2)/(np.pi*w1**2))*np.exp(-(x-x0)**2*(4*np.log(2)/w1**2))
+    a2 = m*(1/2*np.pi)*(w1/((w1/2)**2+4*x**2))
+    offset = slope*(x-x0)+C
+    Total = amplitude*(a1+a2+offset)
+    return Total
+    
 def mm2fs(x, t0_mm):
      return (x-t0_mm)*2/(299792458*1e3*1e-15)
 
@@ -216,6 +228,51 @@ def fs2mm(x,t0_fs):
 
 def cut(arr, minlen):
     return np.array([i[:minlen] for i in arr])
+
+def rebin2D(arr, axis, bin_):
+    arr = np.array(arr)
+    arr_new=[]
+    if axis == 1:
+        arr=arr.T
+    for index in range(len(arr)):
+        cut=arr[index]
+        new=bin_sum(cut,bin_)
+        arr_new.append(new)
+    arr_new=np.array(arr_new)
+    if axis == 1:
+        arr_new=arr_new.T
+    return arr_new
+
+def plot_tool_2D(matrix_ON, matrix_OFF, axis, x_axis, bin_):
+    
+    matrix_on_rebin  = rebin2D(matrix_ON, axis, bin_)
+    matrix_off_rebin = rebin2D(matrix_OFF, axis, bin_)
+    x_axis_rebin = bin_mean(x_axis, bin_)
+    
+    return x_axis_rebin, matrix_on_rebin, matrix_off_rebin#, low_err, high_err
+
+def plot_tool_static_2D(matrix, axis, x_axis, bin_):
+    
+    matrix_rebin  = rebin2D(matrix, axis, bin_)
+    x_axis_rebin = bin_mean(x_axis, bin_)
+    
+    return x_axis_rebin, matrix_rebin
+
+def unwrap_spectra(ROIs, counter, spectra_shots_on, spectra_shots_off):
+    
+    s_all_on  = {}
+    s_all_off = {}
+    for key in ROIs:
+        spectra_all_on  = []
+        spectra_all_off = []
+        for index_step in range(counter):
+            spectra_all_on.extend(spectra_shots_on[index_step][key])
+            spectra_all_off.extend(spectra_shots_off[index_step][key])
+        s_all_on[key]  = spectra_all_on
+        s_all_off[key] = spectra_all_off
+    
+    return s_all_on, s_all_off
+
 
 def color_enumerate(iterable, start=0, cmap=cc.cm.rainbow):
     """
