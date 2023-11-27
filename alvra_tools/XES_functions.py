@@ -8,6 +8,7 @@ from IPython.display import clear_output, display
 from datetime import datetime
 from scipy.stats.stats import pearsonr
 from scipy.signal import find_peaks
+from scipy import ndimage
 import itertools
 from collections import defaultdict
 
@@ -93,6 +94,32 @@ def line_rectifier(image2D_roi, binsize, pixelstart):
 
 ######################################
 
+def get_angle_rotation(ROIkey, roi2D, fitinf, fitsup, increment, liminf, limsup):
+    from scipy import ndimage
+    from lmfit.models import PseudoVoigtModel, VoigtModel, LorentzianModel
+    mod = PseudoVoigtModel()
+    angle = np.arange(fitinf, fitsup+increment, increment)
+    width = []
+    for ang in angle:
+        roi_rot = ndimage.rotate(roi2D, ang, axes=(0,1))
+        line = np.average(roi_rot, axis = 0)
+        line2fit = line[liminf:limsup] - np.average(line[0:20])
+        axis2fit = np.arange(0, len(line2fit))
+        center = np.argmax(line2fit)
+        
+        pars = mod.guess(line2fit, x=axis2fit)
+        init = mod.eval(pars, x=axis2fit)
+        out = mod.fit(line2fit, center=center, x=axis2fit)
+
+        width.append(out.params.get('fwhm').value)
+    width = np.asarray(width)
+    fit_par = np.poly1d(np.polyfit(angle, width, 6))
+    fitangle = np.arange(angle[0], angle[-1], 0.01)
+    f = fit_par(fitangle)
+    
+    return angle[np.argmin(width)], fitangle[np.argmin(f)]
+
+######################################
 
 def edge_removal(module_edge, roi_removal, array):
     index_edge = module_edge - roi_removal[0]
@@ -331,7 +358,8 @@ def XES_PumpProbe_4ROIs(fname, pgroup, roi1, roi2, roi3, roi4, thr_low, thr_high
 
 ######################################
 
-def XES_PumpProbe_ROIs(scan, channels_list, thr_low, thr_high, index=0):
+def XES_PumpProbe_ROIs(scan, channels_list, thr_low, thr_high, index=0, angle_rot=defaultdict(int)):
+    angle_rot=defaultdict(int, angle_rot)
     s = scan[index]
     channels_ROI = Get_ROI_names(s, "JF02T09V03")
     channels_pp = [channel_Events] + channels_list + channels_ROI
@@ -363,10 +391,14 @@ def XES_PumpProbe_ROIs(scan, channels_list, thr_low, thr_high, index=0):
             data_off = resultsPP[roi].unpump
 
             thr_on  = threshold(data_on, thr_low, thr_high)
+            if angle_rot[roi] != 0:
+                thr_on = ndimage.rotate(thr_on, angle_rot[roi], axes=(1,2))
             avg_on  = np.average(thr_on, axis = 0)
             spec_on = avg_on.sum(axis=0)
 
             thr_off  = threshold(data_off, thr_low, thr_high)
+            if angle_rot[roi] != 0:
+                thr_off = ndimage.rotate(thr_off, angle_rot[roi], axes=(1,2))
             avg_off  = np.average(thr_off, axis = 0)
             spec_off = avg_off.sum(axis=0)
 		    
@@ -608,8 +640,9 @@ def XES_delayscan_4ROIs_sfdata(scan, pgroup, roi1, roi2, roi3, roi4, thr_low, th
 
 ######################################
 
-def XES_delayscan_ROIs(scan, channels_list, thr_low, thr_high):
-        
+def XES_delayscan_ROIs(scan, channels_list, thr_low, thr_high, angle_rot=defaultdict(int)):
+    angle_rot=defaultdict(int, angle_rot)
+
     s = scan[0]
     channels_ROI = Get_ROI_names(s, "JF02T09V03")
     channels_pp = [channel_Events] + channels_list + channels_ROI
@@ -628,6 +661,8 @@ def XES_delayscan_ROIs(scan, channels_list, thr_low, thr_high):
     spectra_off = []
     spectra_shots_on = []
     spectra_shots_off = []
+    thresholdeds_on = []
+    thresholdeds_off = []
 
     for i, step in enumerate(scan):
 	    
@@ -658,11 +693,15 @@ def XES_delayscan_ROIs(scan, channels_list, thr_low, thr_high):
                 data_off = resultsPP[roi].unpump
 		    
                 thr_on  = threshold(data_on, thr_low, thr_high)
+                if angle_rot[roi] != 0:
+                    thr_on = ndimage.rotate(thr_on, angle_rot[roi], axes=(1,2))
                 avg_on  = np.average(thr_on, axis = 0)
                 spec_shots_on = thr_on.sum(axis=1)
                 spec_on = avg_on.sum(axis=0)
 		    
                 thr_off  = threshold(data_off, thr_low, thr_high)
+                if angle_rot[roi] != 0:
+                    thr_off = ndimage.rotate(thr_off, angle_rot[roi], axes=(1,2))
                 avg_off  = np.average(thr_off, axis = 0)
                 spec_shots_off = thr_off.sum(axis=1)
                 spec_off = avg_off.sum(axis=0)
@@ -685,17 +724,21 @@ def XES_delayscan_ROIs(scan, channels_list, thr_low, thr_high):
             spectra_off.append(spectrum_off)
             spectra_shots_on.append(spectrum_shots_on)
             spectra_shots_off.append(spectrum_shots_off)
+            thresholdeds_on.append(thresholded_on)
+            thresholdeds_off.append(thresholded_off)
 
         if i==0:
             meta = resultsPP["meta"]
     
-    return(spectra_on, spectra_off, spectra_shots_on, spectra_shots_off, tags, Delay_fs, Delay_mm, meta)
+    return(spectra_on, spectra_off, spectra_shots_on, spectra_shots_off, thresholdeds_on, thresholdeds_off, tags, Delay_fs, Delay_mm, meta)
+    
 
 ######################################
 
 TT_PSEN126 = [channel_PSEN126_signal, channel_PSEN126_bkg, channel_PSEN126_arrTimes, channel_PSEN126_arrTimesAmp, channel_PSEN126_peaks, channel_PSEN126_edges]
 
-def XES_delayscan_TT_ROIs(scan, channels_list, TT, channel_delay_motor, timezero_mm, thr_low, thr_high):
+def XES_delayscan_TT_ROIs(scan, channels_list, TT, channel_delay_motor, timezero_mm, thr_low, thr_high, angle_rot=defaultdict(int)):
+    angle_rot=defaultdict(int, angle_rot)
         
     s = scan[0]
     channels_ROI = Get_ROI_names(s, "JF02T09V03")
@@ -750,15 +793,21 @@ def XES_delayscan_TT_ROIs(scan, channels_list, TT, channel_delay_motor, timezero
                 data_off = resultsPP[roi].unpump
 		    
                 thr_on  = threshold(data_on, thr_low, thr_high)
+                if angle_rot[roi] != 0:
+                    thr_on = ndimage.rotate(thr_on, angle_rot[roi], axes=(1,2))
                 spec_shots_on = thr_on.sum(axis=1)
                    
                 thr_off  = threshold(data_off, thr_low, thr_high)
+                if angle_rot[roi] != 0:
+                    thr_off = ndimage.rotate(thr_off, angle_rot[roi], axes=(1,2))
                 spec_shots_off = thr_off.sum(axis=1)
                     
                 tag = roi#.split(':')[-1]
     
                 spectrum_shots_on[tag] = spec_shots_on
                 spectrum_shots_off[tag] = spec_shots_off
+                thresholded_on[tag] = thr_on
+                thresholded_off[tag] = thr_off
 		
                 tags.append(tag)
 
@@ -773,7 +822,8 @@ def XES_delayscan_TT_ROIs(scan, channels_list, TT, channel_delay_motor, timezero
 
     Delays_corr_scan = np.asarray(Delays_fs_scan) + np.asarray(arrTimes_scan)
 
-    return Delays_fs_scan, Delays_corr_scan, spectra_shots_on, spectra_shots_off, tags, Delay_fs, Delay_mm, meta
+    return Delays_fs_scan, Delays_corr_scan, spectra_shots_on, spectra_shots_off, thresholdeds_on, thresholdeds_off, tags, Delay_fs, Delay_mm, meta
+
 
 ######################################
 
@@ -992,8 +1042,9 @@ def XES_delayscan_TT_reduced(scan, pgroup, TT, channel_delay_motor, timezero_mm,
 
 ######################################
 
-def RIXS_PumpProbe_ROIs(scan, channels_list, thr_low, thr_high):
-        
+def RIXS_PumpProbe_ROIs(scan, channels_list, thr_low, thr_high, angle_rot=defaultdict(int)):
+    angle_rot=defaultdict(int, angle_rot)
+
     s = scan[0]
     channels_ROI = Get_ROI_names(s, "JF02T09V03")
     channels_pp = [channel_Events] + channels_list + channels_ROI
@@ -1005,6 +1056,8 @@ def RIXS_PumpProbe_ROIs(scan, channels_list, thr_low, thr_high):
     spectra_off = []
     spectra_shots_on = []
     spectra_shots_off = []
+    thresholdeds_on = []
+    thresholdeds_off = []
 
     for i, step in enumerate(scan):
 	    
@@ -1035,11 +1088,15 @@ def RIXS_PumpProbe_ROIs(scan, channels_list, thr_low, thr_high):
                 data_off = resultsPP[roi].unpump
 		    
                 thr_on  = threshold(data_on, thr_low, thr_high)
+                if angle_rot[roi] != 0:
+                    thr_on = ndimage.rotate(thr_on, angle_rot[roi], axes=(1,2))
                 avg_on  = np.average(thr_on, axis = 0)
                 spec_shots_on = thr_on.sum(axis=1)
                 spec_on = avg_on.sum(axis=0)
 		    
                 thr_off  = threshold(data_off, thr_low, thr_high)
+                if angle_rot[roi] != 0:
+                    thr_off = ndimage.rotate(thr_off, angle_rot[roi], axes=(1,2))
                 avg_off  = np.average(thr_off, axis = 0)
                 spec_shots_off = thr_off.sum(axis=1)
                 spec_off = avg_off.sum(axis=0)
@@ -1062,11 +1119,13 @@ def RIXS_PumpProbe_ROIs(scan, channels_list, thr_low, thr_high):
             spectra_off.append(spectrum_off)
             spectra_shots_on.append(spectrum_shots_on)
             spectra_shots_off.append(spectrum_shots_off)
+            thresholdeds_on.append(thresholded_on)
+            thresholdeds_off.append(thresholded_off)
 
         if i==0:
             meta = resultsPP["meta"]
     
-    return(spectra_on, spectra_off, spectra_shots_on, spectra_shots_off, tags, Energy_eV, meta)
+    return(spectra_on, spectra_off, spectra_shots_on, spectra_shots_off, thresholdeds_on, thresholdeds_off, tags, Energy_eV, meta)
 
 ######################################
 
@@ -1267,7 +1326,25 @@ def save_data_XES_timescans_ROIs(reducedir, run_name, s_on, s_off, rois, delaymm
 
 ######################################
 
-def save_data_XES_timescans_ROIs_TT(reducedir, run_name, all_s_on, all_s_off, rois, all_delays_stage, all_delays_corr, meta):
+def save_data_XES_timescans_ROIs_TT(reducedir, run_name, all_s_on, all_s_off, thrs_on, thrs_off, rois, all_delays_stage, all_delays_corr, meta, runlist):
+
+    run_array = {}
+    run_array[run_name.split('-')[0]] = {"name": run_name,
+                                    "all_spectra_shots_on": all_s_on, 
+                                    "all_spectra_shots_off" : all_s_off, 
+                                    "all_thresholds_on" : thrs_on,
+                                    "all_thresholds_off" : thrs_off,
+                                    "ROIs" : rois,
+                                    "all_delays_fs_scan" : all_delays_stage,
+                                    "all_delays_corr_scan" : all_delays_corr,
+                                    "meta" : meta,
+                                    "runlist" : runlist}
+   
+    np.save(reducedir+run_name+'/run_array', run_array)
+    
+######################################
+    
+def save_data_XES_timescans_ROIs_TT_stack(reducedir, run_name, all_s_on, all_s_off, rois, all_delays_stage, all_delays_corr, meta, runlist):
 
     run_array = {}
     run_array[run_name.split('-')[0]] = {"name": run_name,
@@ -1276,7 +1353,8 @@ def save_data_XES_timescans_ROIs_TT(reducedir, run_name, all_s_on, all_s_off, ro
                                     "ROIs" : rois,
                                     "all_delays_fs_scan" : all_delays_stage,
                                     "all_delays_corr_scan" : all_delays_corr,
-                                    "meta" : meta}
+                                    "meta" : meta,
+                                    "runlist" : runlist}
    
     np.save(reducedir+run_name+'/run_array', run_array)
 
