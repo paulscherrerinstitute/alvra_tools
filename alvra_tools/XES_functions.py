@@ -101,7 +101,7 @@ def get_angle_rotation(ROIkey, roi2D, fitinf, fitsup, increment, liminf, limsup)
     angle = np.arange(fitinf, fitsup+increment, increment)
     width = []
     for ang in angle:
-        roi_rot = ndimage.rotate(roi2D, ang, axes=(0,1))
+        roi_rot = ndimage.rotate(roi2D, ang, axes=(0,1), reshape=False)
         line = np.average(roi_rot, axis = 0)
         line2fit = line[liminf:limsup] - np.average(line[0:20])
         axis2fit = np.arange(0, len(line2fit))
@@ -392,13 +392,13 @@ def XES_PumpProbe_ROIs(scan, channels_list, thr_low, thr_high, index=0, angle_ro
 
             thr_on  = threshold(data_on, thr_low, thr_high)
             if angle_rot[roi] != 0:
-                thr_on = ndimage.rotate(thr_on, angle_rot[roi], axes=(1,2))
+                thr_on = ndimage.rotate(thr_on, angle_rot[roi], axes=(1,2), reshape=False)
             avg_on  = np.average(thr_on, axis = 0)
             spec_on = avg_on.sum(axis=0)
 
             thr_off  = threshold(data_off, thr_low, thr_high)
             if angle_rot[roi] != 0:
-                thr_off = ndimage.rotate(thr_off, angle_rot[roi], axes=(1,2))
+                thr_off = ndimage.rotate(thr_off, angle_rot[roi], axes=(1,2), reshape=False)
             avg_off  = np.average(thr_off, axis = 0)
             spec_off = avg_off.sum(axis=0)
 		    
@@ -694,14 +694,14 @@ def XES_delayscan_ROIs(scan, channels_list, thr_low, thr_high, angle_rot=default
 		    
                 thr_on  = threshold(data_on, thr_low, thr_high)
                 if angle_rot[roi] != 0:
-                    thr_on = ndimage.rotate(thr_on, angle_rot[roi], axes=(1,2))
+                    thr_on = ndimage.rotate(thr_on, angle_rot[roi], axes=(1,2), reshape=False)
                 avg_on  = np.average(thr_on, axis = 0)
                 spec_shots_on = thr_on.sum(axis=1)
                 spec_on = avg_on.sum(axis=0)
 		    
                 thr_off  = threshold(data_off, thr_low, thr_high)
                 if angle_rot[roi] != 0:
-                    thr_off = ndimage.rotate(thr_off, angle_rot[roi], axes=(1,2))
+                    thr_off = ndimage.rotate(thr_off, angle_rot[roi], axes=(1,2), reshape=False)
                 avg_off  = np.average(thr_off, axis = 0)
                 spec_shots_off = thr_off.sum(axis=1)
                 spec_off = avg_off.sum(axis=0)
@@ -794,12 +794,12 @@ def XES_delayscan_TT_ROIs(scan, channels_list, TT, channel_delay_motor, timezero
 		    
                 thr_on  = threshold(data_on, thr_low, thr_high)
                 if angle_rot[roi] != 0:
-                    thr_on = ndimage.rotate(thr_on, angle_rot[roi], axes=(1,2))
+                    thr_on = ndimage.rotate(thr_on, angle_rot[roi], axes=(1,2), reshape=False)
                 spec_shots_on = thr_on.sum(axis=1)
                    
                 thr_off  = threshold(data_off, thr_low, thr_high)
                 if angle_rot[roi] != 0:
-                    thr_off = ndimage.rotate(thr_off, angle_rot[roi], axes=(1,2))
+                    thr_off = ndimage.rotate(thr_off, angle_rot[roi], axes=(1,2), reshape=False)
                 spec_shots_off = thr_off.sum(axis=1)
                     
                 tag = roi#.split(':')[-1]
@@ -1089,14 +1089,14 @@ def RIXS_PumpProbe_ROIs(scan, channels_list, thr_low, thr_high, angle_rot=defaul
 		    
                 thr_on  = threshold(data_on, thr_low, thr_high)
                 if angle_rot[roi] != 0:
-                    thr_on = ndimage.rotate(thr_on, angle_rot[roi], axes=(1,2))
+                    thr_on = ndimage.rotate(thr_on, angle_rot[roi], axes=(1,2), reshape=False)
                 avg_on  = np.average(thr_on, axis = 0)
                 spec_shots_on = thr_on.sum(axis=1)
                 spec_on = avg_on.sum(axis=0)
 		    
                 thr_off  = threshold(data_off, thr_low, thr_high)
                 if angle_rot[roi] != 0:
-                    thr_off = ndimage.rotate(thr_off, angle_rot[roi], axes=(1,2))
+                    thr_off = ndimage.rotate(thr_off, angle_rot[roi], axes=(1,2), reshape=False)
                 avg_off  = np.average(thr_off, axis = 0)
                 spec_shots_off = thr_off.sum(axis=1)
                 spec_off = avg_off.sum(axis=0)
