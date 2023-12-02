@@ -121,6 +121,14 @@ def get_angle_rotation(ROIkey, roi2D, fitinf, fitsup, increment, liminf, limsup)
 
 ######################################
 
+def clean_ROI_names (channels_ROI):
+    for ROIname in channels_ROI:
+        if "bkg" in ROIname:
+            channels_ROI.remove(ROIname)
+    return channels_ROI
+
+######################################
+
 def edge_removal(module_edge, roi_removal, array):
     index_edge = module_edge - roi_removal[0]
     array_input = array.copy()
@@ -234,14 +242,15 @@ def XES_static_4ROIs(fname, pgroup, roi1, roi2, roi3, roi4, thr_low, thr_high, n
 
 ######################################
 
-def XES_static_ROIs(scan, channels_list, thr_low, thr_high, index=0):
+def XES_static_ROIs(scan, channels_list, thr_low, thr_high, index=0, angle_rot=defaultdict(int), del_bkg=True):
     s = scan[index]
-
+    angle_rot=defaultdict(int, angle_rot)
     detector = "JF02T09V03"
 #    channels_ROI = add_ROI_channels(s, detector)
 
     channels_ROI = Get_ROI_names(s, detector)
-
+    if del_bkg:
+        channels_ROI = clean_ROI_names(channels_ROI)
     channels_list = channels_list + channels_ROI
     
     check_files_and_data(s)
@@ -262,6 +271,8 @@ def XES_static_ROIs(scan, channels_list, thr_low, thr_high, index=0):
         for roi in channels_ROI:
             data = results[roi]
             thr  = threshold(data, thr_low, thr_high)
+            if angle_rot[roi] != 0:
+                thr = ndimage.rotate(thr, angle_rot[roi], axes=(1,2), reshape=False)
             avg  = np.average(thr, axis = 0)
             spec = avg.sum(axis=0)
             
@@ -356,12 +367,16 @@ def XES_PumpProbe_4ROIs(fname, pgroup, roi1, roi2, roi3, roi4, thr_low, thr_high
     print ("It took", clock_int.tick(), "seconds to process this file")
     return spec_roi1_ON, spec_roi2_ON, spec_roi3_ON, spec_roi4_ON, pids_on, spec_roi1_OFF, spec_roi2_OFF, spec_roi3_OFF, spec_roi4_OFF, pids_off
 
+
 ######################################
 
-def XES_PumpProbe_ROIs(scan, channels_list, thr_low, thr_high, index=0, angle_rot=defaultdict(int)):
+def XES_PumpProbe_ROIs(scan, channels_list, thr_low, thr_high, index=0, angle_rot=defaultdict(int), del_bkg=True):
+    clock_int = clock.Clock()
     angle_rot=defaultdict(int, angle_rot)
     s = scan[index]
     channels_ROI = Get_ROI_names(s, "JF02T09V03")
+    if del_bkg:
+        channels_ROI = clean_ROI_names(channels_ROI)
     channels_pp = [channel_Events] + channels_list + channels_ROI
     channels_all = channels_pp
     step = scan[index]
@@ -371,6 +386,7 @@ def XES_PumpProbe_ROIs(scan, channels_list, thr_low, thr_high, index=0, angle_ro
     if check:
         clear_output(wait=True)
         filename = scan.files[index][0].split('/')[-1].split('.')[0]
+        
         print ('Processing: {}'.format(scan.fname.split('/')[-3]))
         print ('Step {} of {}: filename {}'.format(index+1, len(scan.files), filename))
 
@@ -394,12 +410,16 @@ def XES_PumpProbe_ROIs(scan, channels_list, thr_low, thr_high, index=0, angle_ro
             if angle_rot[roi] != 0:
                 thr_on = ndimage.rotate(thr_on, angle_rot[roi], axes=(1,2), reshape=False)
             avg_on  = np.average(thr_on, axis = 0)
+            #if angle_rot[roi] != 0:
+            #    avg_on = ndimage.rotate(avg_on, angle_rot[roi], axes=(0,1), reshape=False)
             spec_on = avg_on.sum(axis=0)
 
             thr_off  = threshold(data_off, thr_low, thr_high)
             if angle_rot[roi] != 0:
                 thr_off = ndimage.rotate(thr_off, angle_rot[roi], axes=(1,2), reshape=False)
             avg_off  = np.average(thr_off, axis = 0)
+            #if angle_rot[roi] != 0:
+            #    avg_off = ndimage.rotate(avg_off, angle_rot[roi], axes=(0,1), reshape=False)
             spec_off = avg_off.sum(axis=0)
 		    
             tag = roi#.split(':')[-1]
@@ -415,7 +435,7 @@ def XES_PumpProbe_ROIs(scan, channels_list, thr_low, thr_high, index=0, angle_ro
             tags.append(tag)
    
     meta = resultsPP["meta"]
-		
+    #print ("Took {} seconds for the previous step".format(clock_int.tick()))
     return(spectrum_on, spectrum_off, averaged_on, averaged_off, thresholded_on, thresholded_off, tags, meta)
 
 
@@ -640,11 +660,13 @@ def XES_delayscan_4ROIs_sfdata(scan, pgroup, roi1, roi2, roi3, roi4, thr_low, th
 
 ######################################
 
-def XES_delayscan_ROIs(scan, channels_list, thr_low, thr_high, angle_rot=defaultdict(int)):
+def XES_delayscan_ROIs(scan, channels_list, thr_low, thr_high, angle_rot=defaultdict(int), del_bkg=True):
     angle_rot=defaultdict(int, angle_rot)
-
+    clock_int = clock.Clock()
     s = scan[0]
     channels_ROI = Get_ROI_names(s, "JF02T09V03")
+    if del_bkg:
+        channels_ROI = clean_ROI_names(channels_ROI)
     channels_pp = [channel_Events] + channels_list + channels_ROI
     channels_all = channels_pp
 
@@ -671,6 +693,7 @@ def XES_delayscan_ROIs(scan, channels_list, thr_low, thr_high, angle_rot=default
         if check:
             clear_output(wait=True)
             filename = scan.files[i][0].split('/')[-1].split('.')[0]
+            print ("Took {} seconds for the previous step".format(clock_int.tick()))
             print ('Processing: {}'.format(scan.fname.split('/')[-3]))
             print ('Step {} of {}: Processing {}'.format(i+1, len(scan.files), filename))
 
@@ -737,11 +760,13 @@ def XES_delayscan_ROIs(scan, channels_list, thr_low, thr_high, angle_rot=default
 
 TT_PSEN126 = [channel_PSEN126_signal, channel_PSEN126_bkg, channel_PSEN126_arrTimes, channel_PSEN126_arrTimesAmp, channel_PSEN126_peaks, channel_PSEN126_edges]
 
-def XES_delayscan_TT_ROIs(scan, channels_list, TT, channel_delay_motor, timezero_mm, thr_low, thr_high, angle_rot=defaultdict(int)):
+def XES_delayscan_TT_ROIs(scan, channels_list, TT, channel_delay_motor, timezero_mm, thr_low, thr_high, angle_rot=defaultdict(int), del_bkg=True):
     angle_rot=defaultdict(int, angle_rot)
-        
+    clock_int = clock.Clock()
     s = scan[0]
     channels_ROI = Get_ROI_names(s, "JF02T09V03")
+    if del_bkg:
+        channels_ROI = clean_ROI_names(channels_ROI)
     channels_pp = [channel_Events, channel_delay_motor] + channels_list + channels_ROI + TT
     channels_all = channels_pp
 
@@ -769,6 +794,7 @@ def XES_delayscan_TT_ROIs(scan, channels_list, TT, channel_delay_motor, timezero
         if check:
             clear_output(wait=True)
             filename = scan.files[i][0].split('/')[-1].split('.')[0]
+            print ("Took {} seconds for the previous step".format(clock_int.tick()))
             print ('Processing: {}'.format(scan.fname.split('/')[-3]))
             print ('Step {} of {}: Processing {}'.format(i+1, len(scan.files), filename))
 
@@ -821,7 +847,7 @@ def XES_delayscan_TT_ROIs(scan, channels_list, TT, channel_delay_motor, timezero
             meta = resultsPP["meta"]
 
     Delays_corr_scan = np.asarray(Delays_fs_scan) + np.asarray(arrTimes_scan)
-
+    
     return Delays_fs_scan, Delays_corr_scan, spectra_shots_on, spectra_shots_off, thresholdeds_on, thresholdeds_off, tags, Delay_fs, Delay_mm, meta
 
 
