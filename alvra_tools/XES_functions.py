@@ -143,6 +143,408 @@ def edge_removal(module_edge, roi_removal, array):
 
 ######################################
 
+def XES_static_ROIs(scan, channels_list, thr_low, thr_high, index=0, angle_rot=defaultdict(int), del_bkg=True):
+    s = scan[index]
+    angle_rot=defaultdict(int, angle_rot)
+    detector = "JF02T09V03"
+#    channels_ROI = add_ROI_channels(s, detector)
+
+    channels_ROI = Get_ROI_names(s, detector)
+    if del_bkg:
+        channels_ROI = clean_ROI_names(channels_ROI)
+    channels_list = channels_list + channels_ROI
+    
+    check_files_and_data(s)
+    check = get_filesize_diff(s)
+    if check:
+        clear_output(wait=True)
+        filename = scan.files[index][0].split('/')[-1].split('.')[0]
+        print ('Processing: {}'.format(scan.fname.split('/')[-3]))
+        print ('Step {} of {}: filename {}'.format(index+1, len(scan.files), filename))
+	     
+        results, _ = load_data_compact(channels_list, s)
+	    
+        thresholded = {}
+        averaged = {}
+        spectrum = {}
+        tags = []
+        
+        for roi in channels_ROI:
+            data = results[roi]
+            thr  = threshold(data, thr_low, thr_high)
+            #if angle_rot[roi] != 0:
+            #    thr = ndimage.rotate(thr, angle_rot[roi], axes=(1,2), reshape=False)
+            avg  = np.average(thr, axis = 0)
+            if angle_rot[roi] != 0:
+                avg = ndimage.rotate(avg, angle_rot[roi], axes=(0,1), reshape=False)
+            spec = avg.sum(axis=0)
+            
+            tag = roi#.split(':')[-1]
+            
+            thresholded[tag] = thr
+            averaged[tag] = avg
+            spectrum[tag] = spec
+            tags.append(tag)
+	    
+    meta = results["meta"]
+
+    return(spectrum, averaged, thresholded, tags, meta)
+
+######################################
+
+def XES_PumpProbe_ROIs(scan, channels_list, thr_low, thr_high, index=0, angle_rot=defaultdict(int), del_bkg=True):
+    clock_int = clock.Clock()
+    angle_rot=defaultdict(int, angle_rot)
+    s = scan[index]
+    channels_ROI = Get_ROI_names(s, "JF02T09V03")
+    if del_bkg:
+        channels_ROI = clean_ROI_names(channels_ROI)
+    channels_pp = [channel_Events] + channels_list + channels_ROI
+    channels_all = channels_pp
+    step = scan[index]
+
+    check_files_and_data(step)
+    check = get_filesize_diff(step)  
+    if check:
+        clear_output(wait=True)
+        filename = scan.files[index][0].split('/')[-1].split('.')[0]        
+        print ('Processing: {}'.format(scan.fname.split('/')[-3]))
+        print ('Step {} of {}: filename {}'.format(index+1, len(scan.files), filename))
+
+        resultsPP, results, _, _ = load_data_compact_pump_probe(channels_pp, channels_all, step)
+
+        thresholded_on = {}
+        averaged_on = {}
+        spectrum_on = {}
+		
+        thresholded_off = {}
+        averaged_off = {}
+        spectrum_off = {}
+
+        tags = []
+		
+        for roi in channels_ROI:
+            data_on = resultsPP[roi].pump
+            data_off = resultsPP[roi].unpump
+
+            thr_on  = threshold(data_on, thr_low, thr_high)
+            #if angle_rot[roi] != 0:
+            #    thr_on = ndimage.rotate(thr_on, angle_rot[roi], axes=(1,2), reshape=False)
+            avg_on  = np.average(thr_on, axis = 0)
+            if angle_rot[roi] != 0:
+                avg_on = ndimage.rotate(avg_on, angle_rot[roi], axes=(0,1), reshape=False)
+            spec_on = avg_on.sum(axis=0)
+
+            thr_off  = threshold(data_off, thr_low, thr_high)
+            #if angle_rot[roi] != 0:
+            #    thr_off = ndimage.rotate(thr_off, angle_rot[roi], axes=(1,2), reshape=False)
+            avg_off  = np.average(thr_off, axis = 0)
+            if angle_rot[roi] != 0:
+                avg_off = ndimage.rotate(avg_off, angle_rot[roi], axes=(0,1), reshape=False)
+            spec_off = avg_off.sum(axis=0)
+		    
+            tag = roi#.split(':')[-1]
+    
+            thresholded_on[tag] = thr_on
+            averaged_on[tag] = avg_on
+            spectrum_on[tag] = spec_on
+		    
+            thresholded_off[tag] = thr_off
+            averaged_off[tag] = avg_off
+            spectrum_off[tag] = spec_off
+		
+            tags.append(tag)
+    print ("Took {} seconds for the previous step".format(clock_int.tick()))
+    meta = resultsPP["meta"]
+    return(spectrum_on, spectrum_off, averaged_on, averaged_off, thresholded_on, thresholded_off, tags, meta)
+
+######################################
+
+def XES_delayscan_ROIs(scan, channels_list, thr_low, thr_high, angle_rot=defaultdict(int), del_bkg=True):
+    angle_rot=defaultdict(int, angle_rot)
+    clock_int = clock.Clock()
+    s = scan[0]
+    channels_ROI = Get_ROI_names(s, "JF02T09V03")
+    if del_bkg:
+        channels_ROI = clean_ROI_names(channels_ROI)
+    channels_pp = [channel_Events] + channels_list + channels_ROI
+    channels_all = channels_pp
+
+    if ' as delay' in scan.parameters['name'][0]:
+        print ('Scan is done with the stage in fs')
+        Delay_fs = scan.readbacks
+        Delay_mm = fs2mm(scan.readbacks,0)
+    else:
+        print ('Scan is done with the stage in mm')
+        Delay_fs = mm2fs(scan.readbacks,0)
+        Delay_mm = scan.readbacks
+	    
+    spectra_on = []
+    spectra_off = []
+    spectra_shots_on = []
+    spectra_shots_off = []
+    thresholdeds_on = []
+    thresholdeds_off = []
+
+    for i, step in enumerate(scan):
+	    
+        check_files_and_data(step)
+        check = get_filesize_diff(step)  
+        if check:
+            clear_output(wait=True)
+            filename = scan.files[i][0].split('/')[-1].split('.')[0]
+            print ("Took {} seconds for the previous step".format(clock_int.tick()))
+            print ('Processing: {}'.format(scan.fname.split('/')[-3]))
+            print ('Step {} of {}: Processing {}'.format(i+1, len(scan.files), filename))
+
+            resultsPP, results, _, _ = load_data_compact_pump_probe(channels_pp, channels_all, step)
+		
+            thresholded_on = {}
+            averaged_on = {}
+            spectrum_on = {}
+            spectrum_shots_on = {}
+		
+            thresholded_off = {}
+            averaged_off = {}
+            spectrum_off = {}
+            spectrum_shots_off = {}
+
+            tags = []
+		
+            for roi in channels_ROI:
+                data_on = resultsPP[roi].pump
+                data_off = resultsPP[roi].unpump
+		    
+                thr_on  = threshold(data_on, thr_low, thr_high)
+                #if angle_rot[roi] != 0:
+                #    thr_on = ndimage.rotate(thr_on, angle_rot[roi], axes=(1,2), reshape=False)
+                avg_on  = np.average(thr_on, axis = 0)
+                if angle_rot[roi] != 0:
+                    avg_on = ndimage.rotate(avg_on, angle_rot[roi], axes=(0,1), reshape=False)
+                spec_shots_on = thr_on.sum(axis=1)
+                spec_on = avg_on.sum(axis=0)
+		    
+                thr_off  = threshold(data_off, thr_low, thr_high)
+                #if angle_rot[roi] != 0:
+                #    thr_off = ndimage.rotate(thr_off, angle_rot[roi], axes=(1,2), reshape=False)
+                avg_off  = np.average(thr_off, axis = 0)
+                if angle_rot[roi] != 0:
+                    avg_off = ndimage.rotate(avg_off, angle_rot[roi], axes=(0,1), reshape=False)
+                spec_shots_off = thr_off.sum(axis=1)
+                spec_off = avg_off.sum(axis=0)
+		    
+                tag = roi#.split(':')[-1]
+    
+                thresholded_on[tag] = thr_on
+                averaged_on[tag] = avg_on
+                spectrum_on[tag] = spec_on
+                spectrum_shots_on[tag] = spec_shots_on
+		    
+                thresholded_off[tag] = thr_off
+                averaged_off[tag] = avg_off
+                spectrum_off[tag] = spec_off
+                spectrum_shots_off[tag] = spec_shots_off
+		
+                tags.append(tag)
+
+            spectra_on.append(spectrum_on)
+            spectra_off.append(spectrum_off)
+            spectra_shots_on.append(spectrum_shots_on)
+            spectra_shots_off.append(spectrum_shots_off)
+            thresholdeds_on.append(thresholded_on)
+            thresholdeds_off.append(thresholded_off)
+
+        if i==0:
+            meta = resultsPP["meta"]
+    
+    return(spectra_on, spectra_off, spectra_shots_on, spectra_shots_off, thresholdeds_on, thresholdeds_off, tags, Delay_fs, Delay_mm, meta)
+    
+######################################
+
+TT_PSEN126 = [channel_PSEN126_signal, channel_PSEN126_bkg, channel_PSEN126_arrTimes, channel_PSEN126_arrTimesAmp, channel_PSEN126_peaks, channel_PSEN126_edges]
+
+def XES_delayscan_TT_ROIs(scan, channels_list, TT, channel_delay_motor, timezero_mm, thr_low, thr_high, angle_rot=defaultdict(int), del_bkg=True):
+    angle_rot=defaultdict(int, angle_rot)
+    clock_int = clock.Clock()
+    s = scan[0]
+    channels_ROI = Get_ROI_names(s, "JF02T09V03")
+    if del_bkg:
+        channels_ROI = clean_ROI_names(channels_ROI)
+    channels_pp = [channel_Events, channel_delay_motor] + channels_list + channels_ROI + TT
+    channels_all = channels_pp
+
+    if ' as delay' in scan.parameters['name'][0]:
+        print ('Scan is done with the stage in fs')
+        Delay_fs = scan.readbacks
+        Delay_mm = fs2mm(scan.readbacks,0)
+    else:
+        print ('Scan is done with the stage in mm')
+        Delay_fs = mm2fs(scan.readbacks,0)
+        Delay_mm = scan.readbacks
+
+    Delay_fs_stage = []
+    arrTimes_scan = []
+    arrTimesAmp_scan = []
+    Delays_fs_scan = []
+	    
+    spectra_shots_on = []
+    spectra_shots_off = []
+
+    for i, step in enumerate(scan):
+	    
+        check_files_and_data(step)
+        check = get_filesize_diff(step)  
+        if check:
+            clear_output(wait=True)
+            filename = scan.files[i][0].split('/')[-1].split('.')[0]
+            print ("Took {} seconds for the previous step".format(clock_int.tick()))
+            print ('Processing: {}'.format(scan.fname.split('/')[-3]))
+            print ('Step {} of {}: Processing {}'.format(i+1, len(scan.files), filename))
+
+            resultsPP, results, _, _ = load_data_compact_pump_probe(channels_pp, channels_all, step)
+
+            delay_shot = resultsPP[channel_delay_motor].pump
+            delay_shot_fs = mm2fs(delay_shot, timezero_mm)
+            Delay_fs_stage.append(delay_shot_fs.mean())
+
+            arrTimes = resultsPP[channel_PSEN126_arrTimes].pump
+            arrTimesAmp = resultsPP[channel_PSEN126_arrTimesAmp].pump
+            sigtraces = resultsPP[channel_PSEN126_edges].pump
+            peaktraces = resultsPP[channel_PSEN126_peaks].pump
+
+            spectrum_shots_on = {}
+            spectrum_shots_off = {}
+
+            tags = []
+		
+            for roi in channels_ROI:
+                data_on = resultsPP[roi].pump
+                data_off = resultsPP[roi].unpump
+		    
+                thr_on  = threshold(data_on, thr_low, thr_high)
+                if angle_rot[roi] != 0:
+                    thr_on = ndimage.rotate(thr_on, angle_rot[roi], axes=(1,2), reshape=False)
+                spec_shots_on = thr_on.sum(axis=1)
+                   
+                thr_off  = threshold(data_off, thr_low, thr_high)
+                if angle_rot[roi] != 0:
+                    thr_off = ndimage.rotate(thr_off, angle_rot[roi], axes=(1,2), reshape=False)
+                spec_shots_off = thr_off.sum(axis=1)
+                    
+                tag = roi#.split(':')[-1]
+    
+                spectrum_shots_on[tag] = spec_shots_on
+                spectrum_shots_off[tag] = spec_shots_off
+                thresholded_on[tag] = thr_on
+                thresholded_off[tag] = thr_off
+		
+                tags.append(tag)
+
+            spectra_shots_on.append(spectrum_shots_on)
+            spectra_shots_off.append(spectrum_shots_off)
+        
+        Delays_fs_scan.extend(delay_shot_fs)
+        arrTimes_scan.extend(arrTimes)
+
+        if i==0:
+            meta = resultsPP["meta"]
+
+    Delays_corr_scan = np.asarray(Delays_fs_scan) + np.asarray(arrTimes_scan)
+    
+    return Delays_fs_scan, Delays_corr_scan, spectra_shots_on, spectra_shots_off, thresholdeds_on, thresholdeds_off, tags, Delay_fs, Delay_mm, meta
+
+######################################
+
+def RIXS_PumpProbe_ROIs(scan, channels_list, thr_low, thr_high, angle_rot=defaultdict(int)):
+    angle_rot=defaultdict(int, angle_rot)
+
+    s = scan[0]
+    channels_ROI = Get_ROI_names(s, "JF02T09V03")
+    channels_pp = [channel_Events] + channels_list + channels_ROI
+    channels_all = channels_pp
+
+    Energy_eV = scan.readbacks
+	    
+    spectra_on = []
+    spectra_off = []
+    spectra_shots_on = []
+    spectra_shots_off = []
+    thresholdeds_on = []
+    thresholdeds_off = []
+
+    for i, step in enumerate(scan):
+	    
+        check_files_and_data(step)
+        check = get_filesize_diff(step)  
+        if check:
+            clear_output(wait=True)
+            filename = scan.files[i][0].split('/')[-1].split('.')[0]
+            print ('Processing: {}'.format(scan.fname.split('/')[-3]))
+            print ('Step {} of {}: Processing {}'.format(i+1, len(scan.files), filename))
+
+            resultsPP, results, _, _ = load_data_compact_pump_probe(channels_pp, channels_all, step)
+		
+            thresholded_on = {}
+            averaged_on = {}
+            spectrum_on = {}
+            spectrum_shots_on = {}
+		
+            thresholded_off = {}
+            averaged_off = {}
+            spectrum_off = {}
+            spectrum_shots_off = {}
+
+            tags = []
+		
+            for roi in channels_ROI:
+                data_on = resultsPP[roi].pump
+                data_off = resultsPP[roi].unpump
+		    
+                thr_on  = threshold(data_on, thr_low, thr_high)
+                if angle_rot[roi] != 0:
+                    thr_on = ndimage.rotate(thr_on, angle_rot[roi], axes=(1,2), reshape=False)
+                avg_on  = np.average(thr_on, axis = 0)
+                spec_shots_on = thr_on.sum(axis=1)
+                spec_on = avg_on.sum(axis=0)
+		    
+                thr_off  = threshold(data_off, thr_low, thr_high)
+                if angle_rot[roi] != 0:
+                    thr_off = ndimage.rotate(thr_off, angle_rot[roi], axes=(1,2), reshape=False)
+                avg_off  = np.average(thr_off, axis = 0)
+                spec_shots_off = thr_off.sum(axis=1)
+                spec_off = avg_off.sum(axis=0)
+		    
+                tag = roi#.split(':')[-1]
+    
+                thresholded_on[tag] = thr_on
+                averaged_on[tag] = avg_on
+                spectrum_on[tag] = spec_on
+                spectrum_shots_on[tag] = spec_shots_on
+		    
+                thresholded_off[tag] = thr_off
+                averaged_off[tag] = avg_off
+                spectrum_off[tag] = spec_off
+                spectrum_shots_off[tag] = spec_shots_off
+		
+                tags.append(tag)
+
+            spectra_on.append(spectrum_on)
+            spectra_off.append(spectrum_off)
+            spectra_shots_on.append(spectrum_shots_on)
+            spectra_shots_off.append(spectrum_shots_off)
+            thresholdeds_on.append(thresholded_on)
+            thresholdeds_off.append(thresholded_off)
+
+        if i==0:
+            meta = resultsPP["meta"]
+    
+    return(spectra_on, spectra_off, spectra_shots_on, spectra_shots_off, thresholdeds_on, thresholdeds_off, tags, Energy_eV, meta)
+
+
+######################################
+#########--Old functions--############
+######################################
+
 def XES_static_full(fname, pgroup, thr_low, thr_high, nshots):
     clock_int = clock.Clock()
 
@@ -242,53 +644,6 @@ def XES_static_4ROIs(fname, pgroup, roi1, roi2, roi3, roi4, thr_low, thr_high, n
 
 ######################################
 
-def XES_static_ROIs(scan, channels_list, thr_low, thr_high, index=0, angle_rot=defaultdict(int), del_bkg=True):
-    s = scan[index]
-    angle_rot=defaultdict(int, angle_rot)
-    detector = "JF02T09V03"
-#    channels_ROI = add_ROI_channels(s, detector)
-
-    channels_ROI = Get_ROI_names(s, detector)
-    if del_bkg:
-        channels_ROI = clean_ROI_names(channels_ROI)
-    channels_list = channels_list + channels_ROI
-    
-    check_files_and_data(s)
-    check = get_filesize_diff(s)
-    if check:
-        clear_output(wait=True)
-        filename = scan.files[index][0].split('/')[-1].split('.')[0]
-        print ('Processing: {}'.format(scan.fname.split('/')[-3]))
-        print ('Step {} of {}: filename {}'.format(index+1, len(scan.files), filename))
-	     
-        results, _ = load_data_compact(channels_list, s)
-	    
-        thresholded = {}
-        averaged = {}
-        spectrum = {}
-        tags = []
-        
-        for roi in channels_ROI:
-            data = results[roi]
-            thr  = threshold(data, thr_low, thr_high)
-            if angle_rot[roi] != 0:
-                thr = ndimage.rotate(thr, angle_rot[roi], axes=(1,2), reshape=False)
-            avg  = np.average(thr, axis = 0)
-            spec = avg.sum(axis=0)
-            
-            tag = roi#.split(':')[-1]
-            
-            thresholded[tag] = thr
-            averaged[tag] = avg
-            spectrum[tag] = spec
-            tags.append(tag)
-	    
-    meta = results["meta"]
-
-    return(spectrum, averaged, thresholded, tags, meta)
-
-######################################
-
 def XES_PumpProbe_4ROIs(fname, pgroup, roi1, roi2, roi3, roi4, thr_low, thr_high, nshots, correctFlag, binsize):
     clock_int = clock.Clock()
 
@@ -366,78 +721,6 @@ def XES_PumpProbe_4ROIs(fname, pgroup, roi1, roi2, roi3, roi4, thr_low, thr_high
     print ('Loaded {} images ON, {} images OFF'.format(imgs_on_roi1.shape[0],imgs_off_roi1.shape[0]))
     print ("It took", clock_int.tick(), "seconds to process this file")
     return spec_roi1_ON, spec_roi2_ON, spec_roi3_ON, spec_roi4_ON, pids_on, spec_roi1_OFF, spec_roi2_OFF, spec_roi3_OFF, spec_roi4_OFF, pids_off
-
-
-######################################
-
-def XES_PumpProbe_ROIs(scan, channels_list, thr_low, thr_high, index=0, angle_rot=defaultdict(int), del_bkg=True):
-    clock_int = clock.Clock()
-    angle_rot=defaultdict(int, angle_rot)
-    s = scan[index]
-    channels_ROI = Get_ROI_names(s, "JF02T09V03")
-    if del_bkg:
-        channels_ROI = clean_ROI_names(channels_ROI)
-    channels_pp = [channel_Events] + channels_list + channels_ROI
-    channels_all = channels_pp
-    step = scan[index]
-
-    check_files_and_data(step)
-    check = get_filesize_diff(step)  
-    if check:
-        clear_output(wait=True)
-        filename = scan.files[index][0].split('/')[-1].split('.')[0]
-        
-        print ('Processing: {}'.format(scan.fname.split('/')[-3]))
-        print ('Step {} of {}: filename {}'.format(index+1, len(scan.files), filename))
-
-        resultsPP, results, _, _ = load_data_compact_pump_probe(channels_pp, channels_all, step)
-
-        thresholded_on = {}
-        averaged_on = {}
-        spectrum_on = {}
-		
-        thresholded_off = {}
-        averaged_off = {}
-        spectrum_off = {}
-
-        tags = []
-		
-        for roi in channels_ROI:
-            data_on = resultsPP[roi].pump
-            data_off = resultsPP[roi].unpump
-
-            thr_on  = threshold(data_on, thr_low, thr_high)
-            if angle_rot[roi] != 0:
-                thr_on = ndimage.rotate(thr_on, angle_rot[roi], axes=(1,2), reshape=False)
-            avg_on  = np.average(thr_on, axis = 0)
-            #if angle_rot[roi] != 0:
-            #    avg_on = ndimage.rotate(avg_on, angle_rot[roi], axes=(0,1), reshape=False)
-            spec_on = avg_on.sum(axis=0)
-
-            thr_off  = threshold(data_off, thr_low, thr_high)
-            if angle_rot[roi] != 0:
-                thr_off = ndimage.rotate(thr_off, angle_rot[roi], axes=(1,2), reshape=False)
-            avg_off  = np.average(thr_off, axis = 0)
-            #if angle_rot[roi] != 0:
-            #    avg_off = ndimage.rotate(avg_off, angle_rot[roi], axes=(0,1), reshape=False)
-            spec_off = avg_off.sum(axis=0)
-		    
-            tag = roi#.split(':')[-1]
-    
-            thresholded_on[tag] = thr_on
-            averaged_on[tag] = avg_on
-            spectrum_on[tag] = spec_on
-		    
-            thresholded_off[tag] = thr_off
-            averaged_off[tag] = avg_off
-            spectrum_off[tag] = spec_off
-		
-            tags.append(tag)
-   
-    meta = resultsPP["meta"]
-    #print ("Took {} seconds for the previous step".format(clock_int.tick()))
-    return(spectrum_on, spectrum_off, averaged_on, averaged_off, thresholded_on, thresholded_off, tags, meta)
-
 
 ######################################
 
@@ -660,199 +943,6 @@ def XES_delayscan_4ROIs_sfdata(scan, pgroup, roi1, roi2, roi3, roi4, thr_low, th
 
 ######################################
 
-def XES_delayscan_ROIs(scan, channels_list, thr_low, thr_high, angle_rot=defaultdict(int), del_bkg=True):
-    angle_rot=defaultdict(int, angle_rot)
-    clock_int = clock.Clock()
-    s = scan[0]
-    channels_ROI = Get_ROI_names(s, "JF02T09V03")
-    if del_bkg:
-        channels_ROI = clean_ROI_names(channels_ROI)
-    channels_pp = [channel_Events] + channels_list + channels_ROI
-    channels_all = channels_pp
-
-    if ' as delay' in scan.parameters['name'][0]:
-        print ('Scan is done with the stage in fs')
-        Delay_fs = scan.readbacks
-        Delay_mm = fs2mm(scan.readbacks,0)
-    else:
-        print ('Scan is done with the stage in mm')
-        Delay_fs = mm2fs(scan.readbacks,0)
-        Delay_mm = scan.readbacks
-	    
-    spectra_on = []
-    spectra_off = []
-    spectra_shots_on = []
-    spectra_shots_off = []
-    thresholdeds_on = []
-    thresholdeds_off = []
-
-    for i, step in enumerate(scan):
-	    
-        check_files_and_data(step)
-        check = get_filesize_diff(step)  
-        if check:
-            clear_output(wait=True)
-            filename = scan.files[i][0].split('/')[-1].split('.')[0]
-            print ("Took {} seconds for the previous step".format(clock_int.tick()))
-            print ('Processing: {}'.format(scan.fname.split('/')[-3]))
-            print ('Step {} of {}: Processing {}'.format(i+1, len(scan.files), filename))
-
-            resultsPP, results, _, _ = load_data_compact_pump_probe(channels_pp, channels_all, step)
-		
-            thresholded_on = {}
-            averaged_on = {}
-            spectrum_on = {}
-            spectrum_shots_on = {}
-		
-            thresholded_off = {}
-            averaged_off = {}
-            spectrum_off = {}
-            spectrum_shots_off = {}
-
-            tags = []
-		
-            for roi in channels_ROI:
-                data_on = resultsPP[roi].pump
-                data_off = resultsPP[roi].unpump
-		    
-                thr_on  = threshold(data_on, thr_low, thr_high)
-                if angle_rot[roi] != 0:
-                    thr_on = ndimage.rotate(thr_on, angle_rot[roi], axes=(1,2), reshape=False)
-                avg_on  = np.average(thr_on, axis = 0)
-                spec_shots_on = thr_on.sum(axis=1)
-                spec_on = avg_on.sum(axis=0)
-		    
-                thr_off  = threshold(data_off, thr_low, thr_high)
-                if angle_rot[roi] != 0:
-                    thr_off = ndimage.rotate(thr_off, angle_rot[roi], axes=(1,2), reshape=False)
-                avg_off  = np.average(thr_off, axis = 0)
-                spec_shots_off = thr_off.sum(axis=1)
-                spec_off = avg_off.sum(axis=0)
-		    
-                tag = roi#.split(':')[-1]
-    
-                thresholded_on[tag] = thr_on
-                averaged_on[tag] = avg_on
-                spectrum_on[tag] = spec_on
-                spectrum_shots_on[tag] = spec_shots_on
-		    
-                thresholded_off[tag] = thr_off
-                averaged_off[tag] = avg_off
-                spectrum_off[tag] = spec_off
-                spectrum_shots_off[tag] = spec_shots_off
-		
-                tags.append(tag)
-
-            spectra_on.append(spectrum_on)
-            spectra_off.append(spectrum_off)
-            spectra_shots_on.append(spectrum_shots_on)
-            spectra_shots_off.append(spectrum_shots_off)
-            thresholdeds_on.append(thresholded_on)
-            thresholdeds_off.append(thresholded_off)
-
-        if i==0:
-            meta = resultsPP["meta"]
-    
-    return(spectra_on, spectra_off, spectra_shots_on, spectra_shots_off, thresholdeds_on, thresholdeds_off, tags, Delay_fs, Delay_mm, meta)
-    
-
-######################################
-
-TT_PSEN126 = [channel_PSEN126_signal, channel_PSEN126_bkg, channel_PSEN126_arrTimes, channel_PSEN126_arrTimesAmp, channel_PSEN126_peaks, channel_PSEN126_edges]
-
-def XES_delayscan_TT_ROIs(scan, channels_list, TT, channel_delay_motor, timezero_mm, thr_low, thr_high, angle_rot=defaultdict(int), del_bkg=True):
-    angle_rot=defaultdict(int, angle_rot)
-    clock_int = clock.Clock()
-    s = scan[0]
-    channels_ROI = Get_ROI_names(s, "JF02T09V03")
-    if del_bkg:
-        channels_ROI = clean_ROI_names(channels_ROI)
-    channels_pp = [channel_Events, channel_delay_motor] + channels_list + channels_ROI + TT
-    channels_all = channels_pp
-
-    if ' as delay' in scan.parameters['name'][0]:
-        print ('Scan is done with the stage in fs')
-        Delay_fs = scan.readbacks
-        Delay_mm = fs2mm(scan.readbacks,0)
-    else:
-        print ('Scan is done with the stage in mm')
-        Delay_fs = mm2fs(scan.readbacks,0)
-        Delay_mm = scan.readbacks
-
-    Delay_fs_stage = []
-    arrTimes_scan = []
-    arrTimesAmp_scan = []
-    Delays_fs_scan = []
-	    
-    spectra_shots_on = []
-    spectra_shots_off = []
-
-    for i, step in enumerate(scan):
-	    
-        check_files_and_data(step)
-        check = get_filesize_diff(step)  
-        if check:
-            clear_output(wait=True)
-            filename = scan.files[i][0].split('/')[-1].split('.')[0]
-            print ("Took {} seconds for the previous step".format(clock_int.tick()))
-            print ('Processing: {}'.format(scan.fname.split('/')[-3]))
-            print ('Step {} of {}: Processing {}'.format(i+1, len(scan.files), filename))
-
-            resultsPP, results, _, _ = load_data_compact_pump_probe(channels_pp, channels_all, step)
-
-            delay_shot = resultsPP[channel_delay_motor].pump
-            delay_shot_fs = mm2fs(delay_shot, timezero_mm)
-            Delay_fs_stage.append(delay_shot_fs.mean())
-
-            arrTimes = resultsPP[channel_PSEN126_arrTimes].pump
-            arrTimesAmp = resultsPP[channel_PSEN126_arrTimesAmp].pump
-            sigtraces = resultsPP[channel_PSEN126_edges].pump
-            peaktraces = resultsPP[channel_PSEN126_peaks].pump
-
-            spectrum_shots_on = {}
-            spectrum_shots_off = {}
-
-            tags = []
-		
-            for roi in channels_ROI:
-                data_on = resultsPP[roi].pump
-                data_off = resultsPP[roi].unpump
-		    
-                thr_on  = threshold(data_on, thr_low, thr_high)
-                if angle_rot[roi] != 0:
-                    thr_on = ndimage.rotate(thr_on, angle_rot[roi], axes=(1,2), reshape=False)
-                spec_shots_on = thr_on.sum(axis=1)
-                   
-                thr_off  = threshold(data_off, thr_low, thr_high)
-                if angle_rot[roi] != 0:
-                    thr_off = ndimage.rotate(thr_off, angle_rot[roi], axes=(1,2), reshape=False)
-                spec_shots_off = thr_off.sum(axis=1)
-                    
-                tag = roi#.split(':')[-1]
-    
-                spectrum_shots_on[tag] = spec_shots_on
-                spectrum_shots_off[tag] = spec_shots_off
-                thresholded_on[tag] = thr_on
-                thresholded_off[tag] = thr_off
-		
-                tags.append(tag)
-
-            spectra_shots_on.append(spectrum_shots_on)
-            spectra_shots_off.append(spectrum_shots_off)
-        
-        Delays_fs_scan.extend(delay_shot_fs)
-        arrTimes_scan.extend(arrTimes)
-
-        if i==0:
-            meta = resultsPP["meta"]
-
-    Delays_corr_scan = np.asarray(Delays_fs_scan) + np.asarray(arrTimes_scan)
-    
-    return Delays_fs_scan, Delays_corr_scan, spectra_shots_on, spectra_shots_off, thresholdeds_on, thresholdeds_off, tags, Delay_fs, Delay_mm, meta
-
-
-######################################
-
 TT_PSEN126 = [channel_PSEN126_signal, channel_PSEN126_bkg, channel_PSEN126_arrTimes, channel_PSEN126_arrTimesAmp, channel_PSEN126_peaks, channel_PSEN126_edges]
 
 def XES_delayscan_TT_4ROIs(scan, pgroup, TT, channel_delay_motor, timezero_mm, roi1, roi2, roi3, roi4, thr_low, thr_high, nshots, nsteps=None):
@@ -1065,94 +1155,6 @@ def XES_delayscan_TT_reduced(scan, pgroup, TT, channel_delay_motor, timezero_mm,
     print ("\nJob done! It took", clock_int.tock(), "seconds to process", int(len(scan.files) if nsteps is None else nsteps), "file(s)")
     return Delays_fs_scan, Delays_corr_scan, XES_spectra_on, XES_spectra_off, Delay_fs, Delay_mm
 
-
-######################################
-
-def RIXS_PumpProbe_ROIs(scan, channels_list, thr_low, thr_high, angle_rot=defaultdict(int)):
-    angle_rot=defaultdict(int, angle_rot)
-
-    s = scan[0]
-    channels_ROI = Get_ROI_names(s, "JF02T09V03")
-    channels_pp = [channel_Events] + channels_list + channels_ROI
-    channels_all = channels_pp
-
-    Energy_eV = scan.readbacks
-	    
-    spectra_on = []
-    spectra_off = []
-    spectra_shots_on = []
-    spectra_shots_off = []
-    thresholdeds_on = []
-    thresholdeds_off = []
-
-    for i, step in enumerate(scan):
-	    
-        check_files_and_data(step)
-        check = get_filesize_diff(step)  
-        if check:
-            clear_output(wait=True)
-            filename = scan.files[i][0].split('/')[-1].split('.')[0]
-            print ('Processing: {}'.format(scan.fname.split('/')[-3]))
-            print ('Step {} of {}: Processing {}'.format(i+1, len(scan.files), filename))
-
-            resultsPP, results, _, _ = load_data_compact_pump_probe(channels_pp, channels_all, step)
-		
-            thresholded_on = {}
-            averaged_on = {}
-            spectrum_on = {}
-            spectrum_shots_on = {}
-		
-            thresholded_off = {}
-            averaged_off = {}
-            spectrum_off = {}
-            spectrum_shots_off = {}
-
-            tags = []
-		
-            for roi in channels_ROI:
-                data_on = resultsPP[roi].pump
-                data_off = resultsPP[roi].unpump
-		    
-                thr_on  = threshold(data_on, thr_low, thr_high)
-                if angle_rot[roi] != 0:
-                    thr_on = ndimage.rotate(thr_on, angle_rot[roi], axes=(1,2), reshape=False)
-                avg_on  = np.average(thr_on, axis = 0)
-                spec_shots_on = thr_on.sum(axis=1)
-                spec_on = avg_on.sum(axis=0)
-		    
-                thr_off  = threshold(data_off, thr_low, thr_high)
-                if angle_rot[roi] != 0:
-                    thr_off = ndimage.rotate(thr_off, angle_rot[roi], axes=(1,2), reshape=False)
-                avg_off  = np.average(thr_off, axis = 0)
-                spec_shots_off = thr_off.sum(axis=1)
-                spec_off = avg_off.sum(axis=0)
-		    
-                tag = roi#.split(':')[-1]
-    
-                thresholded_on[tag] = thr_on
-                averaged_on[tag] = avg_on
-                spectrum_on[tag] = spec_on
-                spectrum_shots_on[tag] = spec_shots_on
-		    
-                thresholded_off[tag] = thr_off
-                averaged_off[tag] = avg_off
-                spectrum_off[tag] = spec_off
-                spectrum_shots_off[tag] = spec_shots_off
-		
-                tags.append(tag)
-
-            spectra_on.append(spectrum_on)
-            spectra_off.append(spectrum_off)
-            spectra_shots_on.append(spectrum_shots_on)
-            spectra_shots_off.append(spectrum_shots_off)
-            thresholdeds_on.append(thresholded_on)
-            thresholdeds_off.append(thresholded_off)
-
-        if i==0:
-            meta = resultsPP["meta"]
-    
-    return(spectra_on, spectra_off, spectra_shots_on, spectra_shots_off, thresholdeds_on, thresholdeds_off, tags, Energy_eV, meta)
-
 ######################################
 
 def RIXS_static_4ROIs(json_file, pgroup, roi1, roi2, roi3, roi4, thr_low, thr_high, nshots, correctFlag, binsize):
@@ -1299,6 +1301,7 @@ def RIXS_PumpProbe_4ROIs(json_file, pgroup, roi1, roi2, roi3, roi4, thr_low, thr
     print ("\nJob done! It took", clock_int.tock(), "seconds to process", len(scan.files), "file(s)")
     return RIXS_roi1_ON, RIXS_roi2_ON, RIXS_roi3_ON, RIXS_roi4_ON, pids_on, RIXS_roi1_OFF, RIXS_roi2_OFF, RIXS_roi3_OFF, RIXS_roi4_OFF, pids_off, Energy_eV
 
+######################################
 ######################################
 
 def save_data_XES_timescans(reducedir, run_name, delaymm, delayfs, spec_array_ON, spec_array_OFF):
