@@ -1291,6 +1291,77 @@ def load_data_compact_pump_probe(channels_pump_unpump, channels_FEL, data, offse
     return result_pp, result_FEL, pids_pump, pids_unpump
 
 ########################################################################################
+
+def load_data_OTA(channels_pump_unpump, data, offsets=None):
+
+    offsets = offsets or {}
+    for chname, value in offsets.items():
+        data[chname].offset = value
+   
+    channels_pump_unpump = check_channels(data, channels_pump_unpump, "pump unpump")
+    subset_pp = data[channels_pump_unpump]
+    subset_pp.print_stats(show_complete=True)
+    subset_pp.drop_missing()
+
+    Event_code = subset_pp[channel_Events].data
+    
+    #FEL_raw  = Event_code[:,13] #Event 13: changed from 12 on June 22
+    #Ppicker  = Event_code[:,200]
+    Laser    = Event_code[:,18]
+    Darkshot = Event_code[:,73]  # generic 50Hz event
+
+    #FEL = np.logical_and(FEL_raw, np.logical_not(Ppicker))
+    #FEL = FEL_raw
+
+    laser_reprate = (1 / Laser.mean()).round().astype(int)
+    index_light = Laser
+    index_dark  = Darkshot
+
+    print ('Laser rep rate is {} Hz (delayed or dark)'.format(100 / laser_reprate))
+    print ('Pump scheme is {}:1'.format(laser_reprate - 1))
+
+    result_pp = {}
+    meta = defaultdict(list)
+    for ch in channels_pump_unpump:
+        ch_pump   = subset_pp[ch].data[index_light]
+        pids_pump   = subset_pp[ch].pids[index_light]
+
+        ch_unpump = subset_pp[ch].data[index_dark]
+        pids_unpump = subset_pp[ch].pids[index_dark]
+
+        correct_pids_pump   = pids_unpump + 1
+        final_pids, indPump, indUnPump = np.intersect1d(pids_pump, correct_pids_pump, return_indices=True)
+        
+        pids_pump=pids_pump[indPump]
+        pids_unpump=pids_unpump[indUnPump]
+
+        ch_pump   = ch_pump[indPump]
+        ch_unpump = ch_unpump[indUnPump] 
+
+        ppdata = namedtuple("PPData", ["pump", "unpump"])
+        result_pp[ch] = ppdata(pump=ch_pump, unpump=ch_unpump)
+
+        # old sfdata does not have the meta attribute, so we cannot check for it
+        try:
+            chmeta = subset_pp[ch]._group["meta"]
+        except:
+            chmeta = None
+
+        if chmeta:
+            for k,v in chmeta.items():
+                meta[ch + "-" + k] = v[()]
+        
+        #if subset_FEL[ch].meta:
+        #    chmeta = subset_FEL[ch].meta
+        #    for k,v in chmeta.items():
+        #        meta[ch + "-" + k] = v[()]
+
+    result_pp["meta"] = meta
+
+    print ("Loaded {} pump and {} unpump shots".format(len(ch_pump), len(ch_unpump)))
+
+    return result_pp, pids_pump, pids_unpump
+########################################################################################
 ########################################################################################
 ########################################################################################
 
