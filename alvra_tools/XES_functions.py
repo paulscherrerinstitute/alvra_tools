@@ -172,11 +172,11 @@ def XES_static_ROIs(scan, channels_list, thr_low, thr_high, index=0, angle_rot=d
         for roi in channels_ROI:
             data = results[roi]
             thr  = threshold(data, thr_low, thr_high)
-            #if angle_rot[roi] != 0:
-            #    thr = ndimage.rotate(thr, angle_rot[roi], axes=(1,2), reshape=False)
-            avg  = np.average(thr, axis = 0)
             if angle_rot[roi] != 0:
-                avg = ndimage.rotate(avg, angle_rot[roi], axes=(0,1), reshape=False)
+                thr = ndimage.rotate(thr, angle_rot[roi], axes=(1,2), reshape=False)
+            avg  = np.average(thr, axis = 0)
+            #if angle_rot[roi] != 0:
+            #    avg = ndimage.rotate(avg, angle_rot[roi], axes=(0,1), reshape=False)
             spec = avg.sum(axis=0)
             
             tag = roi#.split(':')[-1]
@@ -228,19 +228,19 @@ def XES_PumpProbe_ROIs(scan, channels_list, thr_low, thr_high, index=0, angle_ro
             data_off = resultsPP[roi].unpump
 
             thr_on  = threshold(data_on, thr_low, thr_high)
-            #if angle_rot[roi] != 0:
-            #    thr_on = ndimage.rotate(thr_on, angle_rot[roi], axes=(1,2), reshape=False)
-            avg_on  = np.average(thr_on, axis = 0)
             if angle_rot[roi] != 0:
-                avg_on = ndimage.rotate(avg_on, angle_rot[roi], axes=(0,1), reshape=False)
+                thr_on = ndimage.rotate(thr_on, angle_rot[roi], axes=(1,2), reshape=False)
+            avg_on  = np.average(thr_on, axis = 0)
+            #if angle_rot[roi] != 0:
+            #    avg_on = ndimage.rotate(avg_on, angle_rot[roi], axes=(0,1), reshape=False)
             spec_on = avg_on.sum(axis=0)
 
             thr_off  = threshold(data_off, thr_low, thr_high)
-            #if angle_rot[roi] != 0:
-            #    thr_off = ndimage.rotate(thr_off, angle_rot[roi], axes=(1,2), reshape=False)
-            avg_off  = np.average(thr_off, axis = 0)
             if angle_rot[roi] != 0:
-                avg_off = ndimage.rotate(avg_off, angle_rot[roi], axes=(0,1), reshape=False)
+                thr_off = ndimage.rotate(thr_off, angle_rot[roi], axes=(1,2), reshape=False)
+            avg_off  = np.average(thr_off, axis = 0)
+            #if angle_rot[roi] != 0:
+            #    avg_off = ndimage.rotate(avg_off, angle_rot[roi], axes=(0,1), reshape=False)
             spec_off = avg_off.sum(axis=0)
 		    
             tag = roi#.split(':')[-1]
@@ -316,20 +316,20 @@ def XES_delayscan_ROIs(scan, channels_list, thr_low, thr_high, angle_rot=default
                 data_off = resultsPP[roi].unpump
 		    
                 thr_on  = threshold(data_on, thr_low, thr_high)
-                #if angle_rot[roi] != 0:
-                #    thr_on = ndimage.rotate(thr_on, angle_rot[roi], axes=(1,2), reshape=False)
-                avg_on  = np.average(thr_on, axis = 0)
                 if angle_rot[roi] != 0:
-                    avg_on = ndimage.rotate(avg_on, angle_rot[roi], axes=(0,1), reshape=False)
+                    thr_on = ndimage.rotate(thr_on, angle_rot[roi], axes=(1,2), reshape=False)
+                avg_on  = np.average(thr_on, axis = 0)
+                #if angle_rot[roi] != 0:
+                #    avg_on = ndimage.rotate(avg_on, angle_rot[roi], axes=(0,1), reshape=False)
                 spec_shots_on = thr_on.sum(axis=1)
                 spec_on = avg_on.sum(axis=0)
 		    
                 thr_off  = threshold(data_off, thr_low, thr_high)
-                #if angle_rot[roi] != 0:
-                #    thr_off = ndimage.rotate(thr_off, angle_rot[roi], axes=(1,2), reshape=False)
-                avg_off  = np.average(thr_off, axis = 0)
                 if angle_rot[roi] != 0:
-                    avg_off = ndimage.rotate(avg_off, angle_rot[roi], axes=(0,1), reshape=False)
+                    thr_off = ndimage.rotate(thr_off, angle_rot[roi], axes=(1,2), reshape=False)
+                avg_off  = np.average(thr_off, axis = 0)
+                #if angle_rot[roi] != 0:
+                #    avg_off = ndimage.rotate(avg_off, angle_rot[roi], axes=(0,1), reshape=False)
                 spec_shots_off = thr_off.sum(axis=1)
                 spec_off = avg_off.sum(axis=0)
 		    
@@ -389,6 +389,8 @@ def XES_delayscan_TT_ROIs(scan, channels_list, TT, channel_delay_motor, timezero
 	    
     spectra_shots_on = []
     spectra_shots_off = []
+    thresholdeds_on = []
+    thresholdeds_off = []
 
     for i, step in enumerate(scan):
 	    
@@ -414,6 +416,8 @@ def XES_delayscan_TT_ROIs(scan, channels_list, TT, channel_delay_motor, timezero
 
             spectrum_shots_on = {}
             spectrum_shots_off = {}
+            thresholded_on = {}
+            thresholded_off = {}
 
             tags = []
 		
@@ -442,6 +446,8 @@ def XES_delayscan_TT_ROIs(scan, channels_list, TT, channel_delay_motor, timezero
 
             spectra_shots_on.append(spectrum_shots_on)
             spectra_shots_off.append(spectrum_shots_off)
+            thresholdeds_on.append(thresholded_on)
+            thresholdeds_off.append(thresholded_off)
         
         Delays_fs_scan.extend(delay_shot_fs)
         arrTimes_scan.extend(arrTimes)
