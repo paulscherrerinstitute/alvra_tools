@@ -312,7 +312,7 @@ def XAS_scan_1diode_static(scan, diode, Izero, quantile):
             #Diode1_shot_filter, Izero_filter = correlation_filter_static(Fluo_shot1, IzeroFEL_shot, quantile)
             Diode_shot_filter  = Diode_shot_filter / Izero_filter
             
-            print ('{} shots out of {} survived'.format(len(Diode1_shot_filter), len(Fluo_shot1)))
+            print ('{} shots out of {} survived'.format(len(Diode_shot_filter), len(Fluo_shot)))
 
             Diode_shot_filter = Diode_shot_filter / Izero_filter
 
