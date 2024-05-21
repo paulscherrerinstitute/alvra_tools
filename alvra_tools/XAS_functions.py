@@ -1336,8 +1336,10 @@ def save_data_timescans_TT_2diodes(reducedir, run_name, delaymm, delaystage, del
 ################################################
 ################################################
 
-def save_reduced_data_1diode(reducedir, run_name, scan, D1p, D1u, PP1, gs1, corr1):
-    t0 = get_timezero_NBS(scan.fname)
+def save_reduced_data_1diode(reducedir, run_name, scan, D1p, D1u, PP1, gs1, corr1, t0=None):
+	if t0 is None:
+        t0 = get_timezero_NBS(scan.fname)
+    #t0 = get_timezero_NBS(scan.fname)
     rdb = scan.readbacks
     run_array = {}
     run_array[run_name.split('-')[0]] = {"name": run_name,
@@ -1354,8 +1356,10 @@ def save_reduced_data_1diode(reducedir, run_name, scan, D1p, D1u, PP1, gs1, corr
 
 ################################################
 
-def save_reduced_data_1diode_TT(reducedir, run_name, scan, D1p, D1u, PP1, gs1, corr1, PPscan, delayfs, delaycorr):
-    t0 = get_timezero_NBS(scan.fname)
+def save_reduced_data_1diode_TT(reducedir, run_name, scan, D1p, D1u, PP1, gs1, corr1, PPscan, delayfs, delaycorr, t0=None):
+	if t0 is None:
+        t0 = get_timezero_NBS(scan.fname)
+    #t0 = get_timezero_NBS(scan.fname)
     rdb = scan.readbacks
     run_array = {}
     run_array[run_name.split('-')[0]] = {"name": run_name,
@@ -1375,8 +1379,10 @@ def save_reduced_data_1diode_TT(reducedir, run_name, scan, D1p, D1u, PP1, gs1, c
 
 ################################################
 
-def save_reduced_data_2diodes(reducedir, run_name, scan, D1p, D1u, PP1, gs1, corr1, D2p, D2u, PP2, gs2, corr2):
-    t0 = get_timezero_NBS(scan.fname)
+def save_reduced_data_2diodes(reducedir, run_name, scan, D1p, D1u, PP1, gs1, corr1, D2p, D2u, PP2, gs2, corr2, t0=None):
+	if t0 is None:
+        t0 = get_timezero_NBS(scan.fname)
+    #t0 = get_timezero_NBS(scan.fname)
     rdb = scan.readbacks
     run_array = {}
     run_array[run_name.split('-')[0]] = {"name": run_name,
@@ -1398,8 +1404,10 @@ def save_reduced_data_2diodes(reducedir, run_name, scan, D1p, D1u, PP1, gs1, cor
 
 ################################################
 
-def save_reduced_data_2diodes_TT(reducedir, run_name, scan, D1p, D1u, PP1, gs1, corr1, PPscan, D2p, D2u, PP2, gs2, corr2, PPscan2, delayfs1, delaycorr1, delayfs2, delaycorr2):
-    t0 = get_timezero_NBS(scan.fname)
+def save_reduced_data_2diodes_TT(reducedir, run_name, scan, D1p, D1u, PP1, gs1, corr1, PPscan, D2p, D2u, PP2, gs2, corr2, PPscan2, delayfs1, delaycorr1, delayfs2, delaycorr2, t0=None):
+	if t0 is None:
+        t0 = get_timezero_NBS(scan.fname)
+    #t0 = get_timezero_NBS(scan.fname)
     rdb = scan.readbacks
     run_array = {}
     run_array[run_name.split('-')[0]] = {"name": run_name,
@@ -1447,27 +1455,27 @@ def load_reduced_data(pgroup, loaddir, runlist):
 
 ################################################
 
-def LoadTimescansXANES(with_TT, Two_diodes, scan, TT, channel_delay_motor, detector_XAS_1, detector_XAS_2, detector_Izero, quantile_corr, saveflag, reducedir, runname):
+def LoadTimescansXANES(with_TT, Two_diodes, scan, TT, channel_delay_motor, detector_XAS_1, detector_XAS_2, detector_Izero, quantile_corr, saveflag, reducedir, runname, timezero_mm=None):
     if with_TT:
         if Two_diodes:
             (Delays_fs_scan, Delays_corr_scan, DataDiode_pump, DataDiode_unpump, Pump_probe_Diode, Pump_probe_scan,
              Delays_fs_scan2, Delays_corr_scan2, DataDiode2_pump, DataDiode2_unpump, Pump_probe_Diode2, Pump_probe_scan2,
              Izero_pump, Izero_unpump, correlation, correlation2, readbacks, goodshots, goodshots2) = \
-             XAS_scanPP_2diodes_PSEN_bs(scan, TT, channel_delay_motor, detector_XAS_1, detector_XAS_2, detector_Izero, quantile_corr)
+             XAS_scanPP_2diodes_PSEN_bs(scan, TT, channel_delay_motor, detector_XAS_1, detector_XAS_2, detector_Izero, quantile_corr, timezero_mm)
             if saveflag:
                 os.makedirs(reducedir+runname, exist_ok=True)
                 save_reduced_data_2diodes_TT(reducedir, runname, scan, 
                                              DataDiode_pump, DataDiode_unpump, Pump_probe_Diode, goodshots, correlation, Pump_probe_scan,
                                              DataDiode2_pump, DataDiode2_unpump, Pump_probe_Diode2, goodshots2, correlation2, Pump_probe_scan2,
-                                             Delays_fs_scan, Delays_corr_scan, Delays_fs_scan2, Delays_corr_scan2)
+                                             Delays_fs_scan, Delays_corr_scan, Delays_fs_scan2, Delays_corr_scan2, timezero_mm)
         else:
             (Delays_fs_scan, Delays_corr_scan, DataDiode_pump, DataDiode_unpump, Pump_probe_Diode, Pump_probe_scan, 
              Izero_pump_scan, Izero_unpump_scan, correlation, readbacks, goodshots) = \
-             XAS_scanPP_PSEN_bs(scan, TT, channel_delay_motor, detector_XAS_1, detector_Izero, quantile_corr)
+             XAS_scanPP_PSEN_bs(scan, TT, channel_delay_motor, detector_XAS_1, detector_Izero, quantile_corr, timezero_mm)
             if saveflag:
                 os.makedirs(reducedir+runname, exist_ok=True)
                 save_reduced_data_1diode_TT(reducedir, runname, scan, 
-                                            DataDiode_pump, DataDiode_unpump, Pump_probe_Diode, goodshots, correlation, Pump_probe_scan, Delays_fs_scan, Delays_corr_scan)                
+                                            DataDiode_pump, DataDiode_unpump, Pump_probe_Diode, goodshots, correlation, Pump_probe_scan, Delays_fs_scan, Delays_corr_scan, timezero_mm)                
     else:
         if Two_diodes:
             (DataDiode1_pump, DataDiode1_unpump, Pump_probe_Diode1, 
@@ -1478,7 +1486,7 @@ def LoadTimescansXANES(with_TT, Two_diodes, scan, TT, channel_delay_motor, detec
                 os.makedirs(reducedir+runname, exist_ok=True)
                 save_reduced_data_2diodes(reducedir, runname, scan, 
                                           DataDiode1_pump, DataDiode1_unpump, Pump_probe_Diode1, goodshots1, correlation1,
-                                          DataDiode2_pump, DataDiode2_unpump, Pump_probe_Diode2, goodshots2, correlation2)
+                                          DataDiode2_pump, DataDiode2_unpump, Pump_probe_Diode2, goodshots2, correlation2, timezero_mm)
                 
         else:
             (DataDiode_pump, DataDiode_unpump, Pump_probe_Diode, 
@@ -1487,7 +1495,7 @@ def LoadTimescansXANES(with_TT, Two_diodes, scan, TT, channel_delay_motor, detec
             if saveflag:
                 os.makedirs(reducedir+runname, exist_ok=True)
                 save_reduced_data_1diode(reducedir, runname, scan, 
-                                         DataDiode_pump, DataDiode_unpump, Pump_probe_Diode, goodshots, correlation)
+                                         DataDiode_pump, DataDiode_unpump, Pump_probe_Diode, goodshots, correlation, timezero_mm)
 
 ################################################
 
