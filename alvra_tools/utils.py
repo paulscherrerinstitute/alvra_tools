@@ -229,6 +229,12 @@ def fs2mm(x,t0_fs):
 def cut(arr, minlen):
     return np.array([i[:minlen] for i in arr])
 
+def histedges_equalN(x, nbin):
+    npt = len(x)
+    return np.interp(np.linspace(0, npt, nbin),
+                     np.arange(npt),
+                     np.sort(x))
+
 def rebin2D(arr, axis, bin_):
     arr = np.array(arr)
     arr_new=[]
