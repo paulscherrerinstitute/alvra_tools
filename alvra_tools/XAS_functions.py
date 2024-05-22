@@ -1106,6 +1106,52 @@ def XAS_scanPP_2diodes_PSEN_bs(scan, TT, channel_delay_motor, diode1, diode2, Iz
     
     return (Delays_fs_scan, Delays_corr_scan, DataFluo_pump, DataFluo_unpump, Pump_probe, Pump_probe_scan, Delays_fs_scan2, Delays_corr_scan2, DataFluo2_pump, DataFluo2_unpump, Pump_probe2, Pump_probe_scan2, Izero_pump, Izero_unpump, correlation, correlation2, scanvar, goodshots, goodshots2)
 
+######################################
+
+def rebin_XANES(Pump_probe_scan, Delays_corr_scan, Delays_fs_scan, variable_bins, withTT, numbins, binsize, min_delay, max_delay):
+    from scipy.stats import binned_statistic
+    print (np.shape(Pump_probe_scan),np.shape(Delays_corr_scan), np.shape(Delays_fs_scan))
+    
+    if variable_bins:
+        binsize = 'variable'
+        #print ('Rebin with {} bins of variable size'.format(numbins))
+        if not withTT:
+            #print ('Rebin delay stage positions')
+            binList = histedges_equalN(Delays_fs_scan, numbins)
+            pp_TT, binEdges, binNumber = binned_statistic(Delays_fs_scan, Pump_probe_scan, statistic='mean', bins=binList)
+            pp_std, _, _ = binned_statistic(Delays_fs_scan, Pump_probe_scan, statistic='std', bins=binList)
+        else:
+            #print ('Rebin TT corrected delays')
+            binList = histedges_equalN(Delays_corr_scan, numbins)
+            pp_TT, binEdges, binNumber = binned_statistic(Delays_corr_scan, Pump_probe_scan, statistic='mean', bins=binList)
+            pp_std, _, _ = binned_statistic(Delays_fs_scan, Pump_probe_scan, statistic='std', bins=binList)
+
+        bin_centres = (binList[:-1] + binList[1:])/2
+        Delay_fs_TT = np.copy(bin_centres)
+    else: 
+        binList = np.arange(min_delay, max_delay, binsize)
+        #print ('Rebin with {} bins of {} fs'.format(len(binList), binsize))
+        if not withTT:
+            #print ('Rebin delay stage positions')
+            pp_TT, binEdges, binNumber = binned_statistic(Delays_fs_scan, Pump_probe_scan, statistic='mean', bins=binList)
+            pp_std, _, _ = binned_statistic(Delays_fs_scan, Pump_probe_scan, statistic='std', bins=binList)
+        else:
+            #print ('Rebin TT corrected delays')
+            pp_TT, binEdges, binNumber = binned_statistic(Delays_corr_scan, Pump_probe_scan, statistic='mean', bins=binList)
+            pp_std, _, _ = binned_statistic(Delays_corr_scan, Pump_probe_scan, statistic='std', bins=binList)
+
+        bin_centres = (binList[:-1] + binList[1:])/2
+        Delay_fs_TT = np.arange(min_delay + binsize/2, max_delay - binsize/2, binsize)
+    
+    count = []
+    for index in range(len(bin_centres)):
+        count.append(np.count_nonzero(binNumber == index+1))
+    err_pp = pp_std/np.sqrt(np.array(count))
+    
+    print ('Rebin with {} bins of variable size'.format(numbins) if variable_bins else 'Rebin with {} bins of {} fs'.format(len(binList), binsize))
+    print ('Rebin TT corrected delays' if withTT else 'Rebin delay stage positions')
+    
+    return Delay_fs_TT, pp_TT, pp_std, err_pp, count, binsize
 
 ######################################
 
