@@ -911,7 +911,7 @@ def XAS_scanPP_2diodes_PSEN_bs(scan, TT, channel_delay_motor, diode1, diode2, Iz
         channel_edges = channel_PSEN126_edges
         channel_peaks = channel_PSEN126_peaks
 
-	timezero_mm = get_timezero_NBS(scan.fname)
+    timezero_mm = get_timezero_NBS(scan.fname)
     if timezero_offset is not None:
         timezero_mm = timezero_mm + fs2mm(timezero_offset, 0)
 	
@@ -1339,8 +1339,8 @@ def save_data_timescans_TT_2diodes(reducedir, run_name, delaymm, delaystage, del
 ################################################
 
 def save_reduced_data_1diode(reducedir, run_name, scan, D1p, D1u, PP1, gs1, corr1, t0_offset=None):
-	t0 = get_timezero_NBS(scan.fname)
-	if t0_offset is not None:
+    t0 = get_timezero_NBS(scan.fname)
+    if t0_offset is not None:
         t0 = t0 + fs2mm(t0_offset, 0)
     rdb = scan.readbacks
     run_array = {}
@@ -1359,8 +1359,8 @@ def save_reduced_data_1diode(reducedir, run_name, scan, D1p, D1u, PP1, gs1, corr
 ################################################
 
 def save_reduced_data_1diode_TT(reducedir, run_name, scan, D1p, D1u, PP1, gs1, corr1, PPscan, delayfs, delaycorr, t0_offset=None):
-	t0 = get_timezero_NBS(scan.fname)
-	if t0_offset is not None:
+    t0 = get_timezero_NBS(scan.fname)
+    if t0_offset is not None:
         t0 = t0 + fs2mm(t0_offset, 0)
     rdb = scan.readbacks
     run_array = {}
@@ -1382,8 +1382,8 @@ def save_reduced_data_1diode_TT(reducedir, run_name, scan, D1p, D1u, PP1, gs1, c
 ################################################
 
 def save_reduced_data_2diodes(reducedir, run_name, scan, D1p, D1u, PP1, gs1, corr1, D2p, D2u, PP2, gs2, corr2, t0_offset=None):
-	t0 = get_timezero_NBS(scan.fname)
-	if t0_offset is not None:
+    t0 = get_timezero_NBS(scan.fname)
+    if t0_offset is not None:
         t0 = t0 + fs2mm(t0_offset, 0)
     rdb = scan.readbacks
     run_array = {}
@@ -1407,8 +1407,8 @@ def save_reduced_data_2diodes(reducedir, run_name, scan, D1p, D1u, PP1, gs1, cor
 ################################################
 
 def save_reduced_data_2diodes_TT(reducedir, run_name, scan, D1p, D1u, PP1, gs1, corr1, PPscan, D2p, D2u, PP2, gs2, corr2, PPscan2, delayfs1, delaycorr1, delayfs2, delaycorr2, t0_offset=None):
-	t0 = get_timezero_NBS(scan.fname)
-	if t0_offset is not None:
+    t0 = get_timezero_NBS(scan.fname)
+    if t0_offset is not None:
         t0 = t0 + fs2mm(t0_offset, 0)
     rdb = scan.readbacks
     run_array = {}
