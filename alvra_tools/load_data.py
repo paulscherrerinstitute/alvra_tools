@@ -5,7 +5,7 @@ import time
 import jungfrau_utils as ju
 from sfdata import SFDataFile, SFDataFiles
 from collections import namedtuple
-from glob import glob
+import glob
 
 from .channels import *
 from .utils import crop_roi, make_roi, mm2fs, fs2mm
@@ -1361,6 +1361,40 @@ def load_data_OTA(channels_pump_unpump, data, offsets=None):
     print ("Loaded {} pump and {} unpump shots".format(len(ch_pump), len(ch_unpump)))
 
     return result_pp, pids_pump, pids_unpump
+
+########################################################################################
+
+def load_reduced_data(pgroup, loaddir, runlist, twodiodes=False):
+    from collections import defaultdict
+    titlestring = pgroup + ' --- ' +str(runlist)
+
+    d = defaultdict(list)
+    for run in runlist:
+        #data = {}
+        file = glob.glob(loaddir + '/*{:04d}*/*run_array*'.format(run))
+        run_array = np.load(file[0], allow_pickle=True).item()
+        for k, v in run_array.items():
+            for key, value in v.items():
+                #data[key] = value
+                if key == "timezero_mm" or key=="name" or key=='readbacks':
+                    d[key].append(value)
+                else:
+                    d[key].extend(value)
+    if twodiodes:
+        d2 = defaultdict(list)
+        for k,v in d.items():
+            if k == 'name' or k == "readbacks":
+                continue
+            elif k == 'pump_1':
+                d2[k] = d['pump_1'] + d['pump_2']
+            elif k == 'unpump_1':
+                d2[k] = d['unpump_1'] + d['unpump_2']
+            else:
+                d2[k] = d[k] + d[k]
+        d.update(d2)
+
+    return d, titlestring
+
 ########################################################################################
 ########################################################################################
 ########################################################################################

@@ -13,6 +13,439 @@ from alvra_tools.load_data import *
 from alvra_tools.channels import *
 from alvra_tools.utils import *
 from alvra_tools.timing_tool import *
+from alvra_tools.XAS_functions import *
+
+
+def XAS_scanPP(reducedir, saveflag, jsonlist, TT, motor, diode1, diode2, Izero):
+    
+    if TT == TT_PSEN124:
+        TT = [channel_PSEN124_arrTimes, channel_PSEN124_arrTimesAmp]
+        channel_arrTimes = channel_PSEN124_arrTimes
+        channel_arrTimesAmp = channel_PSEN124_arrTimesAmp
+    elif TT == TT_PSEN126:
+        TT = [channel_PSEN126_arrTimes, channel_PSEN126_arrTimesAmp]
+        channel_arrTimes = channel_PSEN126_arrTimes
+        channel_arrTimesAmp = channel_PSEN126_arrTimesAmp
+
+    channels_pp = [channel_Events, diode1, diode2, Izero, motor, channel_monoEnergy] + TT
+    channels_all = channels_pp
+    
+    from sfdata import SFScanInfo
+    
+    pump_1, unpump_1, pump_2, unpump_2, Izero_pump, Izero_unpump, Delays_stage, arrTimes, Delays_corr, energy, readbacks, corr1, corr2 = ([] for i in range(13))
+    
+    for jsonfile in jsonlist:
+        runname = jsonfile.split('/')[-3]
+        scan = SFScanInfo(jsonfile)
+        rbk = scan.readbacks
+
+        p1, u1, p2, u2, Ip, Iu, ds, aT, dc, en, c1, c2 = ([] for i in range(12))
+
+        for i, step in enumerate(scan):
+            check_files_and_data(step)
+            check = get_filesize_diff(step)  
+            
+            if check:
+                clear_output(wait=True)
+                filename = scan.files[i][0].split('/')[-1].split('.')[0]
+                print (jsonfile)
+                print ('Step {} of {}: Processing {}'.format(i+1, len(scan.files), filename))
+    
+                resultsPP, results, _, _ = load_data_compact_pump_probe(channels_pp, channels_all, step)
+
+                p1.extend(resultsPP[diode1].pump)
+                u1.extend(resultsPP[diode1].unpump)
+                p2.extend(resultsPP[diode2].pump)
+                u2.extend(resultsPP[diode2].unpump)
+                Ip.extend(resultsPP[Izero].pump)
+                Iu.extend(resultsPP[Izero].unpump)
+                ds.extend(resultsPP[motor].pump)
+                aT.extend(resultsPP[channel_arrTimes].pump)
+                dc.extend(resultsPP[motor].pump + resultsPP[channel_arrTimes].pump)
+                en.extend(resultsPP[channel_monoEnergy].pump)
+
+                pearsonr1 = pearsonr(resultsPP[diode1].unpump,resultsPP[Izero].unpump)[0]
+                pearsonr2 = pearsonr(resultsPP[diode2].unpump,resultsPP[Izero].unpump)[0]
+
+                c1.append(pearsonr1)
+                c2.append(pearsonr2)
+
+                print ("correlation Diode1 (dark shots) = {}".format(pearsonr1))
+                print ("correlation Diode2 (dark shots) = {}".format(pearsonr2))
+
+        if saveflag:
+            os.makedirs(reducedir+runname, exist_ok=True)
+            save_reduced_data_scanPP(reducedir, runname, scan, p1, u1, p2, u2, Ip, Iu, ds, aT, dc, en, rbk, c1, c2)
+                
+        pump_1.extend(p1)
+        unpump_1.extend(u1)
+        pump_2.extend(p2)
+        unpump_2.extend(u2)
+        Izero_pump.extend(Ip)
+        Izero_unpump.extend(Iu)
+        Delays_stage.extend(ds)
+        arrTimes.extend(aT)
+        Delays_corr.extend(dc)
+        energy.extend(en)
+        readbacks.append(rbk)
+        corr1.append(c1)
+        corr2.append(c2)
+
+    print ('----------------------------')
+    print ('Loaded {} total on/off pairs'.format(len(Delays_corr)))
+
+    return (pump_1, unpump_1, pump_2, unpump_2, Izero_pump, Izero_unpump, Delays_stage, arrTimes, Delays_corr, energy, readbacks, corr1, corr2)
+
+######################################
+
+def XAS_scan_static(reducedir, saveflag, jsonlist, diode1, diode2, Izero):
+    
+    channels_pp = [channel_Events, diode1, diode2, Izero, channel_monoEnergy]
+    channels_all = channels_pp
+
+    from sfdata import SFScanInfo
+    
+    unpump_1, unpump_2, Izero_unpump, energy, readbacks, corr1, corr2 = ([] for i in range(7))
+    
+    for jsonfile in jsonlist:
+        runname = jsonfile.split('/')[-3]
+        scan = SFScanInfo(jsonfile)
+        rbk = scan.readbacks
+
+        u1, u2, Iu, en, c1, c2 = ([] for i in range(6))
+
+        for i, step in enumerate(scan):
+            check_files_and_data(step)
+            check = get_filesize_diff(step)  
+            
+            if check:
+                clear_output(wait=True)
+                filename = scan.files[i][0].split('/')[-1].split('.')[0]
+                print (jsonfile)
+                print ('Step {} of {}: Processing {}'.format(i+1, len(scan.files), filename))
+                
+                resultsPP, results, _, _ = load_data_compact_pump_probe(channels_pp, channels_all, step)
+                #results,_ = load_data_compact(channels, step)
+
+                u1.extend(resultsPP[diode1].unpump)
+                u2.extend(resultsPP[diode2].unpump)
+                Iu.extend(resultsPP[Izero].unpump)
+                en.extend(resultsPP[channel_monoEnergy].unpump)
+                
+                pearsonr1 = pearsonr(resultsPP[diode1].unpump,resultsPP[Izero].unpump)[0]
+                pearsonr2 = pearsonr(resultsPP[diode2].unpump,resultsPP[Izero].unpump)[0]
+
+                c1.append(pearsonr1)
+                c2.append(pearsonr2)
+
+                print ("correlation Diode1 (dark shots) = {}".format(pearsonr1))
+                print ("correlation Diode2 (dark shots) = {}".format(pearsonr2))
+
+        if saveflag:
+            os.makedirs(reducedir+runname, exist_ok=True)
+            save_reduced_data_scan_static(reducedir, runname, scan, u1, u2, Iu, en, rbk, c1, c2)
+                
+        unpump_1.extend(u1)
+        unpump_2.extend(u2)
+        Izero_unpump.extend(Iu)
+        energy.extend(en)
+        readbacks.append(rbk)
+        corr1.append(c1)
+        corr2.append(c2)
+
+    print ('----------------------------')
+    print ('Loaded {} total shots'.format(len(unpump_1)))
+
+    return (unpump_1, unpump_2, Izero_unpump, energy, readbacks, corr1, corr2)
+
+######################################
+
+def rebin_XAS_static(unpump, Iunpump, energy, readbacks):
+
+    unpump = np.asarray(unpump)
+    Iunpump = np.asarray(Iunpump)
+    energy = np.asarray(energy)
+    readbacks = np.asarray(readbacks)
+
+    stepsize_energy = (readbacks[-1]-readbacks[0])/(len(readbacks)-1)
+    binList_energy = np.linspace(readbacks[0]-stepsize_energy/2, readbacks[-1]+stepsize_energy/2, len(readbacks)+1)
+    bin_centres_energy = (binList_energy[:-1] + binList_energy[1:])/2
+
+    GS, err_GS = (np.zeros(len(bin_centres_energy)) for i in range(2))
+    
+    for i in range(len(bin_centres_energy)):
+        cond1e = energy >= binList_energy[i]
+        cond2e = energy < binList_energy[i+1]
+        
+        idx = np.where(cond1e*cond2e)[0]
+        unpump_ebin  = unpump[idx]
+        Izero_u_ebin  = Iunpump[idx]
+
+        unpump_ebin = unpump_ebin / Izero_u_ebin    
+
+        GS[i] = np.nanmean(unpump_ebin)
+        err_GS[i] = np.nanstd(unpump_ebin)/np.sqrt(len(unpump_ebin))
+    
+    return GS, err_GS
+
+
+######################################
+
+def rebin_and_filter_timescans(data, binsize, minvalue, maxvalue, quantile, withTT=True, numbins=None, variable_bins=False):
+
+    for k,v in data.items():
+        data[k] = v
+    
+    pump_1 = np.asarray(data['pump_1'])
+    unpump_1 = np.asarray(data['unpump_1'])
+    Izero_pump = np.asarray(data['Izero_pump'])
+    Izero_unpump = np.asarray(data['Izero_unpump'])
+    Delays_stage = np.asarray(data['Delays_stage'])
+    Delays_corr = np.asarray(data['Delays_corr'])
+
+    if withTT:
+        Delays = Delays_corr
+    else:
+        Delays = Delays_stage
+
+    binList = np.arange(minvalue, maxvalue, binsize)
+    if variable_bins:
+        binList = histedges_equalN(Delays, numbins)
+
+    bin_centres = (binList[:-1] + binList[1:])/2
+    delay_rebin = np.arange(minvalue + binsize/2, maxvalue - binsize/2, binsize)
+    if variable_bins:
+        delay_rebin = bin_centres
+
+    pp_rebin = np.zeros(len(bin_centres))
+    err_pp = np.zeros(len(bin_centres))
+
+    totalshots = len(pump_1)
+    howmany_before = []
+    howmany = []
+
+    for i in range(len(bin_centres)):
+        cond1 = Delays >= binList[i]
+        cond2 = Delays < binList[i+1]
+    
+        idx = np.where(cond1*cond2)[0]
+        delay_rebin[i] = np.average(Delays[idx])
+    
+        pump    = pump_1[idx]
+        unpump  = unpump_1[idx]
+        Izero_p = Izero_pump[idx]
+        Izero_u = Izero_unpump[idx]
+        
+        howmany_before.append(len(Delays[idx]))
+    
+        pump_filter, unpump_filter, Izero_pump_filter, Izero_unpump_filter = \
+        correlation_filter(pump, unpump, Izero_p, Izero_u, quantile)
+        
+        howmany.append(len(pump_filter))
+
+        pump_filter = pump_filter / Izero_pump_filter
+        unpump_filter = unpump_filter / Izero_unpump_filter
+    
+        Pump_probe_shot = np.log10(pump_filter/unpump_filter)
+    
+        pp_rebin[i]  = np.nanmean(Pump_probe_shot)
+        err_pp[i] = np.nanstd(Pump_probe_shot)/np.sqrt(len(Pump_probe_shot))
+    if withTT:
+        print('Time delay axis rebinned with TT data')
+    else:
+        print('Time delay axis rebinned with delay stage data')
+
+    print ('{} shots out of {} survived (total shots: {})'.format(np.sum(howmany), np.sum(howmany_before), totalshots))
+    return pp_rebin, err_pp, delay_rebin, howmany
+
+######################################
+
+def rebin_XAS(pump, unpump, Ipump, Iunpump, energy, readbacks):
+
+    stepsize_energy = (readbacks[-1]-readbacks[0])/(len(readbacks)-1)
+    binList_energy = np.linspace(readbacks[0]-stepsize_energy/2, readbacks[-1]+stepsize_energy/2, len(readbacks)+1)
+    bin_centres_energy = (binList_energy[:-1] + binList_energy[1:])/2
+
+    pp, GS, ES, err_pp, err_GS, err_ES = (np.zeros(len(bin_centres_energy)) for i in range(6))
+    
+    for i in range(len(bin_centres_energy)):
+        cond1e = energy >= binList_energy[i]
+        cond2e = energy < binList_energy[i+1]
+        
+        idx = np.where(cond1e*cond2e)[0]
+        pump_ebin    = pump[idx]
+        unpump_ebin  = unpump[idx]
+        Izero_p_ebin  = Ipump[idx]
+        Izero_u_ebin  = Iunpump[idx]
+
+        pump_ebin   = pump_ebin / Izero_p_ebin
+        unpump_ebin = unpump_ebin / Izero_u_ebin    
+        pp_ebin = np.log10(pump_ebin/unpump_ebin)
+        #pp_ebin = pump_ebin - unpump_ebin
+
+        GS[i] = np.nanmean(unpump_ebin)
+        err_GS[i] = np.nanstd(unpump_ebin)/np.sqrt(len(unpump_ebin))
+        ES[i] = np.nanmean(pump_ebin)
+        err_ES[i] = np.nanstd(pump_ebin)/np.sqrt(len(pump_ebin))
+        pp[i] = np.nanmean(pp_ebin)
+        err_pp[i] = np.nanstd(pp_ebin)/np.sqrt(len(pp_ebin))
+    
+    return pp, GS, ES, err_pp, err_GS, err_ES
+
+######################################
+
+def rebin_and_filter_XAS(data, quantile, readbacks):
+    
+    for k,v in data.items():
+        data[k] = v
+    
+    pump_1 = np.asarray(data['pump_1'])
+    unpump_1 = np.asarray(data['unpump_1'])
+    Izero_pump = np.asarray(data['Izero_pump'])
+    Izero_unpump = np.asarray(data['Izero_unpump'])
+    energy = np.asarray(data['energy'])
+
+    stepsize_energy = (readbacks[-1]-readbacks[0])/(len(readbacks)-1)
+    binList_energy = np.linspace(readbacks[0]-stepsize_energy/2, readbacks[-1]+stepsize_energy/2, len(readbacks)+1)
+    bin_centres_energy = (binList_energy[:-1] + binList_energy[1:])/2
+
+    pp_rebin = np.zeros(len(bin_centres_energy))
+    GS       = np.zeros(len(bin_centres_energy))
+    ES       = np.zeros(len(bin_centres_energy))
+    err_pp   = np.zeros(len(bin_centres_energy))
+    err_GS   = np.zeros(len(bin_centres_energy))
+    err_ES   = np.zeros(len(bin_centres_energy))
+
+    totalshots = len(pump_1)
+    howmany_before = []
+    howmany = []
+
+    for i in range(len(bin_centres_energy)):
+        cond1e = energy >= binList_energy[i]
+        cond2e = energy < binList_energy[i+1]
+        
+        idx = np.where(cond1e*cond2e)[0]
+        pump_ebin    = pump_1[idx]
+        unpump_ebin  = unpump_1[idx]
+        Izero_p_ebin = Izero_pump[idx]
+        Izero_u_ebin = Izero_unpump[idx]
+
+        howmany_before.append(len(energy[idx]))
+    
+        pump_filter, unpump_filter, Izero_pump_filter, Izero_unpump_filter = \
+        correlation_filter(pump_ebin, unpump_ebin, Izero_p_ebin, Izero_u_ebin, quantile)
+
+        howmany.append(len(pump_filter))
+
+        pump_filter = pump_filter / Izero_pump_filter
+        unpump_filter = unpump_filter / Izero_unpump_filter
+        Pump_probe_shot = np.log10(pump_filter/unpump_filter)
+
+        GS[i]     = np.nanmean(unpump_filter)
+        err_GS[i] = np.nanstd(unpump_filter)/np.sqrt(len(unpump_filter))
+        ES[i]     = np.nanmean(pump_filter)
+        err_ES[i] = np.nanstd(pump_filter)/np.sqrt(len(pump_filter))
+        pp_rebin[i]  = np.nanmean(Pump_probe_shot)
+        err_pp[i] = np.nanstd(Pump_probe_shot)/np.sqrt(len(Pump_probe_shot))
+
+    print ('{} shots out of {} survived (total shots: {})'.format(np.sum(howmany), np.sum(howmany_before), totalshots))
+    return pp_rebin, GS, ES, err_pp, err_GS, err_ES, howmany
+    
+######################################
+
+def rebin_and_filter_XAS_2D(data, binsize, minvalue, maxvalue, quantile, readbacks, withTT=True, numbins=None, variable_bins=False):
+    for k,v in data.items():
+        data[k] = v
+
+    pump_1 = np.asarray(data['pump_1'])
+    unpump_1 = np.asarray(data['unpump_1'])
+    Izero_pump = np.asarray(data['Izero_pump'])
+    Izero_unpump = np.asarray(data['Izero_unpump'])
+    energy = np.asarray(data['energy'])
+    Delays_stage = np.asarray(data['Delays_stage'])
+    Delays_corr = np.asarray(data['Delays_corr'])
+
+    stepsize_energy = (readbacks[-1]-readbacks[0])/(len(readbacks)-1)
+    binList_energy = np.linspace(readbacks[0]-stepsize_energy/2, readbacks[-1]+stepsize_energy/2, len(readbacks)+1)
+    bin_centres_energy = (binList_energy[:-1] + binList_energy[1:])/2
+
+    if withTT:
+        Delays = Delays_corr
+    else:
+        Delays = Delays_stage
+
+    binList = np.arange(minvalue, maxvalue, binsize)
+    if variable_bins:
+        binList = histedges_equalN(Delays, numbins)
+    
+    bin_centres = (binList[:-1] + binList[1:])/2
+    delay_rebin = np.arange(minvalue + binsize/2, maxvalue - binsize/2, binsize)
+    if variable_bins:
+        delay_rebin = bin_centres
+
+    pump_in_ebin, unpump_in_ebin, Izero_p_in_ebin, Izero_u_in_ebin, Delays_in_ebin = ([] for i in range(5))
+
+    pp_rebin = np.zeros((len(bin_centres_energy), len(bin_centres)))
+    err_pp   = np.zeros((len(bin_centres_energy), len(bin_centres)))
+
+    for i in range(len(bin_centres_energy)):
+        cond1e = energy >= binList_energy[i]
+        cond2e = energy < binList_energy[i+1]
+    
+        idx = np.where(cond1e*cond2e)[0]
+        pump_in_ebin.append(pump_1[idx])
+        unpump_in_ebin.append(unpump_1[idx])
+        Izero_p_in_ebin.append(Izero_pump[idx])
+        Izero_u_in_ebin.append(Izero_unpump[idx])
+    
+        Delays_in_ebin.append(Delays[idx])
+
+    howmany_before = []
+    howmany = []
+
+    for i, en in enumerate(readbacks):
+        howmany_before.append(len(pump_in_ebin[i]))
+        for j in range(len(bin_centres)):
+            cond1 = np.asarray(Delays_in_ebin[i]) >= binList[j]
+            cond2 = np.asarray(Delays_in_ebin[i]) < binList[j+1]
+    
+            idx = np.where(cond1*cond2)[0]
+            delay_rebin[j] = np.average(np.asarray(Delays_in_ebin[i])[idx])
+    
+            pump_in_tbin       = np.asarray(pump_in_ebin[i])[idx]
+            unpump_in_tbin     = np.asarray(unpump_in_ebin[i])[idx]
+            
+            Izero_p_in_tbin   = np.asarray(Izero_p_in_ebin[i])[idx]
+            Izero_u_in_tbin = np.asarray(Izero_u_in_ebin[i])[idx]
+
+            pump_filter, unpump_filter, Izero_pump_filter, Izero_unpump_filter = \
+            correlation_filter(pump_in_tbin, unpump_in_tbin, Izero_p_in_tbin, Izero_u_in_tbin, quantile)
+
+            howmany.append(len(pump_filter))    
+
+            pump_filter = pump_filter / Izero_pump_filter
+            unpump_filter = unpump_filter / Izero_unpump_filter
+                
+            Pump_probe_shot = np.log10(pump_filter/unpump_filter)
+            
+            pp_rebin[i, j]  = np.nanmean(Pump_probe_shot)
+            err_pp[i, j] = np.nanstd(Pump_probe_shot)/np.sqrt(len(Pump_probe_shot))
+
+    if withTT:
+        print('Time delay axis rebinned with TT data')
+    else:
+        print('Time delay axis rebinned with delay stage data')
+    print ('{} shots out of {} survived ({:.2f}%)'.format(np.sum(howmany), np.sum(howmany_before), 100*np.sum(howmany)/np.sum(howmany_before)))
+
+    return pp_rebin, err_pp, delay_rebin, howmany
+
+
+
+
+
+
+
+
 
 ######################################
 
@@ -146,6 +579,9 @@ def correlation_filter(FluoData_pump, FluoData_unpump, Izero_pump, Izero_unpump,
 ######################################
 
 def correlation_filter_TT(FluoData_pump, FluoData_unpump, Izero_pump, Izero_unpump, arrTimes, delay_fs, quantile):
+
+    condition_Izero_pump = Izero_pump > 0.05
+    condition_Izero_unpump = Izero_unpump > 0.05
     
     FluoData_pump_norm = FluoData_pump / Izero_pump
     FluoData_unpump_norm = FluoData_unpump / Izero_unpump
@@ -160,7 +596,7 @@ def correlation_filter_TT(FluoData_pump, FluoData_unpump, Izero_pump, Izero_unpu
     condition_unpump_low = FluoData_unpump_norm > qnt_low_unpump
     condition_unpump_high = FluoData_unpump_norm < qnt_high_unpump
 
-    correlation_filter = condition_pump_low & condition_pump_high & condition_unpump_low & condition_unpump_high
+    correlation_filter = condition_pump_low & condition_pump_high & condition_unpump_low & condition_unpump_high & condition_Izero_pump & condition_Izero_unpump
     
     FluoData_pump_filter = FluoData_pump[correlation_filter]
     FluoData_unpump_filter = FluoData_unpump[correlation_filter]
@@ -816,7 +1252,7 @@ def XAS_scanPP_PSEN_bs(scan, TT, channel_delay_motor, diode, Izero, quantile, ti
             Fluo_unpump_shot = resultsPP[diode].unpump
 
             delay_shot = resultsPP[channel_delay_motor].pump
-            delay_shot_fs = mm2fs(delay_shot, timezero_mm)
+            delay_shot_fs = delay_shot #mm2fs(delay_shot, timezero_mm)
             Delay_fs_stage.append(delay_shot_fs.mean())
 
             arrTimes = resultsPP[channel_arrTimes].pump
@@ -963,7 +1399,7 @@ def XAS_scanPP_2diodes_PSEN_bs(scan, TT, channel_delay_motor, diode1, diode2, Iz
             Fluo2_unpump_shot = resultsPP[diode2].unpump
 
             delay_shot = resultsPP[channel_delay_motor].pump
-            delay_shot_fs = mm2fs(delay_shot, timezero_mm)
+            delay_shot_fs = delay_shot #mm2fs(delay_shot, timezero_mm)
             Delay_fs_stage.append(delay_shot_fs.mean())
 
             arrTimes = resultsPP[channel_arrTimes].pump
@@ -1105,6 +1541,9 @@ def XAS_scanPP_2diodes_PSEN_bs(scan, TT, channel_delay_motor, diode1, diode2, Iz
     print ('Processed {} out of {} files'.format(len(scanvar), len(scan)))
     
     return (Delays_fs_scan, Delays_corr_scan, DataFluo_pump, DataFluo_unpump, Pump_probe, Pump_probe_scan, Delays_fs_scan2, Delays_corr_scan2, DataFluo2_pump, DataFluo2_unpump, Pump_probe2, Pump_probe_scan2, Izero_pump, Izero_unpump, correlation, correlation2, scanvar, goodshots, goodshots2)
+
+######################################
+
 
 ######################################
 
@@ -1483,23 +1922,54 @@ def save_reduced_data_2diodes_TT(reducedir, run_name, scan, D1p, D1u, PP1, gs1, 
 
 ################################################
 
-def load_reduced_data(pgroup, loaddir, runlist):
-    from collections import defaultdict
-    titlestring = pgroup + ' --- ' +str(runlist)
+def save_reduced_data_scanPP(reducedir, run_name, scan, D1p, D1u, D2p, D2u, I0p, I0u, delaystage, arrTimes, delaycorr, energy, rbk, c1, c2):
+    readbacks = scan.readbacks
+    setValues = scan.values
+    run_array = {}
+    run_array[run_name.split('-')[0]] = {"name": run_name,
+                                         "pump_1": D1p,
+                                         "unpump_1": D1u,
+                                         "pump_2": D2p,
+                                         "unpump_2": D2u,
+                                         "Izero_pump": I0p,
+                                         "Izero_unpump": I0u,
+                                         "Delays_stage" :delaystage, 
+                                         "arrTimes": arrTimes,
+                                         "Delays_corr": delaycorr,
+                                         "energy": energy, 
+                                         "readbacks": rbk, 
+                                         "corr1": c1,
+                                         "corr2": c2}
+                                         
+    np.save(reducedir+run_name+'/run_array', run_array)
 
-    d = defaultdict(list)
-    for run in runlist:
-        #data = {}
-        file = glob.glob(loaddir + '/*{:04d}*/*run_array*'.format(run))
-        run_array = np.load(file[0], allow_pickle=True).item()
-        for k, v in run_array.items():
-            for key, value in v.items():
-                #data[key] = value
-                if key == "timezero_mm" or key=="name":
-                    d[key].append(value)
-                else:
-                    d[key].extend(value)
-    return d, titlestring
+################################################
+
+def save_reduced_data_scan_static(reducedir, run_name, scan, D1u, D2u, I0u, energy, rbk, c1, c2):
+    readbacks = scan.readbacks
+    setValues = scan.values
+    run_array = {}
+    run_array[run_name.split('-')[0]] = {"name": run_name,           
+                                         "unpump_1": D1u,
+                                         "unpump_2": D2u,
+                                         "Izero_unpump": I0u,
+                                         "energy": energy, 
+                                         "readbacks": rbk, 
+                                         "corr1": c1,
+                                         "corr2": c2}
+                                         
+    np.save(reducedir+run_name+'/run_array', run_array)
+
+################################################
+
+def use_two_diodes(d):
+    d2 = defaultdict(list)
+    for k,v in d.items():
+        if k == 'name':
+            continue
+        else:
+            d2[k] = d[k] + d[k]
+    return d2
 
 ################################################
 
