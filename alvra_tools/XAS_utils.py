@@ -5,7 +5,7 @@ import glob
 
 ################################################
 
-def Plot_data(pgroup, runlist, data, withTT):
+def Plot_reduced_data(pgroup, runlist, data, withTT):
 
     jsonfile = glob.glob('/sf/alvra/data/{}/raw/*{:04d}*/meta/scan.json'.format(pgroup, runlist[0]))[0]
     from sfdata import SFScanInfo
@@ -51,7 +51,7 @@ def Plot_data(pgroup, runlist, data, withTT):
 
 ################################################
 
-def Plot_rawdata_2diodes(pgroup, reducedir, runlist, timescan=False):
+def Plot_scan_2diodes(pgroup, reducedir, runlist, timescan=False):
 
     data, titlestring_stack = load_reduced_data(pgroup, reducedir, runlist)
 
@@ -104,7 +104,7 @@ def Plot_rawdata_2diodes(pgroup, reducedir, runlist, timescan=False):
 
 ################################################
 
-def Plot_correlations(pgroup, reducedir, runlist, timescan=False, lowlim=0.99):
+def Plot_correlations_scan(pgroup, reducedir, runlist, timescan=False, lowlim=0.99):
 
     data, titlestring_stack = load_reduced_data(pgroup, reducedir, runlist)
     
@@ -119,8 +119,8 @@ def Plot_correlations(pgroup, reducedir, runlist, timescan=False, lowlim=0.99):
     corr2s = corr2.reshape(readbacks.shape)
     
     for index, run in enumerate(runlist):
-        ax1.plot(readbacks[index], corr1s[index], label='run{:04d}'.format(run))
-        ax3.plot(readbacks[index], corr2s[index], label='run{:04d}'.format(run))
+        ax1.plot(readbacks[index], corr1s[index], label='diode1 run{:04d}'.format(run))
+        ax3.plot(readbacks[index], corr2s[index], label='diode2 run{:04d}'.format(run))
     ax1.legend()
     ax1.grid()
     ax3.legend()
@@ -129,11 +129,15 @@ def Plot_correlations(pgroup, reducedir, runlist, timescan=False, lowlim=0.99):
     ax3.set_ylim(lowlim,1)
     plt.show()
 
+
+
+################################################
+################################################
 ################################################
 
 def Plot_correlation(titlestring, scan, data, quantile, det1, det2, timescan, xlim=None, ylim=None, ylim_pp=None):
     
-    readbacks    = np.asarray(data["readbacks"])
+    readbacks    = np.asarray(data["readbacks"])[0]
     timezero_mm  = np.asarray(data["timezero_mm"])
 
     if timescan:
@@ -167,7 +171,7 @@ def Plot_1diode(titlestring, scan, data, quantile, det1, timescan, xlim=None, yl
     DataDiode1_unpump = np.asarray(data["DataDiode1_unpump"])
     Pump_probe_Diode1 = np.asarray(data["Pump_probe_Diode1"])
     goodshots1        = np.asarray(data["goodshots1"])
-    readbacks         = np.asarray(data["readbacks"])
+    readbacks         = np.asarray(data["readbacks"])[0]
     timezero_mm       = np.asarray(data["timezero_mm"])
     
     if timescan:
@@ -330,7 +334,7 @@ def Plot_2diodes_4figs(titlestring, scan, data, quantile, det1, det2, timescan, 
     Pump_probe_Diode2 = np.asarray(data["Pump_probe_Diode2"])
     goodshots1        = np.asarray(data["goodshots1"])
     goodshots2        = np.asarray(data["goodshots2"])
-    readbacks         = np.asarray(data["readbacks"])
+    readbacks         = np.asarray(data["readbacks"])[0]
     timezero_mm       = np.asarray(data["timezero_mm"])
     
     fig, ((ax1, ax2), (ax3, ax4)) = plt.subplots(2, 2, figsize=(10, 7), constrained_layout=True)
@@ -434,7 +438,7 @@ def Plot_2diodes_2figs(titlestring, scan, data, quantile, det1, det2, timescan, 
     Pump_probe_Diode2 = np.asarray(data["Pump_probe_Diode2"])
     goodshots1        = np.asarray(data["goodshots1"])
     goodshots2        = np.asarray(data["goodshots2"])
-    readbacks         = np.asarray(data["readbacks"])
+    readbacks         = np.asarray(data["readbacks"])[0]
     timezero_mm       = np.asarray(data["timezero_mm"])
     
     fig, ((ax1, ax2)) = plt.subplots(1, 2, figsize=(10, 5), constrained_layout=True)
@@ -785,7 +789,7 @@ def Plot_2diodes_Averaged_2figs(titlestring, scan, data, timescan, nscans=1, xli
     Pump_probe_Diode2 = np.asarray(data["Pump_probe_Diode2"])
     goodshots1        = np.asarray(data["goodshots1"])
     goodshots2        = np.asarray(data["goodshots2"])
-    readbacks         = np.asarray(data["readbacks"])
+    readbacks         = np.asarray(data["readbacks"])[0]
     timezero_mm       = np.asarray(data["timezero_mm"])
 
     if timescan:
