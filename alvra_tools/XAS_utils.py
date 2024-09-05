@@ -67,8 +67,8 @@ def Plot_scan_2diodes(pgroup, reducedir, runlist, timescan=False):
         xaxis    = np.asarray(data["Delays_stage"])
 
     rbk = readbacks[0]
-    pp1, GS1, ES1, err_pp1, err_GS1, err_ES1 = rebin_XAS(pump_1, unpump_1, Izero_pump, Izero_unpump, xaxis, readbacks[0])
-    pp2, GS2, ES2, err_pp2, err_GS2, err_ES2 = rebin_XAS(pump_2, unpump_2, Izero_pump, Izero_unpump, xaxis, readbacks[0])
+    pp1, GS1, ES1, err_pp1, err_GS1, err_ES1 = Rebin_energyscans_PP(pump_1, unpump_1, Izero_pump, Izero_unpump, xaxis, readbacks[0])
+    pp2, GS2, ES2, err_pp2, err_GS2, err_ES2 = Rebin_energyscans_PP(pump_2, unpump_2, Izero_pump, Izero_unpump, xaxis, readbacks[0])
 
     #pp1, GS1, ES1 = rebin_XAS(pump_1, unpump_1, Izero_pump, Izero_unpump, xaxis, readbacks[0], quantile)
     #pp2, GS2, ES2 = rebin_XAS(pump_2, unpump_2, Izero_pump, Izero_unpump, xaxis, readbacks[0], quantile)

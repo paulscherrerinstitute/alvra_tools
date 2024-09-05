@@ -307,10 +307,10 @@ def Rebin_timescans(data, binsize, minvalue, maxvalue, quantile, withTT=True, nu
 
 ######################################
 
-def Rebin_energyscans_PP(pump, unpump, Ipump, Iunpump, energy, readbacks):
+def Rebin_energyscans_PP(pump, unpump, Ipump, Iunpump, scanvar, readbacks):
     
-    ordered = np.argsort(np.asarray(energy))
-    peaks, what = find_peaks(np.diff(energy[ordered]))
+    ordered = np.argsort(np.asarray(scanvar))
+    peaks, what = find_peaks(np.diff(scanvar[ordered]))
     
     pump = pump[ordered]
     unpump = unpump[ordered]
@@ -326,7 +326,7 @@ def Rebin_energyscans_PP(pump, unpump, Ipump, Iunpump, energy, readbacks):
         pump_ebin    = pump[s:e]
         unpump_ebin  = unpump[s:e]
         Izero_p_ebin = Ipump[s:e]
-        Izero_u_ebin = Izero_unpump[s:e]
+        Izero_u_ebin = Iunpump[s:e]
         
         pump_ebin = pump_ebin / Izero_p_ebin
         unpump_ebin = unpump_ebin / Izero_u_ebin
@@ -445,9 +445,9 @@ def Rebin_and_filter_energyscans(data, quantile, readbacks):
         GS.append(np.nanmean(unpump_filter))
         ES.append(np.nanmean(pump_filter))
         pp.append(np.nanmean(pp_shot))
-        err_GS.append(np.nanstd(unpump_filter)/np.sqrt(len(unpump_filter))
-        err_ES.append(np.nanstd(pump_filter)/np.sqrt(len(pump_filter))
-        err_pp.append(np.nanstd(pp_shot)/np.sqrt(len(pp_shot))
+        err_GS.append(np.nanstd(unpump_filter)/np.sqrt(len(unpump_filter)))
+        err_ES.append(np.nanstd(pump_filter)/np.sqrt(len(pump_filter)))
+        err_pp.append(np.nanstd(pp_shot)/np.sqrt(len(pp_shot)))
 
     print (len(peaks), len(readbacks), len(GS))
 
