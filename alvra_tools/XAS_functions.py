@@ -17,7 +17,7 @@ from alvra_tools.timing_tool import *
 from alvra_tools.XAS_functions import *
 
 
-def Reduce_scan_PP(reducedir, saveflag, jsonlist, TT, motor, diode1, diode2, Izero):
+def Reduce_scan_PP(reducedir, saveflag, jsonlist, TT, motor, diode1, diode2, Izero, shots2average=None):
     
     if TT == TT_PSEN124:
         TT = [channel_PSEN124_arrTimes, channel_PSEN124_arrTimesAmp]
@@ -33,14 +33,14 @@ def Reduce_scan_PP(reducedir, saveflag, jsonlist, TT, motor, diode1, diode2, Ize
     
     from sfdata import SFScanInfo
     
-    pump_1, unpump_1, pump_2, unpump_2, Izero_pump, Izero_unpump, Delays_stage, arrTimes, Delays_corr, energy, energypad, readbacks, corr1, corr2 = ([] for i in range(14))
+    pump_1, unpump_1, pump_2, unpump_2, pump_1_raw, unpump_1_raw, pump_2_raw, unpump_2_raw, Izero_pump, Izero_unpump, Delays_stage, arrTimes, Delays_corr, energy, energypad, readbacks, corr1, corr2 = ([] for i in range(18))
     
     for jsonfile in jsonlist:
         runname = jsonfile.split('/')[-3]
         scan = SFScanInfo(jsonfile)
         rbk = scan.readbacks
 
-        p1, u1, p2, u2, Ip, Iu, ds, aT, dc, en, en2, c1, c2 = ([] for i in range(13))
+        p1_raw, u1_raw, p2_raw, u2_raw, p1, u1, p2, u2, Ip, Iu, ds, aT, dc, en, en2, c1, c2 = ([] for i in range(17))
 
         for i, step in enumerate(scan):
             check_files_and_data(step)
@@ -54,10 +54,10 @@ def Reduce_scan_PP(reducedir, saveflag, jsonlist, TT, motor, diode1, diode2, Ize
     
                 resultsPP, results, _, _ = load_data_compact_pump_probe(channels_pp, channels_all, step)
 
-                p1.extend(resultsPP[diode1].pump)
-                u1.extend(resultsPP[diode1].unpump)
-                p2.extend(resultsPP[diode2].pump)
-                u2.extend(resultsPP[diode2].unpump)
+                p1_raw.extend(resultsPP[diode1].pump)
+                u1_raw.extend(resultsPP[diode1].unpump)
+                p2_raw.extend(resultsPP[diode2].pump)
+                u2_raw.extend(resultsPP[diode2].unpump)
                 Ip.extend(resultsPP[Izero].pump)
                 Iu.extend(resultsPP[Izero].unpump)
                 ds.extend(resultsPP[motor].pump)
@@ -82,14 +82,23 @@ def Reduce_scan_PP(reducedir, saveflag, jsonlist, TT, motor, diode1, diode2, Ize
                 print ("correlation Diode1 (dark shots) = {}".format(pearsonr1))
                 print ("correlation Diode2 (dark shots) = {}".format(pearsonr2))
 
+        p1 = p1_raw/np.nanmean(np.array(p1_raw)[:shots2average])
+        u1 = u1_raw/np.nanmean(np.array(u1_raw)[:shots2average])
+        p2 = p2_raw/np.nanmean(np.array(p2_raw)[:shots2average])
+        u2 = u2_raw/np.nanmean(np.array(u2_raw)[:shots2average])
+
         if saveflag:
             os.makedirs(reducedir+runname, exist_ok=True)
-            save_reduced_data_scanPP(reducedir, runname, scan, p1, u1, p2, u2, Ip, Iu, ds, aT, dc, en, en2, rbk, c1, c2)
+            save_reduced_data_scanPP(reducedir, runname, scan, p1, u1, p2, u2, p1_raw, u1_raw, p2_raw, u2_raw, Ip, Iu, ds, aT, dc, en, en2, rbk, c1, c2)
                 
         pump_1.extend(p1)
         unpump_1.extend(u1)
         pump_2.extend(p2)
         unpump_2.extend(u2)
+        pump_1_raw.extend(p1_raw)
+        unpump_1_raw.extend(u1_raw)
+        pump_2_raw.extend(p2_raw)
+        unpump_2_raw.extend(u2_raw)
         Izero_pump.extend(Ip)
         Izero_unpump.extend(Iu)
         Delays_stage.extend(ds)
@@ -104,25 +113,25 @@ def Reduce_scan_PP(reducedir, saveflag, jsonlist, TT, motor, diode1, diode2, Ize
     print ('----------------------------')
     print ('Loaded {} total on/off pairs'.format(len(Delays_corr)))
 
-    return (pump_1, unpump_1, pump_2, unpump_2, Izero_pump, Izero_unpump, Delays_stage, arrTimes, Delays_corr, energy, energypad, readbacks, corr1, corr2)
+    return (pump_1, unpump_1, pump_2, unpump_2, pump_1_raw, unpump_1_raw, pump_2_raw, unpump_2_raw, Izero_pump, Izero_unpump, Delays_stage, arrTimes, Delays_corr, energy, energypad, readbacks, corr1, corr2)
 
 ######################################
 
-def Reduce_scan_static(reducedir, saveflag, jsonlist, diode1, diode2, Izero):
+def Reduce_scan_static(reducedir, saveflag, jsonlist, diode1, diode2, Izero, shots2average=None):
     
     channels_pp = [channel_Events, diode1, diode2, Izero, channel_monoEnergy]
     channels_all = channels_pp
 
     from sfdata import SFScanInfo
     
-    unpump_1, unpump_2, Izero_unpump, energy, energypad, readbacks, corr1, corr2 = ([] for i in range(8))
+    unpump_1, unpump_2, unpump_1_raw, unpump_2_raw, Izero_unpump, energy, energypad, readbacks, corr1, corr2 = ([] for i in range(10))
     
     for jsonfile in jsonlist:
         runname = jsonfile.split('/')[-3]
         scan = SFScanInfo(jsonfile)
         rbk = scan.readbacks
 
-        u1, u2, Iu, en, en2, c1, c2 = ([] for i in range(7))
+        u1, u2, u1_raw, u2_raw, Iu, en, en2, c1, c2 = ([] for i in range(9))
 
         for i, step in enumerate(scan):
             check_files_and_data(step)
@@ -137,8 +146,8 @@ def Reduce_scan_static(reducedir, saveflag, jsonlist, diode1, diode2, Izero):
                 resultsPP, results, _, _ = load_data_compact_pump_probe(channels_pp, channels_all, step)
                 #results,_ = load_data_compact(channels, step)
 
-                u1.extend(resultsPP[diode1].unpump)
-                u2.extend(resultsPP[diode2].unpump)
+                u1_raw.extend(resultsPP[diode1].unpump)
+                u2_raw.extend(resultsPP[diode2].unpump)
                 Iu.extend(resultsPP[Izero].unpump)
 
                 enshot = resultsPP[channel_monoEnergy].unpump
@@ -154,9 +163,12 @@ def Reduce_scan_static(reducedir, saveflag, jsonlist, diode1, diode2, Izero):
                 print ("correlation Diode1 (dark shots) = {}".format(pearsonr1))
                 print ("correlation Diode2 (dark shots) = {}".format(pearsonr2))
 
+        u1 = u1_raw/np.nanmean(np.array(u1_raw)[:shots2average])
+        u2 = u2_raw/np.nanmean(np.array(u2_raw)[:shots2average])
+
         if saveflag:
             os.makedirs(reducedir+runname, exist_ok=True)
-            save_reduced_data_scan_static(reducedir, runname, scan, u1, u2, Iu, en, en2, rbk, c1, c2)
+            save_reduced_data_scan_static(reducedir, runname, scan, u1, u2, u1_raw, u2_raw, Iu, en, en2, rbk, c1, c2)
                 
         unpump_1.extend(u1)
         unpump_2.extend(u2)
@@ -2438,7 +2450,7 @@ def save_reduced_data_2diodes_TT(reducedir, run_name, scan, D1p, D1u, PP1, gs1, 
 
 ################################################
 
-def save_reduced_data_scanPP(reducedir, run_name, scan, D1p, D1u, D2p, D2u, I0p, I0u, delaystage, arrTimes, delaycorr, energy, energypad, rbk, c1, c2):
+def save_reduced_data_scanPP(reducedir, run_name, scan, D1p, D1u, D2p, D2u, D1p_raw, D1u_raw, D2p_raw, D2u_raw, I0p, I0u, delaystage, arrTimes, delaycorr, energy, energypad, rbk, c1, c2):
     readbacks = scan.readbacks
     setValues = scan.values
     run_array = {}
@@ -2446,7 +2458,11 @@ def save_reduced_data_scanPP(reducedir, run_name, scan, D1p, D1u, D2p, D2u, I0p,
                                          "pump_1": D1p,
                                          "unpump_1": D1u,
                                          "pump_2": D2p,
-                                         "unpump_2": D2u,
+                                         "unpump_2": D2u, 
+                                         "pump_1_raw": D1p_raw, 
+                                         "unpump_1_raw": D1u_raw, 
+                                         "pump_2_raw": D2p_raw, 
+                                         "unpump_2_raw": D2u_raw,
                                          "Izero_pump": I0p,
                                          "Izero_unpump": I0u,
                                          "Delays_stage" :delaystage, 
@@ -2462,13 +2478,15 @@ def save_reduced_data_scanPP(reducedir, run_name, scan, D1p, D1u, D2p, D2u, I0p,
 
 ################################################
 
-def save_reduced_data_scan_static(reducedir, run_name, scan, D1u, D2u, I0u, energy, energypad, rbk, c1, c2):
+def save_reduced_data_scan_static(reducedir, run_name, scan, D1u, D2u, D1u_raw, D2u_raw, I0u, energy, energypad, rbk, c1, c2):
     readbacks = scan.readbacks
     setValues = scan.values
     run_array = {}
     run_array[run_name.split('-')[0]] = {"name": run_name,           
                                          "unpump_1": D1u,
                                          "unpump_2": D2u,
+                                         "unpump_1_raw": D1u_raw, 
+                                         "unpump_2_raw": D2u_raw,
                                          "Izero_unpump": I0u,
                                          "energy": energy, 
                                          "energypad": energypad, 
