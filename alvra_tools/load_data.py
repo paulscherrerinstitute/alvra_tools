@@ -1364,7 +1364,7 @@ def load_data_OTA(channels_pump_unpump, data, offsets=None):
 
 ########################################################################################
 
-def load_reduced_data(pgroup, loaddir, runlist, twodiodes=False):
+def load_reduced_data(pgroup, loaddir, runlist, average_twodiodes=False):
     from collections import defaultdict
     titlestring = pgroup + ' --- ' +str(runlist)
 
@@ -1380,7 +1380,7 @@ def load_reduced_data(pgroup, loaddir, runlist, twodiodes=False):
                     d[key].append(value)
                 else:
                     d[key].extend(value)
-    if twodiodes:
+    if average_twodiodes:
         d2 = defaultdict(list)
         for k,v in d.items():
             if k == 'name' or k == "readbacks":
