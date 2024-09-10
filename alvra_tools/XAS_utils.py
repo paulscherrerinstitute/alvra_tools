@@ -1,11 +1,13 @@
 import numpy as np
 from matplotlib import pyplot as plt
 from alvra_tools.XAS_functions import *
+from cycler import cycler
+from itertools import cycle
 import glob
 
 ################################################
 
-def Plot_reduced_data(pgroup, runlist, data, withTT):
+def Plot_reduced_data(pgroup, runlist, data, withTT, timescan=False):
 
     jsonfile = glob.glob('/sf/alvra/data/{}/raw/*{:04d}*/meta/scan.json'.format(pgroup, runlist[0]))[0]
     from sfdata import SFScanInfo
@@ -17,7 +19,9 @@ def Plot_reduced_data(pgroup, runlist, data, withTT):
     unpump_1 = data['unpump_1']
     Delays_stage = data['Delays_stage']
     Delays_corr = data['Delays_corr']
-    energy = data['energy']
+    energy = data['energypad']
+    if timescan:
+        energy = data['energy']
 
     if withTT:
         Delays = Delays_corr
@@ -52,50 +56,56 @@ def Plot_reduced_data(pgroup, runlist, data, withTT):
 ################################################
 
 def Plot_scan_2diodes(pgroup, reducedir, runlist, timescan=False):
-
-    data, titlestring_stack = load_reduced_data(pgroup, reducedir, runlist)
-
-    pump_1       = np.asarray(data["pump_1"])
-    unpump_1     = np.asarray(data["unpump_1"])
-    pump_2       = np.asarray(data["pump_2"])
-    unpump_2     = np.asarray(data["unpump_2"])
-    Izero_pump   = np.asarray(data["Izero_pump"])
-    Izero_unpump = np.asarray(data["Izero_unpump"])
-    xaxis        = np.asarray(data["energy"])
-    readbacks    = np.asarray(data["readbacks"])
-    if timescan:
-        xaxis    = np.asarray(data["Delays_stage"])
-
-    rbk = readbacks[0]
-    pp1, GS1, ES1, err_pp1, err_GS1, err_ES1 = Rebin_energyscans_PP(pump_1, unpump_1, Izero_pump, Izero_unpump, xaxis, readbacks[0])
-    pp2, GS2, ES2, err_pp2, err_GS2, err_ES2 = Rebin_energyscans_PP(pump_2, unpump_2, Izero_pump, Izero_unpump, xaxis, readbacks[0])
-
-    #pp1, GS1, ES1 = rebin_XAS(pump_1, unpump_1, Izero_pump, Izero_unpump, xaxis, readbacks[0], quantile)
-    #pp2, GS2, ES2 = rebin_XAS(pump_2, unpump_2, Izero_pump, Izero_unpump, xaxis, readbacks[0], quantile)
     
+    _, titlestring_stack = load_reduced_data(pgroup, reducedir, runlist)
     fig, ((ax1, ax3), (ax2, ax4)) = plt.subplots(2, 2, figsize=(10, 6), constrained_layout=True)
     plt.suptitle(titlestring_stack)
 
-    ax1.plot(rbk, ES1, label='ON 1', color='royalblue', alpha = 0.8)
-    ax1.fill_between(rbk, ES1-err_ES1, ES1+err_ES1, color='lightblue')
-    ax1.plot(rbk, GS1, label='OFF 1', color='orange', alpha = 0.8)
-    ax1.fill_between(rbk, GS1-err_GS1, GS1+err_GS1, color='navajowhite')
-    ax1.legend()
+    lines =  ['-', '--', ':', '-.', ' ', '', 'solid', 'dashed', 'dashdot', 'dotted']
+    lincecycler = cycle(lines)
 
-    ax2.plot(rbk, ES2, label='ON 2', color='royalblue', alpha = 0.8)
-    ax2.fill_between(rbk, ES2-err_ES2, ES2+err_ES2, color='lightblue')
-    ax2.plot(rbk, GS2, label='OFF 2', color='orange', alpha = 0.8)
-    ax2.fill_between(rbk, GS2-err_GS2, GS2+err_GS2, color='navajowhite')
-    ax2.legend()
+    for index, run in enumerate(runlist):
+        data, _ = load_reduced_data(pgroup, reducedir, [run])
+        pump_1       = np.asarray(data["pump_1"])
+        unpump_1     = np.asarray(data["unpump_1"])
+        pump_2       = np.asarray(data["pump_2"])
+        unpump_2     = np.asarray(data["unpump_2"])
+        Izero_pump   = np.asarray(data["Izero_pump"])
+        Izero_unpump = np.asarray(data["Izero_unpump"])
+        xaxis        = np.asarray(data["energypad"])
+        readbacks    = np.asarray(data["readbacks"])
+        runname      = 'run{:04d}'.format(run)
+                
+        rbk = readbacks[0]
+        if timescan:
+            xaxis    = np.asarray(data["Delays_stage"])
+            pp1, GS1, ES1, err_pp1, err_GS1, err_ES1, rbk = Rebin_timescans(pump_1, unpump_1, Izero_pump, Izero_unpump, xaxis, rbk, varbin_t=False)
+            pp2, GS2, ES2, err_pp2, err_GS2, err_ES2, rbk = Rebin_timescans(pump_2, unpump_2, Izero_pump, Izero_unpump, xaxis, rbk, varbin_t=False)
+        else:            
+            pp1, GS1, ES1, err_pp1, err_GS1, err_ES1 = Rebin_energyscans_PP(pump_1, unpump_1, Izero_pump, Izero_unpump, xaxis, rbk)
+            pp2, GS2, ES2, err_pp2, err_GS2, err_ES2 = Rebin_energyscans_PP(pump_2, unpump_2, Izero_pump, Izero_unpump, xaxis, rbk)
+        lines = next(lincecycler)
 
-    ax3.plot(rbk, pp1, label='pp 1', color='green', marker='.')
-    ax3.fill_between(rbk, pp1-err_pp1, pp1+err_pp1, color='lightgreen')
-    ax3.legend()
-    
-    ax4.plot(rbk, pp2, label='pp 2', color='green', marker='.')
-    ax4.fill_between(rbk, pp2-err_pp2, pp2+err_pp2, color='lightgreen')
-    ax4.legend()
-    
+        ax1.plot(rbk, ES1, linestyle=lines, label='ON 1 {}'.format(runname), color='royalblue', alpha = 0.8)
+        ax1.fill_between(rbk, ES1-err_ES1, ES1+err_ES1, color='lightblue')
+        ax1.plot(rbk, GS1, linestyle=lines, label='OFF 1 {}'.format(runname), color='orange', alpha = 0.8)
+        ax1.fill_between(rbk, GS1-err_GS1, GS1+err_GS1, color='navajowhite')
+        ax1.legend()
+
+        ax2.plot(rbk, pp1, linestyle=lines, label='pp 1 {}'.format(runname), color='green', marker='.')
+        ax2.fill_between(rbk, pp1-err_pp1, pp1+err_pp1, color='lightgreen')
+        ax2.legend()
+
+        ax3.plot(rbk, ES2, linestyle=lines, label='ON 2 {}'.format(runname), color='royalblue', alpha = 0.8)
+        ax3.fill_between(rbk, ES2-err_ES2, ES2+err_ES2, color='lightblue')
+        ax3.plot(rbk, GS2, linestyle=lines,label='OFF 2 {}'.format(runname), color='orange', alpha = 0.8)
+        ax3.fill_between(rbk, GS2-err_GS2, GS2+err_GS2, color='navajowhite')
+        ax3.legend()
+
+        ax4.plot(rbk, pp2, linestyle=lines, label='pp 2 {}'.format(runname), color='green', marker='.')
+        ax4.fill_between(rbk, pp2-err_pp2, pp2+err_pp2, color='lightgreen')
+        ax4.legend()
+
     ax1.grid()
     ax2.grid()
     ax3.grid()
@@ -106,21 +116,18 @@ def Plot_scan_2diodes(pgroup, reducedir, runlist, timescan=False):
 
 def Plot_correlations_scan(pgroup, reducedir, runlist, timescan=False, lowlim=0.99):
 
-    data, titlestring_stack = load_reduced_data(pgroup, reducedir, runlist)
-    
-    readbacks = np.asarray(data["readbacks"])
-    corr1     = np.asarray(data["corr1"])
-    corr2     = np.asarray(data["corr2"])
-
+    _, titlestring_stack = load_reduced_data(pgroup, reducedir, runlist)
     fig, ((ax1, ax3)) = plt.subplots(1, 2, figsize=(10, 3), constrained_layout=True)
     plt.suptitle(titlestring_stack)
-
-    corr1s = corr1.reshape(readbacks.shape)
-    corr2s = corr2.reshape(readbacks.shape)
     
     for index, run in enumerate(runlist):
-        ax1.plot(readbacks[index], corr1s[index], label='diode1 run{:04d}'.format(run))
-        ax3.plot(readbacks[index], corr2s[index], label='diode2 run{:04d}'.format(run))
+        data, _ = load_reduced_data(pgroup, reducedir, [run])
+        readbacks = np.asarray(data["readbacks"])[0]
+        corr1     = np.asarray(data["corr1"])
+        corr2     = np.asarray(data["corr2"])
+
+        ax1.plot(readbacks, corr1, label='diode1 run{:04d}'.format(run))
+        ax3.plot(readbacks, corr2, label='diode2 run{:04d}'.format(run))
     ax1.legend()
     ax1.grid()
     ax3.legend()
