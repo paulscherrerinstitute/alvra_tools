@@ -66,10 +66,10 @@ def Plot_scan_2diodes(pgroup, reducedir, runlist, timescan=False):
 
     for index, run in enumerate(runlist):
         data, _ = load_reduced_data(pgroup, reducedir, [run])
-        pump_1       = np.asarray(data["pump_1"])
-        unpump_1     = np.asarray(data["unpump_1"])
-        pump_2       = np.asarray(data["pump_2"])
-        unpump_2     = np.asarray(data["unpump_2"])
+        pump_1       = np.asarray(data["pump_1_raw"])
+        unpump_1     = np.asarray(data["unpump_1_raw"])
+        pump_2       = np.asarray(data["pump_2_raw"])
+        unpump_2     = np.asarray(data["unpump_2_raw"])
         Izero_pump   = np.asarray(data["Izero_pump"])
         Izero_unpump = np.asarray(data["Izero_unpump"])
         xaxis        = np.asarray(data["energypad"])
