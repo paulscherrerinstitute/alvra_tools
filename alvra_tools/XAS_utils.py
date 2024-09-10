@@ -7,11 +7,11 @@ import glob
 
 ################################################
 
-def Plot_reduced_data(pgroup, runlist, data, withTT, timescan=False):
+def Plot_reduced_data(pgroup, runlist, scan, data, withTT, timescan=False):
 
-    jsonfile = glob.glob('/sf/alvra/data/{}/raw/*{:04d}*/meta/scan.json'.format(pgroup, runlist[0]))[0]
-    from sfdata import SFScanInfo
-    scan = SFScanInfo(jsonfile)
+    #jsonfile = glob.glob('/sf/alvra/data/{}/raw/*{:04d}*/meta/scan.json'.format(pgroup, runlist[0]))[0]
+    #from sfdata import SFScanInfo
+    #scan = SFScanInfo(jsonfile)
 
     Izero_pump = data['Izero_pump']
     Izero_unpump = data['Izero_unpump']
