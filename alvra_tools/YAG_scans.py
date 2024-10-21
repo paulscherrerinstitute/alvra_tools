@@ -178,8 +178,9 @@ def YAG_scanPP_noTT(reducedir, saveflag, Izero, jsonfile, quantile):
             Pump_probe_allshots.append(Laser_diff_filter)
             Pump_probe_avg.append(np.nanmean(Laser_diff_filter))
             Pump_probe_avg_err.append(np.nanstd(Laser_diff_filter))
+
             
-    Pump_probe_allshots = np.asarray(Pump_probe_allshots)
+    Pump_probe_allshots = np.asarray(Pump_probe_allshots, dtype="object")
     Pump_probe_avg = np.asarray(Pump_probe_avg)
     Pump_probe_avg_err = np.asarray(Pump_probe_avg_err)    
 
