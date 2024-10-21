@@ -6,7 +6,7 @@ from matplotlib import pyplot as plt
 from scipy.optimize import curve_fit
 from IPython.display import clear_output, display
 from datetime import datetime
-from scipy.stats.stats import pearsonr
+from scipy.stats import pearsonr
 from scipy.signal import find_peaks
 import itertools
 
@@ -82,10 +82,10 @@ def Reduce_scan_PP(reducedir, saveflag, jsonlist, TT, motor, diode1, diode2, Ize
                 print ("correlation Diode1 (dark shots) = {}".format(pearsonr1))
                 print ("correlation Diode2 (dark shots) = {}".format(pearsonr2))
 
-        p1 = p1_raw/np.nanmean(np.array(p1_raw)[:shots2average])
         u1 = u1_raw/np.nanmean(np.array(u1_raw)[:shots2average])
-        p2 = p2_raw/np.nanmean(np.array(p2_raw)[:shots2average])
-        u2 = u2_raw/np.nanmean(np.array(u2_raw)[:shots2average])
+        p1 = p1_raw/np.nanmean(np.array(u1_raw)[:shots2average])
+        u2 = u2_raw/np.nanmean(np.array(u2_raw)[:shots2average])        
+        p2 = p2_raw/np.nanmean(np.array(u2_raw)[:shots2average])        
 
         if saveflag:
             os.makedirs(reducedir+runname, exist_ok=True)
@@ -186,7 +186,7 @@ def Reduce_scan_static(reducedir, saveflag, jsonlist, diode1, diode2, Izero, sho
 
 ######################################
 
-def Rebin_energyscans_static(unpump, Iunpump, energy, readbacks):
+def Rebin_energyscans_static(unpump, Iunpump, energy, readbacks, threshold=0):
 
     unpump = np.asarray(unpump)
     Iunpump = np.asarray(Iunpump)
@@ -208,7 +208,9 @@ def Rebin_energyscans_static(unpump, Iunpump, energy, readbacks):
         u  = unpump[s:e]
         I_u = Iunpump[s:e]
         
-        unpump_ebin = u / I_u
+        thresh   = (I_u > threshold)
+
+        unpump_ebin = u[thresh] / I_u[thresh]
 
         GS_bin = np.mean(unpump_ebin)
         errGS_bin = np.nanstd(unpump_ebin)/np.sqrt(len(unpump_ebin))
@@ -230,7 +232,7 @@ def Rebin_energyscans_static(unpump, Iunpump, energy, readbacks):
 
 ######################################
 
-def Rebin_and_filter_energyscans_static(data, quantile, readbacks):
+def Rebin_and_filter_energyscans_static(data, quantile, readbacks, threshold=0):
 
     for k,v in data.items():
         data[k] = v
@@ -253,13 +255,23 @@ def Rebin_and_filter_energyscans_static(data, quantile, readbacks):
     for s, e in zip(starts, ends):
         unpump  = unpump_1[s:e]
         Izero_u = Izero_unpump[s:e]
-        
-        ratio_u = unpump/Izero_u
 
+        filterI = Izero_u > (np.nanmedian(Izero_u) - np.std(Izero_u))
+
+        unpump  = unpump[filterI]
+        Izero_u = Izero_u[filterI]
+        
+        thresh   = (Izero_u > threshold)
+        filterIu = Izero_u > (np.nanmedian(Izero_u) - np.std(Izero_u))
+        unpump  = unpump[filterIp & filterIu & thresh]
+        Izero_p = Izero_p[filterIp & filterIu & thresh]
+
+        ratio_u = unpump/Izero_u
+        
         filtervals = create_corr_condition_u(ratio_u, quantile)
         
-        unpump_1_filter     = unpump[filtervals]
-        Izero_unpump_filter = Izero_u[filtervals]
+        unpump_1_filter     = unpump[filtervals & thresh]
+        Izero_unpump_filter = Izero_u[filtervals & thresh]
         
         unpump_filter = unpump_1_filter / Izero_unpump_filter
         
@@ -300,7 +312,7 @@ def create_corr_condition_u(unpump, quantile):
 
 ######################################
 
-def Rebin_energyscans_PP(pump, unpump, Ipump, Iunpump, scanvar, readbacks):
+def Rebin_energyscans_PP(pump, unpump, Ipump, Iunpump, scanvar, readbacks, threshold=0):
     
     ordered = np.argsort(np.asarray(scanvar))
     peaks, what = find_peaks(np.diff(scanvar[ordered]))
@@ -324,7 +336,11 @@ def Rebin_energyscans_PP(pump, unpump, Ipump, Iunpump, scanvar, readbacks):
         
         pump_ebin = pump_ebin / Izero_p_ebin
         unpump_ebin = unpump_ebin / Izero_u_ebin
-        pp_shot = np.log10(pump_ebin/unpump_ebin)
+
+        thresh   = (Izero_p_ebin>threshold) & (Izero_u_ebin>threshold)
+        pp_shot = np.log10(pump_ebin[thresh]/unpump_ebin[thresh])
+        #pp_shot = np.log10(pump_ebin/unpump_ebin)
+        #pp_shot = pump_ebin - unpump_ebin
 
         GS.append(np.nanmean(unpump_ebin))
         ES.append(np.nanmean(pump_ebin))
@@ -339,7 +355,7 @@ def Rebin_energyscans_PP(pump, unpump, Ipump, Iunpump, scanvar, readbacks):
 
 ######################################
 
-def Rebin_and_filter_energyscans_PP(data, quantile, readbacks):
+def Rebin_and_filter_energyscans_PP(data, quantile, readbacks, threshold=0):
     
     for k,v in data.items():
         data[k] = v
@@ -369,6 +385,15 @@ def Rebin_and_filter_energyscans_PP(data, quantile, readbacks):
         unpump  = unpump_1[s:e]
         Izero_p = Izero_pump[s:e]
         Izero_u = Izero_unpump[s:e]
+        
+        thresh   = (Izero_p > threshold) & (Izero_u > threshold)
+        filterIp = Izero_p > (np.nanmedian(Izero_p) - np.std(Izero_p))
+        filterIu = Izero_u > (np.nanmedian(Izero_u) - np.std(Izero_u))
+
+        pump    = pump[filterIp & filterIu & thresh]
+        unpump  = unpump[filterIp & filterIu & thresh]
+        Izero_p = Izero_p[filterIp & filterIu & thresh]
+        Izero_u = Izero_u[filterIp & filterIu & thresh]
         
         ratio_p = pump/Izero_p
         ratio_u = unpump/Izero_u
@@ -420,7 +445,7 @@ def Rebin_and_filter_energyscans_PP(data, quantile, readbacks):
 
 ######################################
 
-def Rebin_timescans(pump, unpump, Ipump, Iunpump, delaystage, readbacks, varbin_t=False):
+def Rebin_timescans(pump, unpump, Ipump, Iunpump, delaystage, readbacks, threshold=0, varbin_t=False):
 
     pump = np.asarray(pump)
     unpump = np.asarray(unpump)
@@ -460,8 +485,8 @@ def Rebin_timescans(pump, unpump, Ipump, Iunpump, delaystage, readbacks, varbin_
 
         p = p / I_p
         u = u / I_u
-        
-        Pump_probe_shot = np.log10(p/u)
+        thresh   = (I_p>threshold) & (I_u>threshold)
+        Pump_probe_shot = np.log10(p[thresh]/u[thresh])
         
         GS[i] = np.nanmean(u)
         ES[i] = np.nanmean(p)
@@ -476,7 +501,7 @@ def Rebin_timescans(pump, unpump, Ipump, Iunpump, delaystage, readbacks, varbin_
 
 ######################################
 
-def Rebin_and_filter_timescans(data, binsize, minvalue, maxvalue, quantile, withTT=True, numbins=None, varbin_t=False):
+def Rebin_and_filter_timescans(data, binsize, minvalue, maxvalue, quantile, threshold=0, withTT=True, numbins=None, varbin_t=False):
 
     for k,v in data.items():
         data[k] = v
@@ -520,6 +545,15 @@ def Rebin_and_filter_timescans(data, binsize, minvalue, maxvalue, quantile, with
         unpump  = unpump_1[idx]
         Izero_p = Izero_pump[idx]
         Izero_u = Izero_unpump[idx]
+
+        thresh   = (Izero_p > threshold) & (Izero_u > threshold)
+        filterIp = Izero_p > (np.nanmedian(Izero_p) - np.std(Izero_p))
+        filterIu = Izero_u > (np.nanmedian(Izero_u) - np.std(Izero_u))
+
+        pump    = pump[filterIp & filterIu & thresh]
+        unpump  = unpump[filterIp & filterIu & thresh]
+        Izero_p = Izero_p[filterIp & filterIu & thresh]
+        Izero_u = Izero_u[filterIp & filterIu & thresh]
         
         howmany_before.append(len(Delays[idx]))
     
@@ -545,7 +579,7 @@ def Rebin_and_filter_timescans(data, binsize, minvalue, maxvalue, quantile, with
 
 ######################################
 
-def Rebin_and_filter_2Dscans(data, binsize, minvalue, maxvalue, quantile, readbacks, withTT, varbin_t=False, numbins=None):
+def Rebin_and_filter_2Dscans(data, binsize, minvalue, maxvalue, quantile, readbacks, withTT, threshold=0, varbin_t=False, numbins=None):
     for k,v in data.items():
         data[k] = v
 
@@ -597,6 +631,16 @@ def Rebin_and_filter_2Dscans(data, binsize, minvalue, maxvalue, quantile, readba
         Izero_p_in_ebin = Izero_pump[s:e]
         Izero_u_in_ebin = Izero_unpump[s:e]
         Delays_in_ebin = Delays[s:e]
+
+        thresh   = (Izero_p_in_ebin > threshold) & (Izero_u_in_ebin > threshold)
+        filterIp = Izero_p_in_ebin > (np.nanmedian(Izero_p_in_ebin) - np.std(Izero_p_in_ebin))
+        filterIu = Izero_u_in_ebin > (np.nanmedian(Izero_u_in_ebin) - np.std(Izero_u_in_ebin))
+
+        pump_in_ebin    = pump_in_ebin[filterIp & filterIu & thresh]
+        unpump_in_ebin  = unpump_in_ebin[filterIp & filterIu & thresh]
+        Izero_p_in_ebin = Izero_p_in_ebin[filterIp & filterIu & thresh]
+        Izero_u_in_ebin = Izero_u_in_ebin[filterIp & filterIu & thresh]
+        Delays_in_ebin  = Delays_in_ebin[filterIp & filterIu & thresh]
         
         for j in range(len(bin_centres)):
             cond1 = np.asarray(Delays_in_ebin) >= binList[j]
@@ -779,8 +823,8 @@ def Rebin_scans_PP_old(pump, unpump, Ipump, Iunpump, energy, readbacks, varbin_e
 
         pump_ebin   = pump_ebin / Izero_p_ebin
         unpump_ebin = unpump_ebin / Izero_u_ebin    
-        pp_ebin = np.log10(pump_ebin/unpump_ebin)
-        #pp_ebin = pump_ebin - unpump_ebin
+        #pp_ebin = np.log10(pump_ebin/unpump_ebin)
+        pp_ebin = pump_ebin - unpump_ebin
 
         GS[i] = np.nanmean(unpump_ebin)
         err_GS[i] = np.nanstd(unpump_ebin)/np.sqrt(len(unpump_ebin))

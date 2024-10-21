@@ -40,8 +40,10 @@ def Plot_reduced_data(pgroup, runlist, scan, data, withTT, timescan=False):
     ax2.legend(loc='best')
     ax3.title.set_text('Delays')
     ax3.hist(Delays, bins = 100)
+    ax3.set_xlim(min(Delays), max(Delays))
     ax4.title.set_text('Energies')
     ax4.hist(energy, bins=len(scan.values))
+    ax4.set_xlim(min(energy), max(energy))
     ax1.grid()
     ax2.grid()
     ax3.grid()
@@ -55,14 +57,14 @@ def Plot_reduced_data(pgroup, runlist, scan, data, withTT, timescan=False):
 
 ################################################
 
-def Plot_scan_2diodes(pgroup, reducedir, runlist, timescan=False):
+def Plot_scan_2diodes(pgroup, reducedir, runlist, timescan=False, threshold=0):
     
     _, titlestring_stack = load_reduced_data(pgroup, reducedir, runlist)
     fig, ((ax1, ax3), (ax2, ax4)) = plt.subplots(2, 2, figsize=(10, 6), constrained_layout=True)
     plt.suptitle(titlestring_stack)
 
     lines =  ['-', '--', ':', '-.', ' ', '', 'solid', 'dashed', 'dashdot', 'dotted']
-    lincecycler = cycle(lines)
+    linecycler = cycle(lines)
 
     for index, run in enumerate(runlist):
         data, _ = load_reduced_data(pgroup, reducedir, [run])
@@ -79,12 +81,12 @@ def Plot_scan_2diodes(pgroup, reducedir, runlist, timescan=False):
         rbk = readbacks[0]
         if timescan:
             xaxis    = np.asarray(data["Delays_stage"])
-            pp1, GS1, ES1, err_pp1, err_GS1, err_ES1, rbk = Rebin_timescans(pump_1, unpump_1, Izero_pump, Izero_unpump, xaxis, rbk, varbin_t=False)
-            pp2, GS2, ES2, err_pp2, err_GS2, err_ES2, rbk = Rebin_timescans(pump_2, unpump_2, Izero_pump, Izero_unpump, xaxis, rbk, varbin_t=False)
+            pp1, GS1, ES1, err_pp1, err_GS1, err_ES1, rbk = Rebin_timescans(pump_1, unpump_1, Izero_pump, Izero_unpump, xaxis, rbk, threshold, varbin_t=False)
+            pp2, GS2, ES2, err_pp2, err_GS2, err_ES2, rbk = Rebin_timescans(pump_2, unpump_2, Izero_pump, Izero_unpump, xaxis, rbk, threshold, varbin_t=False)
         else:            
-            pp1, GS1, ES1, err_pp1, err_GS1, err_ES1 = Rebin_energyscans_PP(pump_1, unpump_1, Izero_pump, Izero_unpump, xaxis, rbk)
-            pp2, GS2, ES2, err_pp2, err_GS2, err_ES2 = Rebin_energyscans_PP(pump_2, unpump_2, Izero_pump, Izero_unpump, xaxis, rbk)
-        lines = next(lincecycler)
+            pp1, GS1, ES1, err_pp1, err_GS1, err_ES1 = Rebin_energyscans_PP(pump_1, unpump_1, Izero_pump, Izero_unpump, xaxis, rbk, threshold)
+            pp2, GS2, ES2, err_pp2, err_GS2, err_ES2 = Rebin_energyscans_PP(pump_2, unpump_2, Izero_pump, Izero_unpump, xaxis, rbk, threshold)
+        lines = next(linecycler)
 
         ax1.plot(rbk, ES1, linestyle=lines, label='ON 1 {}'.format(runname), color='royalblue', alpha = 0.8)
         ax1.fill_between(rbk, ES1-err_ES1, ES1+err_ES1, color='lightblue')
