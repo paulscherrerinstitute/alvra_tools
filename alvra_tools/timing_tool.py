@@ -3,7 +3,7 @@ import pathlib
 
 import numpy as np
 from scipy.interpolate import interp1d
-from scipy.signal import tukey
+from scipy.signal.windows import tukey
 from scipy.ndimage import gaussian_filter1d
 from scipy.ndimage import convolve1d
 from datetime import datetime
