@@ -38,15 +38,19 @@ def Reduce_scan_PP(reducedir, saveflag, jsonlist, TT, motor, diode1, diode2, Ize
     for jsonfile in jsonlist:
         runname = jsonfile.split('/')[-3]
         scan = SFScanInfo(jsonfile)
-        rbk = scan.readbacks
+        rbk = np.ravel(scan.readbacks)
+        unique = np.roll(np.diff(rbk, prepend=1)>0.001, -1)
+        #unique = np.diff(rbk, prepend=1)>0.001
+        rbk = rbk[unique]
 
         p1_raw, u1_raw, p2_raw, u2_raw, p1, u1, p2, u2, Ip, Iu, ds, aT, dc, en, en2, c1, c2 = ([] for i in range(17))
 
         for i, step in enumerate(scan):
             check_files_and_data(step)
             check = get_filesize_diff(step)  
-            
-            if check:
+            go = unique[i]
+
+            if check & go:
                 clear_output(wait=True)
                 filename = scan.files[i][0].split('/')[-1].split('.')[0]
                 print (jsonfile)
@@ -66,12 +70,8 @@ def Reduce_scan_PP(reducedir, saveflag, jsonlist, TT, motor, diode1, diode2, Ize
 
                 enshot = resultsPP[channel_monoEnergy].pump
                 en.extend(enshot)
-                en2 = np.pad(en2, (0,len(enshot)), constant_values=(np.random.normal(rbk[i],0.01,1)))
-                
-                #if np.abs(np.mean(enshot)-rbk[i]) > 5:
-                #    en = np.pad(en, (0,len(enshot)), constant_values=(rbk[i]))
-                #else:
-                #    en.extend(resultsPP[channel_monoEnergy].pump)
+                #en2 = np.pad(en2, (0,len(enshot)), constant_values=(np.random.normal(rbk[i],0.01,1)))
+                en2 = np.pad(en2, (0,len(enshot)), constant_values=(np.nanmean(enshot)))
 
                 pearsonr1 = pearsonr(resultsPP[diode1].unpump,resultsPP[Izero].unpump)[0]
                 pearsonr2 = pearsonr(resultsPP[diode2].unpump,resultsPP[Izero].unpump)[0]
@@ -106,14 +106,14 @@ def Reduce_scan_PP(reducedir, saveflag, jsonlist, TT, motor, diode1, diode2, Ize
         Delays_corr.extend(dc)
         energy.extend(en)
         energypad.extend(en2)
-        readbacks.append(rbk)
+        #readbacks.append(rbk)
         corr1.append(c1)
         corr2.append(c2)
 
     print ('----------------------------')
     print ('Loaded {} total on/off pairs'.format(len(Delays_corr)))
 
-    return (pump_1, unpump_1, pump_2, unpump_2, pump_1_raw, unpump_1_raw, pump_2_raw, unpump_2_raw, Izero_pump, Izero_unpump, Delays_stage, arrTimes, Delays_corr, energy, energypad, readbacks, corr1, corr2)
+    return (pump_1, unpump_1, pump_2, unpump_2, pump_1_raw, unpump_1_raw, pump_2_raw, unpump_2_raw, Izero_pump, Izero_unpump, Delays_stage, arrTimes, Delays_corr, energy, energypad, rbk, corr1, corr2)
 
 ######################################
 
