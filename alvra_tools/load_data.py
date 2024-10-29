@@ -1288,7 +1288,7 @@ def load_data_compact_pump_probe(channels_pump_unpump, channels_FEL, data, offse
 
     print ("Loaded {} pump and {} unpump shots".format(len(ch_pump), len(ch_unpump)))
 
-    return result_pp, result_FEL, pids_pump, pids_unpump
+    return result_pp, result_FEL, index_light, index_dark
 
 ########################################################################################
 
@@ -1394,6 +1394,40 @@ def load_reduced_data(pgroup, loaddir, runlist, average_twodiodes=False):
         d.update(d2)
 
     return d, titlestring
+
+########################################################################################
+
+def load_reduced_data_noPair(pgroup, loaddir, runlist, average_twodiodes=False):
+    from collections import defaultdict
+    titlestring = pgroup + ' --- ' +str(runlist)
+
+    d = defaultdict(list)
+    for run in runlist:
+        #data = {}
+        file = glob.glob(loaddir + '/*{:04d}*/*run_array*'.format(run))
+        run_array = np.load(file[0], allow_pickle=True).item()
+        for k, v in run_array.items():
+            for key, value in v.items():
+                #data[key] = value
+                if key == "timezero_mm" or key=="name" or key=='readbacks':
+                    d[key].append(value)
+                else:
+                    d[key].extend(value)
+    if average_twodiodes:
+        d2 = defaultdict(list)
+        for k,v in d.items():
+            if k == 'name' or k == "readbacks":
+                continue
+            elif k == 'pump_1':
+                d2[k] = d['pump_1'] + d['pump_2']
+            #elif k == 'unpump_1':
+            #    d2[k] = d['unpump_1'] + d['unpump_2']
+            else:
+                d2[k] = d[k] + d[k]
+        d.update(d2)
+
+    return d, titlestring
+
 
 ########################################################################################
 ########################################################################################
