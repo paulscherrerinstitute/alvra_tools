@@ -215,105 +215,6 @@ def Reduce_scan_PP_noPair(reducedir, saveflag, jsonlist, TT, motor, diode1, diod
 
 ##################################################################
 
-def Reduce_scan_PP_noPair2(reducedir, saveflag, jsonlist, TT, motor, diode1, diode2, det_Izero, shots2average=None):
-    
-    if TT == TT_PSEN124:
-        TT = [channel_PSEN124_arrTimes, channel_PSEN124_arrTimesAmp]
-        channel_arrTimes = channel_PSEN124_arrTimes
-        channel_arrTimesAmp = channel_PSEN124_arrTimesAmp
-    elif TT == TT_PSEN126:
-        TT = [channel_PSEN126_arrTimes, channel_PSEN126_arrTimesAmp]
-        channel_arrTimes = channel_PSEN126_arrTimes
-        channel_arrTimesAmp = channel_PSEN126_arrTimesAmp
-
-    channels_pp = [channel_Events, diode1, diode2, det_Izero, motor, channel_monoEnergy] + TT
-    channels_all = channels_pp
-    
-    from sfdata import SFScanInfo
-    
-    pump_1, pump_2, pump_1_raw, pump_2_raw, Izero_pump, Delays_stage, arrTimes, Delays_corr, energy, energypad, readbacks, corr1, corr2, lights, darks = ([] for i in range(15))
-    
-    for jsonfile in jsonlist:
-        runname = jsonfile.split('/')[-3]
-        scan = SFScanInfo(jsonfile)
-        rbk = np.ravel(scan.readbacks)
-        unique = np.roll(np.diff(rbk, prepend=1)>0.001, -1)
-        #unique = np.diff(rbk, prepend=1)>0.001
-        rbk = rbk[unique]
-
-        p1_raw, p2_raw, p1, p2, Ip, ds, aT, dc, en, en2, c1, c2, light, dark = ([] for i in range(14))
-
-        for i, step in enumerate(scan):
-            check_files_and_data(step)
-            check = get_filesize_diff(step)  
-            go = unique[i]
-
-            if check & go:
-                clear_output(wait=True)
-                filename = scan.files[i][0].split('/')[-1].split('.')[0]
-                print (jsonfile)
-                print ('Step {} of {}: Processing {}'.format(i+1, len(scan.files), filename))
-    
-                resultsPP, results, index_light, index_dark = load_data_compact_pump_probe(channels_pp, channels_all, step)
-
-                light.extend(index_light)
-                dark.extend(index_dark)
-
-                p1_raw.extend(results[diode1])
-                p2_raw.extend(results[diode2])
-
-                Ip.extend(results[det_Izero])
-
-                ds.extend(results[motor])
-                aT.extend(results[channel_arrTimes])
-                dc.extend(results[motor] + results[channel_arrTimes])
-
-                enshot = results[channel_monoEnergy]
-                en.extend(enshot)
-                #en2 = np.pad(en2, (0,len(enshot)), constant_values=(np.random.normal(rbk[i],0.01,1)))
-                en2 = np.pad(en2, (0,len(enshot)), constant_values=(np.nanmean(enshot)))
-
-                pearsonr1 = pearsonr(results[diode1],results[det_Izero])[0]
-                pearsonr2 = pearsonr(results[diode2],results[det_Izero])[0]
-
-                c1.append(pearsonr1)
-                c2.append(pearsonr2)
-
-                print ("correlation Diode1 (ALL shots) = {}".format(pearsonr1))
-                print ("correlation Diode2 (ALL shots) = {}".format(pearsonr2))
-
-        p1 = p1_raw/np.nanmean(np.array(p1_raw)[:shots2average])
-        p2 = p2_raw/np.nanmean(np.array(p2_raw)[:shots2average])
-
-        if saveflag:
-            os.makedirs(reducedir+runname, exist_ok=True)
-            save_reduced_data_scanPP_noPair(reducedir, runname, scan, p1, p2, p1_raw, p2_raw, Ip, ds, aT, dc, en, en2, rbk, c1, c2, light, dark)
-                
-        pump_1.extend(p1)
-        pump_2.extend(p2)
-        pump_1_raw.extend(p1_raw)
-        pump_2_raw.extend(p2_raw)
-        Izero_pump.extend(Ip)
-
-        Delays_stage.extend(ds)
-        arrTimes.extend(aT)
-        Delays_corr.extend(dc)
-        energy.extend(en)
-        energypad.extend(en2)
-        #readbacks.append(rbk)
-        corr1.append(c1)
-        corr2.append(c2)
-        lights.extend(light)
-        darks.extend(dark)
-
-    print ('----------------------------')
-    print ('Loaded {} total on/off pairs'.format(len(Delays_corr)))
-
-    return (pump_1, pump_2, pump_1_raw, pump_2_raw, Izero_pump, Delays_stage, arrTimes, Delays_corr, energy, energypad, rbk, corr1, corr2, lights, darks)
-
-
-######################################
-
 def Reduce_scan_static(reducedir, saveflag, jsonlist, diode1, diode2, Izero, shots2average=None):
     
     channels_pp = [channel_Events, diode1, diode2, Izero, channel_monoEnergy]
@@ -535,7 +436,9 @@ def Rebin_energyscans_PP(pump, unpump, Ipump, Iunpump, scanvar, readbacks, thres
         unpump_ebin = unpump_ebin / Izero_u_ebin
 
         thresh   = (Izero_p_ebin>threshold) & (Izero_u_ebin>threshold)
-        pp_shot = np.log10(pump_ebin[thresh]/unpump_ebin[thresh])
+        pp_shot = pump_ebin[thresh] - unpump_ebin[thresh]
+
+        #pp_shot = np.log10(pump_ebin[thresh]/unpump_ebin[thresh])
         #pp_shot = np.log10(pump_ebin/unpump_ebin)
         #pp_shot = pump_ebin - unpump_ebin
 
@@ -545,8 +448,6 @@ def Rebin_energyscans_PP(pump, unpump, Ipump, Iunpump, scanvar, readbacks, thres
         err_GS.append(np.nanstd(unpump_ebin)/np.sqrt(len(unpump_ebin)))
         err_ES.append(np.nanstd(pump_ebin)/np.sqrt(len(pump_ebin)))
         err_pp.append(np.nanstd(pp_shot)/np.sqrt(len(pp_shot)))
-
-    
 
     return np.array(pp), np.array(GS), np.array(ES), np.array(err_pp), np.array(err_GS), np.array(err_ES)
 
@@ -662,7 +563,8 @@ def Rebin_and_filter_energyscans_PP(data, quantile, readbacks, threshold=0):
 
         pump_filter = pump_1_filter / Izero_pump_filter
         unpump_filter = unpump_1_filter / Izero_unpump_filter
-        pp_shot = np.log10(pump_filter/unpump_filter)
+        #pp_shot = np.log10(pump_filter/unpump_filter)
+        pp_shot = pump_filter - unpump_filter
 
         GS.append(np.nanmean(unpump_filter))
         ES.append(np.nanmean(pump_filter))
@@ -840,7 +742,8 @@ def Rebin_timescans(pump, unpump, Ipump, Iunpump, delaystage, readbacks, thresho
         p = p / I_p
         u = u / I_u
         thresh   = (I_p>threshold) & (I_u>threshold)
-        Pump_probe_shot = np.log10(p[thresh]/u[thresh])
+        #Pump_probe_shot = np.log10(p[thresh]/u[thresh])
+        Pump_probe_shot = p[thresh] - u[thresh]
         
         GS[i] = np.nanmean(u)
         ES[i] = np.nanmean(p)
@@ -988,7 +891,8 @@ def Rebin_and_filter_timescans(data, binsize, minvalue, maxvalue, quantile, thre
         pump_filter = pump_filter / Izero_pump_filter
         unpump_filter = unpump_filter / Izero_unpump_filter
     
-        Pump_probe_shot = np.log10(pump_filter/unpump_filter)
+        #Pump_probe_shot = np.log10(pump_filter/unpump_filter)
+        Pump_probe_shot = pump_filter - unpump_filter
     
         pp_rebin[i]  = np.nanmean(Pump_probe_shot)
         err_pp[i] = np.nanstd(Pump_probe_shot)/np.sqrt(len(Pump_probe_shot))
@@ -1398,7 +1302,8 @@ def Rebin_and_filter_timescans(data, binsize, minvalue, maxvalue, quantile, with
         pump_filter = pump_filter / Izero_pump_filter
         unpump_filter = unpump_filter / Izero_unpump_filter
     
-        Pump_probe_shot = np.log10(pump_filter/unpump_filter)
+        #Pump_probe_shot = np.log10(pump_filter/unpump_filter)
+        Pump_probe_shot = pump_filter - unpump_filter
     
         pp_rebin[i]  = np.nanmean(Pump_probe_shot)
         err_pp[i] = np.nanstd(Pump_probe_shot)/np.sqrt(len(Pump_probe_shot))
@@ -1435,7 +1340,8 @@ def Rebin_scans_PP(pump, unpump, Ipump, Iunpump, scanvar, readbacks):
         
         pump_ebin = pump_ebin / Izero_p_ebin
         unpump_ebin = unpump_ebin / Izero_u_ebin
-        pp_shot = np.log10(pump_ebin/unpump_ebin)
+        #pp_shot = np.log10(pump_ebin/unpump_ebin)
+        pp_shot = pump_ebin - unpump_ebin)
 
         GS.append(np.nanmean(unpump_ebin))
         ES.append(np.nanmean(pump_ebin))
@@ -1569,7 +1475,8 @@ def Rebin_and_filter_energyscans_old(data, quantile, readbacks, varbin_e=False):
 
         pump_filter = pump_filter / Izero_pump_filter
         unpump_filter = unpump_filter / Izero_unpump_filter
-        Pump_probe_shot = np.log10(pump_filter/unpump_filter)
+        #Pump_probe_shot = np.log10(pump_filter/unpump_filter)
+        Pump_probe_shot = pump_filter - unpump_filter
 
         GS[i]     = np.nanmean(unpump_filter)
         err_GS[i] = np.nanstd(unpump_filter)/np.sqrt(len(unpump_filter))
@@ -1662,7 +1569,8 @@ def Rebin_and_filter_2Dscans_old(data, binsize, minvalue, maxvalue, quantile, re
             pump_filter = pump_filter / Izero_pump_filter
             unpump_filter = unpump_filter / Izero_unpump_filter
                 
-            Pump_probe_shot = np.log10(pump_filter/unpump_filter)
+            #Pump_probe_shot = np.log10(pump_filter/unpump_filter)
+            Pump_probe_shot = pump_filter - unpump_filter
             
             pp_rebin[i, j]  = np.nanmean(Pump_probe_shot)
             err_pp[i, j] = np.nanstd(Pump_probe_shot)/np.sqrt(len(Pump_probe_shot))
