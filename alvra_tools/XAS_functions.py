@@ -1341,7 +1341,7 @@ def Rebin_scans_PP(pump, unpump, Ipump, Iunpump, scanvar, readbacks):
         pump_ebin = pump_ebin / Izero_p_ebin
         unpump_ebin = unpump_ebin / Izero_u_ebin
         #pp_shot = np.log10(pump_ebin/unpump_ebin)
-        pp_shot = pump_ebin - unpump_ebin)
+        pp_shot = pump_ebin - unpump_ebin
 
         GS.append(np.nanmean(unpump_ebin))
         ES.append(np.nanmean(pump_ebin))
