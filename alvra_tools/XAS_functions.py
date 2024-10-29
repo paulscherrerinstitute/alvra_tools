@@ -115,6 +115,203 @@ def Reduce_scan_PP(reducedir, saveflag, jsonlist, TT, motor, diode1, diode2, Ize
 
     return (pump_1, unpump_1, pump_2, unpump_2, pump_1_raw, unpump_1_raw, pump_2_raw, unpump_2_raw, Izero_pump, Izero_unpump, Delays_stage, arrTimes, Delays_corr, energy, energypad, rbk, corr1, corr2)
 
+##################################################################
+
+def Reduce_scan_PP_noPair(reducedir, saveflag, jsonlist, TT, motor, diode1, diode2, det_Izero, shots2average=None):
+    
+    if TT == TT_PSEN124:
+        TT = [channel_PSEN124_arrTimes, channel_PSEN124_arrTimesAmp]
+        channel_arrTimes = channel_PSEN124_arrTimes
+        channel_arrTimesAmp = channel_PSEN124_arrTimesAmp
+    elif TT == TT_PSEN126:
+        TT = [channel_PSEN126_arrTimes, channel_PSEN126_arrTimesAmp]
+        channel_arrTimes = channel_PSEN126_arrTimes
+        channel_arrTimesAmp = channel_PSEN126_arrTimesAmp
+
+    channels_pp = [channel_Events, diode1, diode2, det_Izero, motor, channel_monoEnergy] + TT
+    channels_all = channels_pp
+    
+    from sfdata import SFScanInfo
+    
+    pump_1, pump_2, pump_1_raw, pump_2_raw, Izero_pump, Delays_stage, arrTimes, Delays_corr, energy, energypad, readbacks, corr1, corr2, lights, darks = ([] for i in range(15))
+    
+    for jsonfile in jsonlist:
+        runname = jsonfile.split('/')[-3]
+        scan = SFScanInfo(jsonfile)
+        rbk = np.ravel(scan.readbacks)
+        unique = np.roll(np.diff(rbk, prepend=1)>0.001, -1)
+        #unique = np.diff(rbk, prepend=1)>0.001
+        rbk = rbk[unique]
+
+        p1_raw, p2_raw, p1, p2, Ip, ds, aT, dc, en, en2, c1, c2, light, dark = ([] for i in range(14))
+
+        for i, step in enumerate(scan):
+            check_files_and_data(step)
+            check = get_filesize_diff(step)  
+            go = unique[i]
+
+            if check & go:
+                clear_output(wait=True)
+                filename = scan.files[i][0].split('/')[-1].split('.')[0]
+                print (jsonfile)
+                print ('Step {} of {}: Processing {}'.format(i+1, len(scan.files), filename))
+    
+                resultsPP, results, index_light, index_dark = load_data_compact_pump_probe(channels_pp, channels_all, step)
+
+                light.extend(index_light)
+                dark.extend(index_dark)
+
+                p1_raw.extend(results[diode1])
+                p2_raw.extend(results[diode2])
+
+                Ip.extend(results[det_Izero])
+
+                ds.extend(results[motor])
+                aT.extend(results[channel_arrTimes])
+                dc.extend(results[motor] + results[channel_arrTimes])
+
+                enshot = results[channel_monoEnergy]
+                en.extend(enshot)
+                #en2 = np.pad(en2, (0,len(enshot)), constant_values=(np.random.normal(rbk[i],0.01,1)))
+                en2 = np.pad(en2, (0,len(enshot)), constant_values=(np.nanmean(enshot)))
+
+                pearsonr1 = pearsonr(results[diode1],results[det_Izero])[0]
+                pearsonr2 = pearsonr(results[diode2],results[det_Izero])[0]
+
+                c1.append(pearsonr1)
+                c2.append(pearsonr2)
+
+                print ("correlation Diode1 (ALL shots) = {}".format(pearsonr1))
+                print ("correlation Diode2 (ALL shots) = {}".format(pearsonr2))
+
+        p1 = p1_raw/np.nanmean(np.array(p1_raw)[:shots2average])
+        p2 = p2_raw/np.nanmean(np.array(p2_raw)[:shots2average])
+
+        if saveflag:
+            os.makedirs(reducedir+runname, exist_ok=True)
+            save_reduced_data_scanPP_noPair(reducedir, runname, scan, p1, p2, p1_raw, p2_raw, Ip, ds, aT, dc, en, en2, rbk, c1, c2, light, dark)
+                
+        pump_1.extend(p1)
+        pump_2.extend(p2)
+        pump_1_raw.extend(p1_raw)
+        pump_2_raw.extend(p2_raw)
+        Izero_pump.extend(Ip)
+
+        Delays_stage.extend(ds)
+        arrTimes.extend(aT)
+        Delays_corr.extend(dc)
+        energy.extend(en)
+        energypad.extend(en2)
+        #readbacks.append(rbk)
+        corr1.append(c1)
+        corr2.append(c2)
+        lights.extend(light)
+        darks.extend(dark)
+
+    print ('----------------------------')
+    print ('Loaded {} total on/off pairs'.format(len(Delays_corr)))
+
+    return (pump_1, pump_2, pump_1_raw, pump_2_raw, Izero_pump, Delays_stage, arrTimes, Delays_corr, energy, energypad, rbk, corr1, corr2, lights, darks)
+
+##################################################################
+
+def Reduce_scan_PP_noPair2(reducedir, saveflag, jsonlist, TT, motor, diode1, diode2, det_Izero, shots2average=None):
+    
+    if TT == TT_PSEN124:
+        TT = [channel_PSEN124_arrTimes, channel_PSEN124_arrTimesAmp]
+        channel_arrTimes = channel_PSEN124_arrTimes
+        channel_arrTimesAmp = channel_PSEN124_arrTimesAmp
+    elif TT == TT_PSEN126:
+        TT = [channel_PSEN126_arrTimes, channel_PSEN126_arrTimesAmp]
+        channel_arrTimes = channel_PSEN126_arrTimes
+        channel_arrTimesAmp = channel_PSEN126_arrTimesAmp
+
+    channels_pp = [channel_Events, diode1, diode2, det_Izero, motor, channel_monoEnergy] + TT
+    channels_all = channels_pp
+    
+    from sfdata import SFScanInfo
+    
+    pump_1, pump_2, pump_1_raw, pump_2_raw, Izero_pump, Delays_stage, arrTimes, Delays_corr, energy, energypad, readbacks, corr1, corr2, lights, darks = ([] for i in range(15))
+    
+    for jsonfile in jsonlist:
+        runname = jsonfile.split('/')[-3]
+        scan = SFScanInfo(jsonfile)
+        rbk = np.ravel(scan.readbacks)
+        unique = np.roll(np.diff(rbk, prepend=1)>0.001, -1)
+        #unique = np.diff(rbk, prepend=1)>0.001
+        rbk = rbk[unique]
+
+        p1_raw, p2_raw, p1, p2, Ip, ds, aT, dc, en, en2, c1, c2, light, dark = ([] for i in range(14))
+
+        for i, step in enumerate(scan):
+            check_files_and_data(step)
+            check = get_filesize_diff(step)  
+            go = unique[i]
+
+            if check & go:
+                clear_output(wait=True)
+                filename = scan.files[i][0].split('/')[-1].split('.')[0]
+                print (jsonfile)
+                print ('Step {} of {}: Processing {}'.format(i+1, len(scan.files), filename))
+    
+                resultsPP, results, index_light, index_dark = load_data_compact_pump_probe(channels_pp, channels_all, step)
+
+                light.extend(index_light)
+                dark.extend(index_dark)
+
+                p1_raw.extend(results[diode1])
+                p2_raw.extend(results[diode2])
+
+                Ip.extend(results[det_Izero])
+
+                ds.extend(results[motor])
+                aT.extend(results[channel_arrTimes])
+                dc.extend(results[motor] + results[channel_arrTimes])
+
+                enshot = results[channel_monoEnergy]
+                en.extend(enshot)
+                #en2 = np.pad(en2, (0,len(enshot)), constant_values=(np.random.normal(rbk[i],0.01,1)))
+                en2 = np.pad(en2, (0,len(enshot)), constant_values=(np.nanmean(enshot)))
+
+                pearsonr1 = pearsonr(results[diode1],results[det_Izero])[0]
+                pearsonr2 = pearsonr(results[diode2],results[det_Izero])[0]
+
+                c1.append(pearsonr1)
+                c2.append(pearsonr2)
+
+                print ("correlation Diode1 (ALL shots) = {}".format(pearsonr1))
+                print ("correlation Diode2 (ALL shots) = {}".format(pearsonr2))
+
+        p1 = p1_raw/np.nanmean(np.array(p1_raw)[:shots2average])
+        p2 = p2_raw/np.nanmean(np.array(p2_raw)[:shots2average])
+
+        if saveflag:
+            os.makedirs(reducedir+runname, exist_ok=True)
+            save_reduced_data_scanPP_noPair(reducedir, runname, scan, p1, p2, p1_raw, p2_raw, Ip, ds, aT, dc, en, en2, rbk, c1, c2, light, dark)
+                
+        pump_1.extend(p1)
+        pump_2.extend(p2)
+        pump_1_raw.extend(p1_raw)
+        pump_2_raw.extend(p2_raw)
+        Izero_pump.extend(Ip)
+
+        Delays_stage.extend(ds)
+        arrTimes.extend(aT)
+        Delays_corr.extend(dc)
+        energy.extend(en)
+        energypad.extend(en2)
+        #readbacks.append(rbk)
+        corr1.append(c1)
+        corr2.append(c2)
+        lights.extend(light)
+        darks.extend(dark)
+
+    print ('----------------------------')
+    print ('Loaded {} total on/off pairs'.format(len(Delays_corr)))
+
+    return (pump_1, pump_2, pump_1_raw, pump_2_raw, Izero_pump, Delays_stage, arrTimes, Delays_corr, energy, energypad, rbk, corr1, corr2, lights, darks)
+
+
 ######################################
 
 def Reduce_scan_static(reducedir, saveflag, jsonlist, diode1, diode2, Izero, shots2average=None):
@@ -355,6 +552,63 @@ def Rebin_energyscans_PP(pump, unpump, Ipump, Iunpump, scanvar, readbacks, thres
 
 ######################################
 
+def Rebin_energyscans_PP_noPair(pump, Ipump, lights, darks, scanvar, readbacks, threshold=0):
+    
+    ordered = np.argsort(np.asarray(scanvar))
+    peaks, what = find_peaks(np.diff(scanvar[ordered]))
+    
+    pump = pump[ordered]
+    Ipump = Ipump[ordered]
+
+    lights = lights[ordered]
+    darks = darks[ordered]
+
+    starts = np.append(0, peaks)
+    ends = np.append(peaks, None)
+
+    pp, GS, ES, err_pp, err_GS, err_ES = ([] for i in range(6))
+    filtered = []
+
+    for s, e in zip(starts, ends):
+        pump_ebin1    = pump[s:e]
+        Izero_p_ebin1 = Ipump[s:e]
+        lights_ebin  = lights[s:e]
+        darks_ebin   = darks[s:e]   
+
+        thresh = (Izero_p_ebin1>threshold)
+
+        pump_ebin1    = pump_ebin1[thresh]
+        Izero_p_ebin1 = Izero_p_ebin1[thresh]
+        lights_ebin   = lights_ebin[thresh]
+        darks_ebin    = darks_ebin[thresh]
+
+        pump_ebin    = pump_ebin1[lights_ebin]
+        unpump_ebin  = pump_ebin1[darks_ebin]
+        Izero_p_ebin = Izero_p_ebin1[lights_ebin]
+        Izero_u_ebin = Izero_p_ebin1[darks_ebin]
+
+        pump_ebin = pump_ebin / Izero_p_ebin
+        unpump_ebin = unpump_ebin / Izero_u_ebin
+
+        #pp_shot = np.log10(pump_ebin[thresh]/unpump_ebin[thresh])
+        #pp_shot = np.log10(pump_ebin/unpump_ebin)
+        #pp_shot = pump_ebin - unpump_ebin
+        pp_ebin = np.nanmean(pump_ebin) - np.nanmean(unpump_ebin)
+
+        GS.append(np.nanmean(unpump_ebin))
+        ES.append(np.nanmean(pump_ebin))
+        pp.append(pp_ebin)
+        GS_err = np.nanstd(unpump_ebin)/np.sqrt(len(unpump_ebin))
+        ES_err = np.nanstd(pump_ebin)/np.sqrt(len(pump_ebin))
+        err_GS.append(GS_err)
+        err_ES.append(ES_err)
+        err_pp.append(np.sqrt(GS_err**2 + ES_err**2))
+
+    return np.array(pp), np.array(GS), np.array(ES), np.array(err_pp), np.array(err_GS), np.array(err_ES)
+
+
+######################################
+
 def Rebin_and_filter_energyscans_PP(data, quantile, readbacks, threshold=0):
     
     for k,v in data.items():
@@ -445,6 +699,106 @@ def Rebin_and_filter_energyscans_PP(data, quantile, readbacks, threshold=0):
 
 ######################################
 
+def Rebin_and_filter_energyscans_PP_noPair(data, quantile, readbacks, threshold=0):
+    
+    for k,v in data.items():
+        data[k] = v
+    
+    pump_1 = np.asarray(data['pump_1'])
+    Izero_pump = np.asarray(data['Izero_pump'])
+    energy = np.asarray(data['energypad'])
+    lights = np.asarray(data['lights'])
+    darks  = np.asarray(data['darks'])    
+    
+    ordered = np.argsort(np.asarray(energy))
+    peaks, what = find_peaks(np.diff(energy[ordered]))
+    
+    pump_1 = pump_1[ordered]
+    Izero_pump = Izero_pump[ordered]
+    lights = lights[ordered]
+    darks = darks[ordered]
+
+    starts = np.append(0, peaks)
+    ends = np.append(peaks, None)
+
+    pp, GS, ES, err_pp, err_GS, err_ES = ([] for i in range(6))
+    filtered_p = []
+    filtered_u = []
+
+    for s, e in zip(starts, ends):
+        pump1    = pump_1[s:e]
+        Izero_p1 = Izero_pump[s:e]
+        lights_e = lights[s:e]
+        darks_e  = darks[s:e]       
+
+        thresh  = Izero_p1 > threshold
+        filterI = Izero_p1 > (np.nanmedian(Izero_p1) - np.std(Izero_p1))
+        
+        pump1    = pump1[filterI & thresh]
+        Izero_p1 = Izero_p1[filterI & thresh]
+        lights_e = lights_e[filterI & thresh]
+        darks_e  = darks_e[filterI & thresh]
+
+        pump    = pump1[lights_e]
+        unpump  = pump1[darks_e]
+        Izero_p = Izero_p1[lights_e]
+        Izero_u = Izero_p1[darks_e]
+        
+        ratio_p = pump/Izero_p
+        ratio_u = unpump/Izero_u
+        
+        filtervals_p, filtervals_u = create_corr_condition_noPair(ratio_p, ratio_u, quantile)
+        filtered_p.extend(filtervals_p)
+        filtered_u.extend(filtervals_u)
+        
+        pump_filter         = pump[filtervals_p]
+        unpump_filter       = unpump[filtervals_u]
+        Izero_pump_filter   = Izero_p[filtervals_p]
+        Izero_unpump_filter = Izero_u[filtervals_u]
+
+        pump_filter = pump_filter / Izero_pump_filter
+        unpump_filter = unpump_filter / Izero_unpump_filter
+        #pp_shot = np.log10(pump_filter/unpump_filter)
+        pp_ebin = np.nanmean(pump_filter) - np.nanmean(unpump_filter)
+
+        GS.append(np.nanmean(unpump_filter))
+        ES.append(np.nanmean(pump_filter))
+        pp.append(pp_ebin)
+        GS_err = np.nanstd(unpump_filter)/np.sqrt(len(unpump_filter))
+        ES_err = np.nanstd(pump_filter)/np.sqrt(len(pump_filter))
+
+        err_GS.append(GS_err)
+        err_ES.append(ES_err)
+        err_pp.append(np.sqrt(GS_err**2 + ES_err**2))
+
+    print (len(peaks), len(readbacks), len(GS))
+
+    GS = np.reshape(np.array(GS), (len(readbacks),-1)) 
+    ES = np.reshape(np.array(ES), (len(readbacks), -1))
+    pp = np.reshape(np.array(pp), (len(readbacks), -1))
+    err_GS = np.reshape(np.array(err_GS), (len(readbacks), -1))
+    err_ES = np.reshape(np.array(err_ES), (len(readbacks), -1))
+    err_pp = np.reshape(np.array(err_pp), (len(readbacks), -1))
+
+    nscans = np.shape(GS)[1]
+
+    err_GS2 = np.nanstd(GS, axis=1)
+    err_ES2 = np.nanstd(ES, axis=1)
+    err_pp2 = np.nanstd(pp, axis=1)
+
+    GS = np.nanmean(GS, axis=1)
+    ES = np.nanmean(ES, axis=1)
+    pp = np.nanmean(pp, axis=1)
+
+    err_GS = np.sqrt(np.sum(err_GS**2, axis=1))
+    err_ES = np.sqrt(np.sum(err_ES**2, axis=1))
+    err_pp = np.sqrt(np.sum(err_pp**2, axis=1))
+
+    print ('{} shots out of {} survived'.format(np.sum(filtered_p)+np.sum(filtered_u), len(pump_1)))
+    return np.array(pp), np.array(GS), np.array(ES), np.array(err_pp), np.array(err_GS), np.array(err_ES), np.array(err_pp2), np.array(err_GS2), np.array(err_ES2), filtered_p, filtered_u
+
+######################################
+
 def Rebin_timescans(pump, unpump, Ipump, Iunpump, delaystage, readbacks, threshold=0, varbin_t=False):
 
     pump = np.asarray(pump)
@@ -494,6 +848,75 @@ def Rebin_timescans(pump, unpump, Ipump, Iunpump, delaystage, readbacks, thresho
         err_GS = np.nanstd(u)/np.sqrt(len(u))
         err_ES = np.nanstd(p)/np.sqrt(len(p))
         err_pp[i] = np.nanstd(Pump_probe_shot)/np.sqrt(len(Pump_probe_shot))
+    
+    print('Time delay axis rebinned with delay stage data')
+    
+    return np.array(pp_rebin), np.array(GS), np.array(ES), np.array(err_pp), np.array(err_GS), np.array(err_ES), delay_rebin
+
+######################################
+
+def Rebin_timescans_noPair(pump, Ipump, lights, darks, delaystage, readbacks, threshold=0, varbin_t=False):
+
+    pump = np.asarray(pump)
+    Ipump = np.asarray(Ipump)
+    lights = np.asarray(lights)
+    darks = np.asarray(darks)
+    delaystage = np.asarray(delaystage)
+
+    stepsize = (readbacks[-1]-readbacks[0])/(len(readbacks)-1)
+    binList = np.linspace(readbacks[0]-stepsize/2, readbacks[-1]+stepsize/2, len(readbacks)+1)
+    if varbin_t:
+        binList = histedges_equalN(delaystage, len(readbacks)+1)
+    bin_centres = (binList[:-1] + binList[1:])/2
+
+    delay_rebin = readbacks
+    if varbin_t:
+        delay_rebin = bin_centres
+
+    GS = np.zeros(len(bin_centres))
+    ES = np.zeros(len(bin_centres))
+    pp_rebin = np.zeros(len(bin_centres))
+
+    err_GS = np.zeros(len(bin_centres))
+    err_ES = np.zeros(len(bin_centres))    
+    err_pp = np.zeros(len(bin_centres))
+
+    for i in range(len(bin_centres)):
+        cond1 = delaystage >= binList[i]
+        cond2 = delaystage < binList[i+1]
+    
+        idx = np.where(cond1*cond2)[0]
+        delay_rebin[i] = np.average(delaystage[idx])
+    
+        p1  = pump[idx]
+        I_p1 = Ipump[idx]
+        lights_t = lights[idx]
+        darks_t = darks[idx]
+
+        thresh   = (I_p1>threshold)
+
+        p1 = p1[thresh]
+        I_p1 = I_p1[thresh]
+        lights_t = lights_t[thresh]
+        darks_t = darks_t[thresh]
+
+        p   = p1[lights_t]
+        u   = p1[darks_t]
+        I_p = I_p1[lights_t]
+        I_u = I_p1[darks_t]
+
+        p = p / I_p
+        u = u / I_u
+        
+        #Pump_probe_shot = np.log10(p[thresh]/u[thresh])
+        Pump_probe = np.nanmean(p) - np.nanmean(u)
+        
+        GS[i] = np.nanmean(u)
+        ES[i] = np.nanmean(p)
+        pp_rebin[i]  = Pump_probe
+        err_GS = np.nanstd(u)/np.sqrt(len(u))
+        err_ES = np.nanstd(p)/np.sqrt(len(p))
+        err_pp[i] = np.sqrt(err_GS**2 + err_ES**2)
     
     print('Time delay axis rebinned with delay stage data')
     
@@ -576,6 +999,101 @@ def Rebin_and_filter_timescans(data, binsize, minvalue, maxvalue, quantile, thre
 
     print ('{} shots out of {} survived (total shots: {})'.format(np.sum(howmany), np.sum(howmany_before), totalshots))
     return pp_rebin, err_pp, delay_rebin, howmany
+
+######################################
+
+def Rebin_and_filter_timescans_noPair(data, binsize, minvalue, maxvalue, quantile, withTT, threshold=0, numbins=None, varbin_t=False):
+    for k,v in data.items():
+        data[k] = v
+        
+    diode = np.asarray(data['pump_1'])
+    Izero = np.asarray(data['Izero_pump'])
+    lights = np.asarray(data['lights'])
+    darks = np.asarray(data['darks'])
+    Delays_stage = np.asarray(data['Delays_stage'])
+    Delays_corr = np.asarray(data['Delays_corr'])
+
+    if withTT:
+        Delays = Delays_corr#[lights]
+    else:
+        Delays = Delays_stage#[lights]
+
+    binList = np.arange(minvalue, maxvalue, binsize)
+    if varbin_t:
+        binList = histedges_equalN(Delays, numbins)
+
+    bin_centres = (binList[:-1] + binList[1:])/2
+    delay_rebin = np.arange(minvalue + binsize/2, maxvalue - binsize/2, binsize)
+    if varbin_t:
+        delay_rebin = bin_centres
+
+    pp_rebin = np.zeros(len(bin_centres))
+    GS_rebin = np.zeros(len(bin_centres))
+    ES_rebin = np.zeros(len(bin_centres))
+    err_pp = np.zeros(len(bin_centres))
+
+    totalshots = len(diode)
+    howmany_before = []
+    howmany = []
+    filtered_p = []
+    filtered_u = []
+
+    for i in range(len(bin_centres)):
+        cond1 = Delays >= binList[i]
+        cond2 = Delays < binList[i+1]
+    
+        idx = np.where(cond1*cond2)[0]
+        #delay_rebin[i] = np.average(Delays[idx])
+        howmany_before.append(len(Delays[idx]))
+    
+        diode_t  = diode[idx]
+        Izero_t  = Izero[idx]
+        lights_t = lights[idx]
+        darks_t  = darks[idx]
+        delays_t = Delays[idx]
+
+        thresh   = Izero_t > threshold
+        filterI  = Izero_t > (np.nanmedian(Izero_t) - np.std(Izero_t))
+
+        diode_t  = diode_t[filterI & thresh]
+        Izero_t  = Izero_t[filterI & thresh]
+        lights_t = lights_t[filterI & thresh]
+        darks_t  = darks_t[filterI & thresh]
+        delays_t = delays_t[filterI & thresh]
+
+        pump     = diode_t[lights_t]
+        unpump   = diode_t[darks_t]
+        Izero_p  = Izero_t[lights_t]
+        Izero_u  = Izero_t[darks_t]
+        delays_p = delays_t[lights_t]
+
+        ratio_p = pump/Izero_p
+        ratio_u = unpump/Izero_u
+        
+        filtervals_p, filtervals_u = create_corr_condition_noPair(ratio_p, ratio_u, quantile)
+
+        pump_filter         = pump[filtervals_p]
+        unpump_filter       = unpump[filtervals_u]
+        Izero_pump_filter   = Izero_p[filtervals_p]
+        Izero_unpump_filter = Izero_u[filtervals_u]
+
+        howmany.append(len(pump_filter)+len(unpump_filter))
+        
+        pump_filter = pump_filter / Izero_pump_filter
+        unpump_filter = unpump_filter / Izero_unpump_filter
+
+        delay_rebin[i] = np.average(delays_p)
+        pp_rebin[i]  = np.nanmean(pump_filter) - np.nanmean(unpump_filter)
+        GS_rebin[i]  = np.nanmean(unpump_filter)
+        ES_rebin[i]  = np.nanmean(pump_filter)
+        err_pp[i] = (np.sqrt(np.nanstd(pump_filter)**2 + np.nanstd(unpump_filter)**2))/np.sqrt(len(pump_filter))
+
+    if withTT:
+        print('Time delay axis rebinned with TT data')
+    else:
+        print('Time delay axis rebinned with delay stage data')
+    print ('{} shots out of {} survived (total shots: {})'.format(np.sum(filtered_p)+np.sum(filtered_u), np.sum(howmany_before), totalshots))
+    return pp_rebin, GS_rebin, ES_rebin, err_pp, delay_rebin, howmany
 
 ######################################
 
@@ -662,7 +1180,7 @@ def Rebin_and_filter_2Dscans(data, binsize, minvalue, maxvalue, quantile, readba
             pump_filter = pump_filter / Izero_pump_filter
             unpump_filter = unpump_filter / Izero_unpump_filter
                 
-            Pump_probe_shot = np.log10(pump_filter/unpump_filter)
+            Pump_probe_shot = (pump_filter - unpump_filter)
             
             pp_rebin[i, j]  = np.nanmean(Pump_probe_shot)
             err_pp[i, j] = np.nanstd(Pump_probe_shot)/np.sqrt(len(Pump_probe_shot))
@@ -680,13 +1198,142 @@ def Rebin_and_filter_2Dscans(data, binsize, minvalue, maxvalue, quantile, readba
 
     return pp_rebin, err_pp, delay_rebin, howmany
 
+######################################
 
+def Rebin_and_filter_2Dscans_noPair(data, binsize, minvalue, maxvalue, quantile, readbacks, withTT, threshold=0, varbin_t=False, numbins=None):
+    for k,v in data.items():
+        data[k] = v
 
+    pump_1 = np.asarray(data['pump_1'])
+    Izero_pump = np.asarray(data['Izero_pump'])
+    lights = np.asarray(data['lights'])    
+    darks = np.asarray(data['darks'])
 
+    print (len(pump_1), len(Izero_pump), len(lights), len(darks))
 
+    energypad = np.asarray(data['energypad'])
+    Delays_stage = np.asarray(data['Delays_stage'])
+    Delays_corr = np.asarray(data['Delays_corr'])
 
+    if withTT:
+        Delays = Delays_corr
+    else:
+        Delays = Delays_stage
 
+    binList = np.arange(minvalue, maxvalue, binsize)
+    if varbin_t:
+        binList = histedges_equalN(Delays, numbins)
+    
+    bin_centres = (binList[:-1] + binList[1:])/2
+    delay_rebin = np.arange(minvalue + binsize/2, maxvalue - binsize/2, binsize)
+    if varbin_t:
+        delay_rebin = bin_centres
 
+    ordered = np.argsort(np.asarray(energypad))
+    peaks, what = find_peaks(np.diff(energypad[ordered]))
+    
+    pump_1 = pump_1[ordered]    
+    Izero_pump = Izero_pump[ordered]
+    lights = lights[ordered]
+    darks = darks[ordered]
+    Delays = Delays[ordered]
+
+    starts = np.append(0, peaks)
+    ends = np.append(peaks, None)
+
+    pump_in_ebin, Izero_p_in_ebin, Delays_in_ebin, lights_in_ebin, darks_in_ebin = ([] for i in range(5))
+
+    pp_rebin = np.zeros((len(starts), len(bin_centres)))
+    GS_rebin = np.zeros((len(starts), len(bin_centres)))
+    ES_rebin = np.zeros((len(starts), len(bin_centres)))
+    err_pp   = np.zeros((len(starts), len(bin_centres)))
+    howmany_before = len(pump_1)
+    howmany = []
+
+    print (len(peaks), len(readbacks), len(bin_centres))
+    for i, (s, e) in enumerate(zip(starts, ends)):
+        pump_in_ebin = pump_1[s:e]
+        Izero_p_in_ebin = Izero_pump[s:e]
+        Delays_in_ebin = Delays[s:e]
+        lights_in_ebin = lights[s:e]
+        darks_in_ebin = darks[s:e]
+
+        thresh   = (Izero_p_in_ebin > threshold)
+        filterIp = Izero_p_in_ebin > (np.nanmedian(Izero_p_in_ebin) - np.std(Izero_p_in_ebin))
+
+        pump_in_ebin    = pump_in_ebin[filterIp & thresh]
+        Izero_p_in_ebin = Izero_p_in_ebin[filterIp & thresh]
+        Delays_in_ebin  = Delays_in_ebin[filterIp & thresh]
+        lights_in_ebin  = lights_in_ebin[filterIp & thresh]
+        darks_in_ebin   = darks_in_ebin[filterIp & thresh]
+        
+        for j in range(len(bin_centres)):
+            cond1 = np.asarray(Delays_in_ebin) >= binList[j]
+            cond2 = np.asarray(Delays_in_ebin) < binList[j+1]
+
+            idx = np.where(cond1*cond2)[0]
+            #delay_rebin[j]  = np.average(np.asarray(Delays_in_ebin)[idx])
+            
+            pump_in_tbin    = np.asarray(pump_in_ebin)[idx]
+            Izero_p_in_tbin = np.asarray(Izero_p_in_ebin)[idx]
+            lights_in_tbin  = np.asarray(lights_in_ebin)[idx]
+            darks_in_tbin   = np.asarray(darks_in_ebin)[idx]
+            delays_in_tbin  = np.asarray(Delays_in_ebin)[idx]
+        
+            delay_rebin[j]  = np.average(delays_in_tbin)
+
+            Diode_norm = pump_in_tbin / Izero_p_in_tbin
+
+            qnt_low  = np.nanquantile(Diode_norm, 0.5 - quantile/2)
+            qnt_high = np.nanquantile(Diode_norm, 0.5 + quantile/2)
+    
+            condition_low = Diode_norm > qnt_low
+            condition_high = Diode_norm < qnt_high
+
+            correlation_filter = condition_low & condition_high
+
+            Diode_filter  = pump_in_tbin[correlation_filter]
+            Izero_filter  = Izero_p_in_tbin[correlation_filter]
+            darks_filter  = darks_in_tbin[correlation_filter]
+            lights_filter = lights_in_tbin[correlation_filter]
+
+            howmany.append(len(Diode_filter))
+
+            p  = Diode_filter[lights_filter]
+            u  = Diode_filter[darks_filter]
+            Ip = Izero_filter[lights_filter]
+            Iu = Izero_filter[darks_filter]
+
+            p = p/Ip
+            u = u/Iu
+
+            pp_rebin[i, j]  = np.nanmean(p) - np.nanmean(u)
+            GS_rebin[i, j] = np.nanmean(u)            
+            ES_rebin[i, j] = np.nanmean(p)
+
+            err_GS = np.nanstd(u)/np.sqrt(len(u))
+            err_ES = np.nanstd(p)/np.sqrt(len(p)) 
+
+            err_pp[i, j] = np.sqrt(err_GS**2 + err_ES**2)
+
+    pp_rebin = np.reshape(np.array(pp_rebin), (len(readbacks), -1, len(bin_centres)))
+    GS_rebin = np.reshape(np.array(GS_rebin), (len(readbacks), -1, len(bin_centres)))
+    ES_rebin = np.reshape(np.array(ES_rebin), (len(readbacks), -1, len(bin_centres)))
+
+    pp_rebin = np.nanmean(pp_rebin, axis=1)
+    GS_rebin = np.nanmean(GS_rebin, axis=1)
+    ES_rebin = np.nanmean(ES_rebin, axis=1)
+
+    err_pp = np.reshape(np.array(err_pp), (len(readbacks), -1, len(bin_centres)))
+    err_pp = np.nanmean(err_pp, axis=1)
+
+    if withTT:
+        print('Time delay axis rebinned with TT data')
+    else:
+        print('Time delay axis rebinned with delay stage data')
+    print ('{} shots out of {} survived ({:.2f}%)'.format(np.sum(howmany), np.sum(howmany_before), 100*np.sum(howmany)/np.sum(howmany_before)))
+
+    return pp_rebin, GS_rebin, ES_rebin, err_pp, delay_rebin, howmany
 
 
 
@@ -854,8 +1501,25 @@ def create_corr_condition(pump, unpump, quantile):
 
 ######################################
 
+def create_corr_condition_noPair(pump, unpump, quantile):
+
+    qnt_low_p  = np.nanquantile(pump, 0.5 - quantile/2)
+    qnt_high_p = np.nanquantile(pump, 0.5 + quantile/2)
+    qnt_low_u  = np.nanquantile(unpump, 0.5 - quantile/2)
+    qnt_high_u = np.nanquantile(unpump, 0.5 + quantile/2)
+
+    filtervals_p_l = pump > qnt_low_p
+    filtervals_p_h = pump < qnt_high_p
+    filtervals_u_l = unpump > qnt_low_u
+    filtervals_u_h = unpump < qnt_high_u
+
+    condition_p = filtervals_p_l & filtervals_p_h
+    condition_u = filtervals_u_l & filtervals_u_h
+    return condition_p, condition_u
 
 
+######################################
+######################################
 ######################################
 
 def Rebin_and_filter_energyscans_old(data, quantile, readbacks, varbin_e=False):
@@ -2517,6 +3181,31 @@ def save_reduced_data_scanPP(reducedir, run_name, scan, D1p, D1u, D2p, D2u, D1p_
                                          "readbacks": rbk, 
                                          "corr1": c1,
                                          "corr2": c2}
+                                         
+    np.save(reducedir+run_name+'/run_array', run_array)
+
+################################################
+
+def save_reduced_data_scanPP_noPair(reducedir, run_name, scan, D1p, D2p, D1p_raw, D2p_raw, I0p, delaystage, arrTimes, delaycorr, energy, energypad, rbk, c1, c2, lights, darks):
+    readbacks = scan.readbacks
+    setValues = scan.values
+    run_array = {}
+    run_array[run_name.split('-')[0]] = {"name": run_name,
+                                         "pump_1": D1p,                                
+                                         "pump_2": D2p,
+                                         "pump_1_raw": D1p_raw, 
+                                         "pump_2_raw": D2p_raw, 
+                                         "Izero_pump": I0p,
+                                         "Delays_stage" :delaystage, 
+                                         "arrTimes": arrTimes,
+                                         "Delays_corr": delaycorr,
+                                         "energy": energy,
+                                         "energypad": energypad,
+                                         "readbacks": rbk, 
+                                         "corr1": c1,
+                                         "corr2": c2, 
+                                         "lights": lights,
+                                         "darks": darks}
                                          
     np.save(reducedir+run_name+'/run_array', run_array)
 

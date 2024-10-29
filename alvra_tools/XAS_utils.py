@@ -57,6 +57,59 @@ def Plot_reduced_data(pgroup, runlist, scan, data, withTT, timescan=False):
 
 ################################################
 
+def Plot_reduced_data_noPair(pgroup, runlist, scan, data, withTT, timescan=False):
+
+    #jsonfile = glob.glob('/sf/alvra/data/{}/raw/*{:04d}*/meta/scan.json'.format(pgroup, runlist[0]))[0]
+    #from sfdata import SFScanInfo
+    #scan = SFScanInfo(jsonfile)
+
+    Izero = data['Izero_pump']
+    #Izero_unpump = data['Izero_unpump']
+    pump_1 = data['pump_1']
+    #unpump_1 = data['unpump_1']
+    Delays_stage = data['Delays_stage']
+    Delays_corr = data['Delays_corr']
+    energy = data['energypad']
+    lights = data['lights']
+    darks  = data['darks']
+
+    if timescan:
+        energy = data['energy']
+
+    if withTT:
+        Delays = Delays_corr
+    else:
+        Delays = Delays_stage
+    
+    fig, (ax1, ax2, ax3, ax4) = plt.subplots(1, 4, figsize=(9, 3), constrained_layout=True)
+    fig.suptitle(pgroup + ' -- ' + str(runlist))
+    ax1.title.set_text('Izero')
+    ax1.hist(np.asarray(Izero)[lights], bins = 200, alpha=0.5, label = 'on')
+    ax1.hist(np.asarray(Izero)[darks], bins = 200, alpha=0.5, label = 'off')
+    ax1.legend(loc='best')
+    ax2.title.set_text('Fluo')
+    ax2.hist(np.asarray(pump_1)[lights], bins = 200, alpha=0.5, label = 'on')
+    ax2.hist(np.asarray(pump_1)[darks], bins = 200, alpha=0.5, label = 'off')
+    ax2.legend(loc='best')
+    ax3.title.set_text('Delays')
+    ax3.hist(Delays, bins = 100)
+    ax3.set_xlim(min(Delays), max(Delays))
+    ax4.title.set_text('Energies')
+    ax4.hist(energy, bins=len(scan.values))
+    ax4.set_xlim(min(energy), max(energy))
+    ax1.grid()
+    ax2.grid()
+    ax3.grid()
+    ax4.grid()
+    plt.show()
+
+    if withTT:
+        print('Time delay axis rebinned with TT data')
+    else:
+        print('Time delay axis rebinned with delay stage data')
+
+################################################
+
 def Plot_scan_2diodes(pgroup, reducedir, runlist, timescan=False, threshold=0, indexrun=-1):
     
     _, titlestring_stack = load_reduced_data(pgroup, reducedir, runlist)
@@ -88,6 +141,69 @@ def Plot_scan_2diodes(pgroup, reducedir, runlist, timescan=False, threshold=0, i
     else:            
         pp1, GS1, ES1, err_pp1, err_GS1, err_ES1 = Rebin_energyscans_PP(pump_1, unpump_1, Izero_pump, Izero_unpump, xaxis, rbk, threshold)
         pp2, GS2, ES2, err_pp2, err_GS2, err_ES2 = Rebin_energyscans_PP(pump_2, unpump_2, Izero_pump, Izero_unpump, xaxis, rbk, threshold)
+    lines = next(linecycler)
+
+    ax1.plot(rbk, ES1, linestyle=lines, label='ON 1 {}'.format(runname), color='royalblue', alpha = 0.8)
+    ax1.fill_between(rbk, ES1-err_ES1, ES1+err_ES1, color='lightblue')
+    ax1.plot(rbk, GS1, linestyle=lines, label='OFF 1 {}'.format(runname), color='orange', alpha = 0.8)
+    ax1.fill_between(rbk, GS1-err_GS1, GS1+err_GS1, color='navajowhite')
+    ax1.legend()
+
+    ax2.plot(rbk, pp1, linestyle=lines, label='pp 1 {}'.format(runname), color='green', marker='.')
+    ax2.fill_between(rbk, pp1-err_pp1, pp1+err_pp1, color='lightgreen')
+    ax2.legend()
+
+    ax3.plot(rbk, ES2, linestyle=lines, label='ON 2 {}'.format(runname), color='royalblue', alpha = 0.8)
+    ax3.fill_between(rbk, ES2-err_ES2, ES2+err_ES2, color='lightblue')
+    ax3.plot(rbk, GS2, linestyle=lines,label='OFF 2 {}'.format(runname), color='orange', alpha = 0.8)
+    ax3.fill_between(rbk, GS2-err_GS2, GS2+err_GS2, color='navajowhite')
+    ax3.legend()
+
+    ax4.plot(rbk, pp2, linestyle=lines, label='pp 2 {}'.format(runname), color='green', marker='.')
+    ax4.fill_between(rbk, pp2-err_pp2, pp2+err_pp2, color='lightgreen')
+    ax4.legend()
+
+    ax1.grid()
+    ax2.grid()
+    ax3.grid()
+    ax4.grid()
+    plt.show()
+
+################################################
+
+def Plot_scan_2diodes_noPair(pgroup, reducedir, runlist, timescan=False, threshold=0, indexrun=-1):
+    
+    _, titlestring_stack = load_reduced_data(pgroup, reducedir, runlist)
+    fig, ((ax1, ax3), (ax2, ax4)) = plt.subplots(2, 2, figsize=(10, 6), constrained_layout=True)
+    plt.suptitle(titlestring_stack)
+
+    lines =  ['-', '--', ':', '-.', ' ', '', 'solid', 'dashed', 'dashdot', 'dotted']
+    linecycler = cycle(lines)
+
+    run = runlist[indexrun]
+    
+    #for index, run in enumerate(runlist):
+    data, _ = load_reduced_data(pgroup, reducedir, [run])
+    pump_1       = np.asarray(data["pump_1_raw"])
+    #unpump_1     = np.asarray(data["unpump_1_raw"])
+    pump_2       = np.asarray(data["pump_2_raw"])
+    #unpump_2     = np.asarray(data["unpump_2_raw"])
+    Izero_pump   = np.asarray(data["Izero_pump"])
+    #Izero_unpump = np.asarray(data["Izero_unpump"])
+    xaxis        = np.asarray(data["energypad"])
+    readbacks    = np.asarray(data["readbacks"])
+    lights       = np.asarray(data["lights"])
+    darks        = np.asarray(data["darks"])
+    runname      = 'run{:04d}'.format(run)
+            
+    rbk = readbacks[0]
+    if timescan:
+        xaxis    = np.asarray(data["Delays_stage"])
+        pp1, GS1, ES1, err_pp1, err_GS1, err_ES1, rbk = Rebin_timescans_noPair(pump_1, Izero_pump, lights, darks, xaxis, rbk, threshold, varbin_t=False)
+        pp2, GS2, ES2, err_pp2, err_GS2, err_ES2, rbk = Rebin_timescans_noPair(pump_2, Izero_pump, lights, darks, xaxis, rbk, threshold, varbin_t=False)
+    else:            
+        pp1, GS1, ES1, err_pp1, err_GS1, err_ES1 = Rebin_energyscans_PP_noPair(pump_1, Izero_pump, lights, darks, xaxis, rbk, threshold)
+        pp2, GS2, ES2, err_pp2, err_GS2, err_ES2 = Rebin_energyscans_PP_noPair(pump_2, Izero_pump, lights, darks, xaxis, rbk, threshold)
     lines = next(linecycler)
 
     ax1.plot(rbk, ES1, linestyle=lines, label='ON 1 {}'.format(runname), color='royalblue', alpha = 0.8)
