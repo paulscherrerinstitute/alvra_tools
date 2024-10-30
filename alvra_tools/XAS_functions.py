@@ -1042,6 +1042,8 @@ def Rebin_and_filter_2Dscans(data, binsize, minvalue, maxvalue, quantile, readba
     pump_in_ebin, unpump_in_ebin, Izero_p_in_ebin, Izero_u_in_ebin, Delays_in_ebin = ([] for i in range(5))
 
     pp_rebin = np.zeros((len(starts), len(bin_centres)))
+    GS_rebin = np.zeros((len(starts), len(bin_centres)))
+    ES_rebin = np.zeros((len(starts), len(bin_centres)))
     err_pp   = np.zeros((len(starts), len(bin_centres)))
     howmany_before = len(pump_1)
     howmany = []
@@ -1063,13 +1065,14 @@ def Rebin_and_filter_2Dscans(data, binsize, minvalue, maxvalue, quantile, readba
         Izero_p_in_ebin = Izero_p_in_ebin[filterIp & filterIu & thresh]
         Izero_u_in_ebin = Izero_u_in_ebin[filterIp & filterIu & thresh]
         Delays_in_ebin  = Delays_in_ebin[filterIp & filterIu & thresh]
-        
+
         for j in range(len(bin_centres)):
             cond1 = np.asarray(Delays_in_ebin) >= binList[j]
             cond2 = np.asarray(Delays_in_ebin) < binList[j+1]
 
             idx = np.where(cond1*cond2)[0]
-            delay_rebin[j]  = np.average(np.asarray(Delays_in_ebin)[idx])
+            if withTT:
+                delay_rebin[j]  = np.nanmean(np.asarray(Delays_in_ebin)[idx])
             
             pump_in_tbin    = np.asarray(pump_in_ebin)[idx]
             unpump_in_tbin  = np.asarray(unpump_in_ebin)[idx]
@@ -1085,8 +1088,12 @@ def Rebin_and_filter_2Dscans(data, binsize, minvalue, maxvalue, quantile, readba
             unpump_filter = unpump_filter / Izero_unpump_filter
                 
             Pump_probe_shot = (pump_filter - unpump_filter)
+            GS_shot = unpump_filter
+            ES_shot = pump_filter
             
-            pp_rebin[i, j]  = np.nanmean(Pump_probe_shot)
+            pp_rebin[i, j] = np.nanmean(Pump_probe_shot)
+            GS_rebin[i, j] = np.nanmean(GS_shot)
+            ES_rebin[i, j] = np.nanmean(ES_shot)
             err_pp[i, j] = np.nanstd(Pump_probe_shot)/np.sqrt(len(Pump_probe_shot))
 
     pp_rebin = np.reshape(np.array(pp_rebin), (len(readbacks), -1, len(bin_centres)))
@@ -1100,7 +1107,7 @@ def Rebin_and_filter_2Dscans(data, binsize, minvalue, maxvalue, quantile, readba
         print('Time delay axis rebinned with delay stage data')
     print ('{} shots out of {} survived ({:.2f}%)'.format(np.sum(howmany), np.sum(howmany_before), 100*np.sum(howmany)/np.sum(howmany_before)))
 
-    return pp_rebin, err_pp, delay_rebin, howmany
+    return pp_rebin, err_pp, GS_rebin, ES_rebin, delay_rebin, howmany
 
 ######################################
 
