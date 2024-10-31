@@ -9,10 +9,6 @@ import glob
 
 def Plot_reduced_data(pgroup, runlist, scan, data, withTT, timescan=False):
 
-    #jsonfile = glob.glob('/sf/alvra/data/{}/raw/*{:04d}*/meta/scan.json'.format(pgroup, runlist[0]))[0]
-    #from sfdata import SFScanInfo
-    #scan = SFScanInfo(jsonfile)
-
     Izero_pump = data['Izero_pump']
     Izero_unpump = data['Izero_unpump']
     pump_1 = data['pump_1']
@@ -111,6 +107,10 @@ def Plot_reduced_data_noPair(pgroup, runlist, scan, data, withTT, timescan=False
 ################################################
 
 def Plot_scan_2diodes(pgroup, reducedir, runlist, timescan=False, threshold=0, indexrun=-1):
+
+    jsonfile = glob.glob('/sf/alvra/data/{}/raw/*{:04d}*/meta/scan.json'.format(pgroup, runlist[0]))[0]
+    from sfdata import SFScanInfo
+    scan = SFScanInfo(jsonfile)
     
     _, titlestring_stack = load_reduced_data(pgroup, reducedir, runlist)
     fig, ((ax1, ax3), (ax2, ax4)) = plt.subplots(2, 2, figsize=(10, 6), constrained_layout=True)
@@ -131,9 +131,20 @@ def Plot_scan_2diodes(pgroup, reducedir, runlist, timescan=False, threshold=0, i
     Izero_unpump = np.asarray(data["Izero_unpump"])
     xaxis        = np.asarray(data["energypad"])
     readbacks    = np.asarray(data["readbacks"])
-    runname      = 'run{:04d}'.format(run)
+    runname      = 'run{:04d}'.format(run)    
             
     rbk = readbacks[0]
+    xlabel = scan.parameters['name'][0]
+    try:
+        xunits = scan.parameters['units'][0]
+    except:
+        pass
+
+    if scan.parameters['Id'] == ['dummy']:
+        rbk = np.arange(len(scan.readbacks))
+        xlabel = 'Acq number'
+        xunits = 'N/A'
+
     if timescan:
         xaxis    = np.asarray(data["Delays_stage"])
         pp1, GS1, ES1, err_pp1, err_GS1, err_ES1, rbk = Rebin_timescans(pump_1, unpump_1, Izero_pump, Izero_unpump, xaxis, rbk, threshold, varbin_t=False)
@@ -147,20 +158,24 @@ def Plot_scan_2diodes(pgroup, reducedir, runlist, timescan=False, threshold=0, i
     ax1.fill_between(rbk, ES1-err_ES1, ES1+err_ES1, color='lightblue')
     ax1.plot(rbk, GS1, linestyle=lines, label='OFF 1 {}'.format(runname), color='orange', alpha = 0.8)
     ax1.fill_between(rbk, GS1-err_GS1, GS1+err_GS1, color='navajowhite')
+    ax1.set_xlabel("{} ({})".format(xlabel, xunits))
     ax1.legend()
 
     ax2.plot(rbk, pp1, linestyle=lines, label='pp 1 {}'.format(runname), color='green', marker='.')
     ax2.fill_between(rbk, pp1-err_pp1, pp1+err_pp1, color='lightgreen')
+    ax2.set_xlabel("{} ({})".format(xlabel, xunits))
     ax2.legend()
 
     ax3.plot(rbk, ES2, linestyle=lines, label='ON 2 {}'.format(runname), color='royalblue', alpha = 0.8)
     ax3.fill_between(rbk, ES2-err_ES2, ES2+err_ES2, color='lightblue')
     ax3.plot(rbk, GS2, linestyle=lines,label='OFF 2 {}'.format(runname), color='orange', alpha = 0.8)
     ax3.fill_between(rbk, GS2-err_GS2, GS2+err_GS2, color='navajowhite')
+    ax3.set_xlabel("{} ({})".format(xlabel, xunits))
     ax3.legend()
 
     ax4.plot(rbk, pp2, linestyle=lines, label='pp 2 {}'.format(runname), color='green', marker='.')
     ax4.fill_between(rbk, pp2-err_pp2, pp2+err_pp2, color='lightgreen')
+    ax4.set_xlabel("{} ({})".format(xlabel, xunits))
     ax4.legend()
 
     ax1.grid()
@@ -239,6 +254,16 @@ def Plot_correlations_scan(pgroup, reducedir, runlist, timescan=False, lowlim=0.
     _, titlestring_stack = load_reduced_data(pgroup, reducedir, runlist)
     fig, ((ax1, ax3)) = plt.subplots(1, 2, figsize=(10, 3), constrained_layout=True)
     plt.suptitle(titlestring_stack)
+
+    jsonfile = glob.glob('/sf/alvra/data/{}/raw/*{:04d}*/meta/scan.json'.format(pgroup, runlist[0]))[0]
+    from sfdata import SFScanInfo
+    scan = SFScanInfo(jsonfile)
+
+    xlabel = scan.parameters['name'][0]
+    try:
+        xunits = scan.parameters['units'][0]
+    except:
+        pass
     
     for index, run in enumerate(runlist):
         data, _ = load_reduced_data(pgroup, reducedir, [run])
@@ -246,11 +271,18 @@ def Plot_correlations_scan(pgroup, reducedir, runlist, timescan=False, lowlim=0.
         corr1     = np.asarray(data["corr1"])
         corr2     = np.asarray(data["corr2"])
 
+        if scan.parameters['Id'] == ['dummy']:
+            readbacks = np.arange(len(scan.readbacks))
+            xlabel = 'Acq number'
+            xunits = 'N/A'
+
         ax1.plot(readbacks, corr1, label='diode1 run{:04d}'.format(run))
         ax3.plot(readbacks, corr2, label='diode2 run{:04d}'.format(run))
     ax1.legend()
+    ax1.set_xlabel("{} ({})".format(xlabel, xunits))
     ax1.grid()
     ax3.legend()
+    ax3.set_xlabel("{} ({})".format(xlabel, xunits))
     ax3.grid()
     ax1.set_ylim(lowlim,1)
     ax3.set_ylim(lowlim,1)
