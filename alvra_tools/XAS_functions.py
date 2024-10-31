@@ -865,7 +865,8 @@ def Rebin_and_filter_timescans(data, binsize, minvalue, maxvalue, quantile, thre
         cond2 = Delays < binList[i+1]
     
         idx = np.where(cond1*cond2)[0]
-        delay_rebin[i] = np.average(Delays[idx])
+        if withTT:
+            delay_rebin[i] = np.average(Delays[idx])
     
         pump    = pump_1[idx]
         unpump  = unpump_1[idx]
@@ -1249,79 +1250,7 @@ def Rebin_and_filter_2Dscans_noPair(data, binsize, minvalue, maxvalue, quantile,
 
 
 ######################################
-
-
-
 ######################################
-
-def Rebin_and_filter_timescans(data, binsize, minvalue, maxvalue, quantile, withTT=True, numbins=None, varbin_t=False):
-
-    for k,v in data.items():
-        data[k] = v
-    
-    pump_1 = np.asarray(data['pump_1'])
-    unpump_1 = np.asarray(data['unpump_1'])
-    Izero_pump = np.asarray(data['Izero_pump'])
-    Izero_unpump = np.asarray(data['Izero_unpump'])
-    Delays_stage = np.asarray(data['Delays_stage'])
-    Delays_corr = np.asarray(data['Delays_corr'])
-
-    if withTT:
-        Delays = Delays_corr
-    else:
-        Delays = Delays_stage
-
-    binList = np.arange(minvalue, maxvalue, binsize)
-    if varbin_t:
-        binList = histedges_equalN(Delays, numbins)
-
-    bin_centres = (binList[:-1] + binList[1:])/2
-    delay_rebin = np.arange(minvalue + binsize/2, maxvalue - binsize/2, binsize)
-    if varbin_t:
-        delay_rebin = bin_centres
-
-    pp_rebin = np.zeros(len(bin_centres))
-    err_pp = np.zeros(len(bin_centres))
-
-    totalshots = len(pump_1)
-    howmany_before = []
-    howmany = []
-
-    for i in range(len(bin_centres)):
-        cond1 = Delays >= binList[i]
-        cond2 = Delays < binList[i+1]
-    
-        idx = np.where(cond1*cond2)[0]
-        delay_rebin[i] = np.average(Delays[idx])
-    
-        pump    = pump_1[idx]
-        unpump  = unpump_1[idx]
-        Izero_p = Izero_pump[idx]
-        Izero_u = Izero_unpump[idx]
-        
-        howmany_before.append(len(Delays[idx]))
-    
-        pump_filter, unpump_filter, Izero_pump_filter, Izero_unpump_filter = \
-        correlation_filter(pump, unpump, Izero_p, Izero_u, quantile)
-        
-        howmany.append(len(pump_filter))
-
-        pump_filter = pump_filter / Izero_pump_filter
-        unpump_filter = unpump_filter / Izero_unpump_filter
-    
-        #Pump_probe_shot = np.log10(pump_filter/unpump_filter)
-        Pump_probe_shot = pump_filter - unpump_filter
-    
-        pp_rebin[i]  = np.nanmean(Pump_probe_shot)
-        err_pp[i] = np.nanstd(Pump_probe_shot)/np.sqrt(len(Pump_probe_shot))
-    if withTT:
-        print('Time delay axis rebinned with TT data')
-    else:
-        print('Time delay axis rebinned with delay stage data')
-
-    print ('{} shots out of {} survived (total shots: {})'.format(np.sum(howmany), np.sum(howmany_before), totalshots))
-    return pp_rebin, err_pp, delay_rebin, howmany
-
 ######################################
 
 def Rebin_scans_PP(pump, unpump, Ipump, Iunpump, scanvar, readbacks):
