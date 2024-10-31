@@ -39,8 +39,10 @@ def Reduce_scan_PP(reducedir, saveflag, jsonlist, TT, motor, diode1, diode2, Ize
         runname = jsonfile.split('/')[-3]
         scan = SFScanInfo(jsonfile)
         rbk = np.ravel(scan.readbacks)
+
         unique = np.roll(np.diff(rbk, prepend=1)>0.001, -1)
-        #unique = np.diff(rbk, prepend=1)>0.001
+        if scan.parameters['Id'] == ['dummy']:
+            unique = np.full(len(rbk), True)
         rbk = rbk[unique]
 
         p1_raw, u1_raw, p2_raw, u2_raw, p1, u1, p2, u2, Ip, Iu, ds, aT, dc, en, en2, c1, c2 = ([] for i in range(17))
@@ -139,8 +141,10 @@ def Reduce_scan_PP_noPair(reducedir, saveflag, jsonlist, TT, motor, diode1, diod
         runname = jsonfile.split('/')[-3]
         scan = SFScanInfo(jsonfile)
         rbk = np.ravel(scan.readbacks)
+
         unique = np.roll(np.diff(rbk, prepend=1)>0.001, -1)
-        #unique = np.diff(rbk, prepend=1)>0.001
+        if scan.parameters['Id'] == ['dummy']:
+            unique = np.full(len(rbk), True)
         rbk = rbk[unique]
 
         p1_raw, p2_raw, p1, p2, Ip, ds, aT, dc, en, en2, c1, c2, light, dark = ([] for i in range(14))
