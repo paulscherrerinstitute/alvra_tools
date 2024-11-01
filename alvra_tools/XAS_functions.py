@@ -869,7 +869,7 @@ def Rebin_and_filter_timescans(data, binsize, minvalue, maxvalue, quantile, thre
         cond2 = Delays < binList[i+1]
     
         idx = np.where(cond1*cond2)[0]
-        if withTT:
+        if varbin_t:
             delay_rebin[i] = np.average(Delays[idx])
     
         pump    = pump_1[idx]
@@ -1076,8 +1076,8 @@ def Rebin_and_filter_2Dscans(data, binsize, minvalue, maxvalue, quantile, readba
             cond2 = np.asarray(Delays_in_ebin) < binList[j+1]
 
             idx = np.where(cond1*cond2)[0]
-            if withTT:
-                delay_rebin[j]  = np.nanmean(np.asarray(Delays_in_ebin)[idx])
+            if varbin_t:
+            	delay_rebin[j]  = np.nanmean(np.asarray(Delays_in_ebin)[idx])
             
             pump_in_tbin    = np.asarray(pump_in_ebin)[idx]
             unpump_in_tbin  = np.asarray(unpump_in_ebin)[idx]
