@@ -1463,16 +1463,16 @@ def load_reduced_data_offset(pgroup, loaddir, runlist, t0_offset, average_twodio
                     d2[k] = d['unpump_1'] + d['unpump_2']
                 else:
                     d2[k] = d[k] + d[k]
-            d.update(d2)
-        
-        #d3 = defaultdict(list)
-        #offset = np.asarray(t0_offset[i]) 
-        #for k,v in d.items():
-        #    if "Delay" in k:# == "Delay_stage":
-        #        #print (len(d[k]))
-        #        d3[k] = d[k] + offset
-        #        print ("Run {}, {} offset by {} fs".format(run, k, offset))
-        #d.update(d3)
+            d.update(d2)              
+
+    if switch_diodes:
+            d3 = d.copy()
+            for k in d.keys():
+                if "1" in k:
+                    d3[k] = d[k.replace('1', '2')]
+                if "2" in k:
+                    d3[k] = d[k.replace('2', '1')]
+            d.update(d3)
 
     return d, titlestring
 
