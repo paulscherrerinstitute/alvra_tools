@@ -40,7 +40,7 @@ def Reduce_scan_PP(reducedir, saveflag, jsonlist, TT, motor, diode1, diode2, Ize
         scan = SFScanInfo(jsonfile)
         rbk = np.ravel(scan.readbacks)
 
-        unique = np.roll(np.diff(rbk, prepend=1)>0.001, -1)
+        unique = np.roll(np.diff(rbk, prepend=1)>0.05, -1)
         if scan.parameters['Id'] == ['dummy']:
             unique = np.full(len(rbk), True)
         rbk = rbk[unique]
@@ -1006,7 +1006,7 @@ def Rebin_and_filter_timescans_noPair(data, binsize, minvalue, maxvalue, quantil
 
 ######################################
 
-def Rebin_and_filter_2Dscans(data, binsize, minvalue, maxvalue, quantile, readbacks, withTT, threshold=0, varbin_t=False, numbins=None):
+def Rebin_and_filter_2Dscans(data, binsize, minvalue, maxvalue, quantile, readbacks, withTT, threshold=0, n_sigma=1, varbin_t=False, numbins=None):
     for k,v in data.items():
         data[k] = v
 
@@ -1062,8 +1062,8 @@ def Rebin_and_filter_2Dscans(data, binsize, minvalue, maxvalue, quantile, readba
         Delays_in_ebin = Delays[s:e]
 
         thresh   = (Izero_p_in_ebin > threshold) & (Izero_u_in_ebin > threshold)
-        filterIp = Izero_p_in_ebin > (np.nanmedian(Izero_p_in_ebin) - np.std(Izero_p_in_ebin))
-        filterIu = Izero_u_in_ebin > (np.nanmedian(Izero_u_in_ebin) - np.std(Izero_u_in_ebin))
+        filterIp = Izero_p_in_ebin > (np.nanmedian(Izero_p_in_ebin) - n_sigma*np.std(Izero_p_in_ebin))
+        filterIu = Izero_u_in_ebin > (np.nanmedian(Izero_u_in_ebin) - n_sigma*np.std(Izero_u_in_ebin))
 
         pump_in_ebin    = pump_in_ebin[filterIp & filterIu & thresh]
         unpump_in_ebin  = unpump_in_ebin[filterIp & filterIu & thresh]
