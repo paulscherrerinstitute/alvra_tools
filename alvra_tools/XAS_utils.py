@@ -142,9 +142,7 @@ def Plot_scan_2diodes(pgroup, reducedir, runlist, timescan=False, threshold=0, i
 
     if scan.parameters['Id'] == ['dummy']:
         rbk = np.arange(len(scan.readbacks))
-        xlabel = 'Acq number'
-        xunits = 'N/A'
-
+  
     if timescan:
         xaxis    = np.asarray(data["Delays_stage"])
         pp1, GS1, ES1, err_pp1, err_GS1, err_ES1, rbk = Rebin_timescans(pump_1, unpump_1, Izero_pump, Izero_unpump, xaxis, rbk, threshold, varbin_t=False)
@@ -153,6 +151,11 @@ def Plot_scan_2diodes(pgroup, reducedir, runlist, timescan=False, threshold=0, i
         pp1, GS1, ES1, err_pp1, err_GS1, err_ES1 = Rebin_energyscans_PP(pump_1, unpump_1, Izero_pump, Izero_unpump, xaxis, rbk, threshold)
         pp2, GS2, ES2, err_pp2, err_GS2, err_ES2 = Rebin_energyscans_PP(pump_2, unpump_2, Izero_pump, Izero_unpump, xaxis, rbk, threshold)
     lines = next(linecycler)
+
+    if scan.parameters['Id'] == ['dummy']:
+        rbk = np.arange(len(scan.readbacks))
+        xlabel = 'Acq number'
+        xunits = 'N/A'
 
     ax1.plot(rbk, ES1, linestyle=lines, label='ON 1 {}'.format(runname), color='royalblue', alpha = 0.8)
     ax1.fill_between(rbk, ES1-err_ES1, ES1+err_ES1, color='lightblue')
