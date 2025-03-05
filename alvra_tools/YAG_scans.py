@@ -66,6 +66,7 @@ def YAG_scanPP(reducedir, saveflag, jsonlist, TT, motor, laser, Izero):
 
         if saveflag:
             os.makedirs(reducedir+runname, exist_ok=True)
+            os.chmod(reducedir+runname, 0o775)
             save_reduced_data_YAGPP(reducedir, runname, scan, lp, lu, Ip, Iu, ds, aT, dc)
 
         laser_pump.extend(lp)
@@ -75,6 +76,70 @@ def YAG_scanPP(reducedir, saveflag, jsonlist, TT, motor, laser, Izero):
         Delays_stage.extend(ds)
         arrTimes.extend(aT)
         Delays_corr.extend(dc)
+
+    print ('----------------------------')
+    print ('Loaded {} total on/off pairs'.format(len(Delays_corr)))
+
+    return (laser_pump, laser_unpump, Izero_pump, Izero_unpump, Delays_stage, arrTimes, Delays_corr)
+
+#########################################################
+
+def YAG_scanPP_loop(reducedir, saveflag, jsonlist, TT, motor, laser, Izero):
+    if TT == TT_PSEN124:
+        TT = [channel_PSEN124_arrTimes, channel_PSEN124_arrTimesAmp]
+        channel_arrTimes = channel_PSEN124_arrTimes
+        channel_arrTimesAmp = channel_PSEN124_arrTimesAmp
+    elif TT == TT_PSEN126:
+        TT = [channel_PSEN126_arrTimes, channel_PSEN126_arrTimesAmp]
+        channel_arrTimes = channel_PSEN126_arrTimes
+        channel_arrTimesAmp = channel_PSEN126_arrTimesAmp
+
+    channels_pp = [channel_Events, laser, Izero, motor] + TT
+    channels_all = channels_pp
+
+    from sfdata import SFScanInfo
+
+    laser_pump, laser_unpump, Izero_pump, Izero_unpump, Delays_stage, arrTimes, Delays_corr = ([] for i in range(7))
+
+    for jsonfile in jsonlist:
+        runname = jsonfile.split('/')[-3]
+        scan = SFScanInfo(jsonfile)
+
+        lp, lu, Ip, Iu, ds, aT, dc = ([] for i in range(7))
+
+        for i, step in enumerate(scan):
+            check_files_and_data(step)
+            check = get_filesize_diff(step)
+
+            if check:
+                clear_output(wait=True)
+                filename = scan.files[i][0].split('/')[-1].split('.')[0]
+                print (jsonfile)
+                print ('Step {} of {}: Processing {}'.format(i+1, len(scan.files), filename))
+
+                resultsPP, results, _, _ = load_data_compact_pump_probe(channels_pp, channels_all, step)
+
+                lp = resultsPP[laser].pump
+                lu = resultsPP[laser].unpump
+                Ip = resultsPP[Izero].pump
+                Iu = resultsPP[Izero].unpump
+                ds = resultsPP[motor].pump
+                aT = resultsPP[channel_arrTimes].pump
+                dc = resultsPP[motor].pump + resultsPP[channel_arrTimes].pump
+
+                if saveflag:
+                    os.makedirs(reducedir+runname+'/'+filename, exist_ok=True)
+                    os.chmod(reducedir+runname+'/'+filename, 0o775)
+                    save_reduced_data_YAGPP(reducedir, runname+'/'+filename, scan, lp, lu, Ip, Iu, ds, aT, dc)
+                print ('acq {}: loaded {} on/off pairs'.format(step, len(dc)))
+
+            laser_pump.extend(lp)
+            laser_unpump.extend(lu)
+            Izero_pump.extend(Ip)
+            Izero_unpump.extend(Iu)
+            Delays_stage.extend(ds)
+            arrTimes.extend(aT)
+            Delays_corr.extend(dc)
 
     print ('----------------------------')
     print ('Loaded {} total on/off pairs'.format(len(Delays_corr)))
@@ -127,9 +192,10 @@ def rebin_and_filter_YAG(data, binsize, minvalue, maxvalue, quantile, numbins=No
         correlation_filter(pump, unpump, Izero_p, Izero_u, quantile)
         
         howmany.append(len(pump_filter))
-    
+#        howmany.append(len(pump))
         Pump_probe_shot = -np.log10(pump_filter/unpump_filter)/Izero_pump_filter
-    
+#        Pump_probe_shot = -np.log10(pump/unpump)/Izero_p
+
         pp_rebin[i]  = np.nanmean(Pump_probe_shot)
         err_pp[i] = np.nanstd(Pump_probe_shot)/np.sqrt(len(Pump_probe_shot))
 

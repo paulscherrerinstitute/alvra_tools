@@ -119,6 +119,110 @@ def Reduce_scan_PP(reducedir, saveflag, jsonlist, TT, motor, diode1, diode2, Ize
 
 ##################################################################
 
+def Reduce_scan_PP_loop(reducedir, saveflag, jsonlist, TT, motor, diode1, diode2, Izero, shots2average=None):
+    
+    if TT == TT_PSEN124:
+        TT = [channel_PSEN124_arrTimes, channel_PSEN124_arrTimesAmp]
+        channel_arrTimes = channel_PSEN124_arrTimes
+        channel_arrTimesAmp = channel_PSEN124_arrTimesAmp
+    elif TT == TT_PSEN126:
+        TT = [channel_PSEN126_arrTimes, channel_PSEN126_arrTimesAmp]
+        channel_arrTimes = channel_PSEN126_arrTimes
+        channel_arrTimesAmp = channel_PSEN126_arrTimesAmp
+
+    channels_pp = [channel_Events, diode1, diode2, Izero, motor, channel_monoEnergy] + TT
+    channels_all = channels_pp
+    
+    from sfdata import SFScanInfo
+    
+    pump_1, unpump_1, pump_2, unpump_2, pump_1_raw, unpump_1_raw, pump_2_raw, unpump_2_raw, Izero_pump, Izero_unpump, Delays_stage, arrTimes, Delays_corr, energy, energypad, readbacks, corr1, corr2 = ([] for i in range(18))
+    
+    for jsonfile in jsonlist:
+        runname = jsonfile.split('/')[-3]
+        scan = SFScanInfo(jsonfile)
+        rbk = np.ravel(scan.readbacks)
+
+        unique = np.roll(np.diff(rbk, prepend=1)>0.05, -1)
+        if scan.parameters['Id'] == ['dummy']:
+            unique = np.full(len(rbk), True)
+        rbk = rbk[unique]
+
+        p1_raw, u1_raw, p2_raw, u2_raw, p1, u1, p2, u2, Ip, Iu, ds, aT, dc, en, en2, c1, c2 = ([] for i in range(17))
+
+        for i, step in enumerate(scan):
+            check_files_and_data(step)
+            check = get_filesize_diff(step)  
+            go = unique[i]
+
+            if check & go:
+                clear_output(wait=True)
+                filename = scan.files[i][0].split('/')[-1].split('.')[0]
+                print (jsonfile)
+                print ('Step {} of {}: Processing {}'.format(i+1, len(scan.files), filename))
+    
+                resultsPP, results, _, _ = load_data_compact_pump_probe(channels_pp, channels_all, step)
+                try:
+                    p1_raw = resultsPP[diode1].pump
+                    u1_raw = resultsPP[diode1].unpump
+                    p2_raw = resultsPP[diode2].pump
+                    u2_raw = resultsPP[diode2].unpump
+                    Ip     = resultsPP[Izero].pump
+                    Iu     = resultsPP[Izero].unpump
+                    ds     = resultsPP[motor].pump
+                    aT     = resultsPP[channel_arrTimes].pump
+                    dc     = resultsPP[motor].pump + resultsPP[channel_arrTimes].pump
+
+                    enshot = resultsPP[channel_monoEnergy].pump
+                    en = enshot
+                    #en2 = np.pad(en2, (0,len(enshot)), constant_values=(np.random.normal(rbk[i],0.01,1)))
+                    en2 = np.pad(en2, (0,len(enshot)), constant_values=(np.nanmean(enshot)))
+
+                    pearsonr1 = pearsonr(resultsPP[diode1].unpump,resultsPP[Izero].unpump)[0]
+                    pearsonr2 = pearsonr(resultsPP[diode2].unpump,resultsPP[Izero].unpump)[0]
+
+                    c1 = [pearsonr1]
+                    c2 = [pearsonr2]
+
+                    print ("correlation Diode1 (dark shots) = {}".format(pearsonr1))
+                    print ("correlation Diode2 (dark shots) = {}".format(pearsonr2))
+
+                    u1 = u1_raw/np.nanmean(np.array(u1_raw)[:shots2average])
+                    p1 = p1_raw/np.nanmean(np.array(u1_raw)[:shots2average])
+                    u2 = u2_raw/np.nanmean(np.array(u2_raw)[:shots2average])        
+                    p2 = p2_raw/np.nanmean(np.array(u2_raw)[:shots2average])        
+
+                    if saveflag:
+                        os.makedirs(reducedir+runname+'/'+filename, exist_ok=True)
+                        os.chmod(reducedir+runname+'/'+filename, 0o775)
+                        save_reduced_data_scanPP(reducedir, runname+'/'+filename, scan, p1, u1, p2, u2, p1_raw, u1_raw, p2_raw, u2_raw, Ip, Iu, ds, aT, dc, en, en2, rbk, c1, c2)
+                except:
+                    print ('Error in loading this acquisition, skipped!')
+        pump_1.extend(p1)
+        unpump_1.extend(u1)
+        pump_2.extend(p2)
+        unpump_2.extend(u2)
+        pump_1_raw.extend(p1_raw)
+        unpump_1_raw.extend(u1_raw)
+        pump_2_raw.extend(p2_raw)
+        unpump_2_raw.extend(u2_raw)
+        Izero_pump.extend(Ip)
+        Izero_unpump.extend(Iu)
+        Delays_stage.extend(ds)
+        arrTimes.extend(aT)
+        Delays_corr.extend(dc)
+        energy.extend(en)
+        energypad.extend(en2)
+        #readbacks.append(rbk)
+        corr1.append(c1)
+        corr2.append(c2)
+
+    print ('----------------------------')
+    print ('Loaded {} total on/off pairs'.format(len(Delays_corr)))
+
+    return (pump_1, unpump_1, pump_2, unpump_2, pump_1_raw, unpump_1_raw, pump_2_raw, unpump_2_raw, Izero_pump, Izero_unpump, Delays_stage, arrTimes, Delays_corr, energy, energypad, rbk, corr1, corr2)
+
+##################################################################
+
 def Reduce_scan_PP_noPair(reducedir, saveflag, jsonlist, TT, motor, diode1, diode2, det_Izero, shots2average=None):
     
     if TT == TT_PSEN124:
@@ -1103,6 +1207,10 @@ def Rebin_and_filter_2Dscans(data, binsize, minvalue, maxvalue, quantile, readba
 
     pp_rebin = np.reshape(np.array(pp_rebin), (len(readbacks), -1, len(bin_centres)))
     pp_rebin = np.nanmean(pp_rebin, axis=1)
+    GS_rebin = np.reshape(np.array(GS_rebin), (len(readbacks), -1, len(bin_centres)))
+    GS_rebin = np.nanmean(GS_rebin, axis=1)
+    ES_rebin = np.reshape(np.array(ES_rebin), (len(readbacks), -1, len(bin_centres)))
+    ES_rebin = np.nanmean(ES_rebin, axis=1)
     err_pp = np.reshape(np.array(err_pp), (len(readbacks), -1, len(bin_centres)))
     err_pp = np.nanmean(err_pp, axis=1)
 
