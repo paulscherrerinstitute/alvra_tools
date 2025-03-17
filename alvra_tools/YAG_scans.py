@@ -148,7 +148,7 @@ def YAG_scanPP_loop(reducedir, saveflag, jsonlist, TT, motor, laser, Izero):
 
 #########################################################
 
-def rebin_and_filter_YAG(data, binsize, minvalue, maxvalue, quantile, numbins=None, variable_bins=False):
+def rebin_and_filter_YAG(data, binsize, minvalue, maxvalue, quantile, t_offset=0, numbins=None, variable_bins=False):
 
     for k,v in data.items():
         data[k] = v
@@ -158,6 +158,8 @@ def rebin_and_filter_YAG(data, binsize, minvalue, maxvalue, quantile, numbins=No
     Izero_pump = np.asarray(data['Izero_pump'])
     Izero_unpump = np.asarray(data['Izero_unpump'])
     Delays_corr = np.asarray(data['Delays_corr'])
+
+    Delays_corr=Delays_corr+t_offset
 
     binList = np.arange(minvalue, maxvalue, binsize)
 
