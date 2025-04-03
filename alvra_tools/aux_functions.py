@@ -306,22 +306,22 @@ def check_psss(pgroup, runlist):
         timestamps_run = []
         for i, step in enumerate(scan):
             check_files_and_data(step)
-	        check = get_filesize_diff(step) 
-	        if check:
+            check = get_filesize_diff(step) 
+            if check:
                 clear_output(wait=True)
-	            print ('{}/{}: {}'.format(j+1, len(datafiles), json_file))
-	            timestamps_run.append( timestamp_step(step) )
-	            filename = scan.files[i][0].split('/')[-1].split('.')[0]
-	            print ('Step {} of {}: Processing {}'.format(i+1, len(scan.files), filename))
+                print ('{}/{}: {}'.format(j+1, len(datafiles), json_file))
+                timestamps_run.append( timestamp_step(step) )
+                filename = scan.files[i][0].split('/')[-1].split('.')[0]
+                print ('Step {} of {}: Processing {}'.format(i+1, len(scan.files), filename))
 
-	            results,pids = load_data_compact(channel_list, step)
-	            temp = results['SARFE10-PSSS059:FIT-COM']
-	            psss_com_run.append(np.average(results['SARFE10-PSSS059:FIT-COM']))
-	            psss_com.append(np.average(results['SARFE10-PSSS059:FIT-COM']))
+                results,pids = load_data_compact(channel_list, step)
+                temp = results['SARFE10-PSSS059:FIT-COM']
+                psss_com_run.append(np.average(results['SARFE10-PSSS059:FIT-COM']))
+                psss_com.append(np.average(results['SARFE10-PSSS059:FIT-COM']))
 	            
-	            pulseEnergy.append(np.average(results["SARFE10-PBPG050:HAMP-INTENSITY-CAL"]))
-	            pulseEnergy_run.append(np.average(results["SARFE10-PBPG050:HAMP-INTENSITY-CAL"]))
-	            timestamps.append(timestamp_step(step))
+                pulseEnergy.append(np.average(results["SARFE10-PBPG050:HAMP-INTENSITY-CAL"]))
+                pulseEnergy_run.append(np.average(results["SARFE10-PBPG050:HAMP-INTENSITY-CAL"]))
+                timestamps.append(timestamp_step(step))
 
     return timestamps, psss_com, pulseEnergy
 
