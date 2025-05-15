@@ -91,6 +91,7 @@ def Reduce_scan_PP(reducedir, saveflag, jsonlist, TT, motor, diode1, diode2, Ize
 
         if saveflag:
             os.makedirs(reducedir+runname, exist_ok=True)
+            os.chmod(reducedir+runname, 0o775)
             save_reduced_data_scanPP(reducedir, runname, scan, p1, u1, p2, u2, p1_raw, u1_raw, p2_raw, u2_raw, Ip, Iu, ds, aT, dc, en, en2, rbk, c1, c2)
                 
         pump_1.extend(p1)
@@ -161,42 +162,68 @@ def Reduce_scan_PP_loop(reducedir, saveflag, jsonlist, TT, motor, diode1, diode2
                 print ('Step {} of {}: Processing {}'.format(i+1, len(scan.files), filename))
     
                 resultsPP, results, _, _ = load_data_compact_pump_probe(channels_pp, channels_all, step)
-                try:
-                    p1_raw = resultsPP[diode1].pump
-                    u1_raw = resultsPP[diode1].unpump
-                    p2_raw = resultsPP[diode2].pump
-                    u2_raw = resultsPP[diode2].unpump
-                    Ip     = resultsPP[Izero].pump
-                    Iu     = resultsPP[Izero].unpump
-                    ds     = resultsPP[motor].pump
-                    aT     = resultsPP[channel_arrTimes].pump
-                    dc     = resultsPP[motor].pump + resultsPP[channel_arrTimes].pump
+                #try:
+                p1_raw_acq = resultsPP[diode1].pump
+                u1_raw_acq = resultsPP[diode1].unpump
+                p2_raw_acq = resultsPP[diode2].pump
+                u2_raw_acq = resultsPP[diode2].unpump
+                Ip_acq     = resultsPP[Izero].pump
+                Iu_acq     = resultsPP[Izero].unpump
+                ds_acq     = resultsPP[motor].pump
+                aT_acq     = resultsPP[channel_arrTimes].pump
+                dc_acq     = resultsPP[motor].pump + resultsPP[channel_arrTimes].pump   
 
-                    enshot = resultsPP[channel_monoEnergy].pump
-                    en = enshot
-                    #en2 = np.pad(en2, (0,len(enshot)), constant_values=(np.random.normal(rbk[i],0.01,1)))
-                    en2 = np.pad(en2, (0,len(enshot)), constant_values=(np.nanmean(enshot)))
+                enshot = resultsPP[channel_monoEnergy].pump                 
+                en_acq = enshot                         
+                en2 = np.pad(en2, (0,len(enshot)), constant_values=(np.nanmean(enshot)))  
 
-                    pearsonr1 = pearsonr(resultsPP[diode1].unpump,resultsPP[Izero].unpump)[0]
-                    pearsonr2 = pearsonr(resultsPP[diode2].unpump,resultsPP[Izero].unpump)[0]
+                pearsonr1 = pearsonr(resultsPP[diode1].unpump,resultsPP[Izero].unpump)[0]
+                pearsonr2 = pearsonr(resultsPP[diode2].unpump,resultsPP[Izero].unpump)[0]
 
-                    c1 = [pearsonr1]
-                    c2 = [pearsonr2]
+                c1_acq = [pearsonr1]
+                c2_acq = [pearsonr2]
 
-                    print ("correlation Diode1 (dark shots) = {}".format(pearsonr1))
-                    print ("correlation Diode2 (dark shots) = {}".format(pearsonr2))
+                p1_raw.extend(p1_raw_acq)
+                u1_raw.extend(u1_raw_acq)
+                p2_raw.extend(p2_raw_acq)
+                u2_raw.extend(u2_raw_acq)
+                Ip.extend(Ip_acq)
+                Iu.extend(Iu_acq)
+                ds.extend(ds_acq)
+                aT.extend(aT_acq)
+                dc.extend(dc_acq)
+                
+                en.extend(enshot)
+                c1.append(pearsonr1)
+                c2.append(pearsonr2)
 
-                    u1 = u1_raw/np.nanmean(np.array(u1_raw)[:shots2average])
-                    p1 = p1_raw/np.nanmean(np.array(u1_raw)[:shots2average])
-                    u2 = u2_raw/np.nanmean(np.array(u2_raw)[:shots2average])        
-                    p2 = p2_raw/np.nanmean(np.array(u2_raw)[:shots2average])        
+                print ("correlation Diode1 (dark shots) = {}".format(pearsonr1))
+                print ("correlation Diode2 (dark shots) = {}".format(pearsonr2))
 
-                    if saveflag:
-                        os.makedirs(reducedir+runname+'/'+filename, exist_ok=True)
-                        os.chmod(reducedir+runname+'/'+filename, 0o775)
-                        save_reduced_data_scanPP(reducedir, runname+'/'+filename, scan, p1, u1, p2, u2, p1_raw, u1_raw, p2_raw, u2_raw, Ip, Iu, ds, aT, dc, en, en2, rbk, c1, c2)
-                except:
-                    print ('Error in loading this acquisition, skipped!')
+                u1_acq = u1_raw_acq/np.nanmean(np.array(u1_raw_acq)[:shots2average])
+                p1_acq = p1_raw_acq/np.nanmean(np.array(u1_raw_acq)[:shots2average])
+                u2_acq = u2_raw_acq/np.nanmean(np.array(u2_raw_acq)[:shots2average])        
+                p2_acq = p2_raw_acq/np.nanmean(np.array(u2_raw_acq)[:shots2average])        
+
+                if saveflag:
+                    os.makedirs(reducedir+runname+'/'+filename, exist_ok=True)
+                    os.chmod(reducedir+runname+'/'+filename, 0o775)
+                    save_reduced_data_scanPP(reducedir, runname+'/'+filename, scan, p1_acq, u1_acq, p2_acq, u2_acq, p1_raw_acq, u1_raw_acq, p2_raw_acq, u2_raw_acq, Ip_acq, Iu_acq, ds_acq, aT_acq, dc_acq, en_acq, en2, rbk, c1_acq, c2_acq)
+                print ('Saved in: {}'.format(reducedir+runname+'/'+filename+'/'))
+                #except:
+                #    print ('Error in loading this acquisition, skipped!')
+        
+        u1 = u1_raw/np.nanmean(np.array(u1_raw)[:shots2average])
+        p1 = p1_raw/np.nanmean(np.array(u1_raw)[:shots2average])
+        u2 = u2_raw/np.nanmean(np.array(u2_raw)[:shots2average])        
+        p2 = p2_raw/np.nanmean(np.array(u2_raw)[:shots2average])   
+
+        if saveflag:
+            os.makedirs(reducedir+runname, exist_ok=True)
+            os.chmod(reducedir+runname, 0o775)
+            save_reduced_data_scanPP(reducedir, runname, scan, p1, u1, p2, u2, p1_raw, u1_raw, p2_raw, u2_raw, Ip, Iu, ds, aT, dc, en, en2, rbk, c1, c2)
+            print ('Saved in: {}'.format(reducedir+runname+'/'))
+
         pump_1.extend(p1)
         unpump_1.extend(u1)
         pump_2.extend(p2)
@@ -462,22 +489,14 @@ def Rebin_and_filter_energyscans_static(data, quantile, readbacks, threshold=0):
         unpump  = unpump_1[s:e]
         Izero_u = Izero_unpump[s:e]
 
-        filterI = Izero_u > (np.nanmedian(Izero_u) - np.std(Izero_u))
+        ratio_u = unpump/Izero_u        
 
-        unpump  = unpump[filterI]
-        Izero_u = Izero_u[filterI]
-        
+        filterIu = Izero_u > (np.nanmedian(Izero_u) - np.std(Izero_u))        
         thresh   = (Izero_u > threshold)
-        filterIu = Izero_u > (np.nanmedian(Izero_u) - np.std(Izero_u))
-        unpump  = unpump[filterIp & filterIu & thresh]
-        Izero_p = Izero_p[filterIp & filterIu & thresh]
-
-        ratio_u = unpump/Izero_u
-        
         filtervals = create_corr_condition_u(ratio_u, quantile)
-        
-        unpump_1_filter     = unpump[filtervals & thresh]
-        Izero_unpump_filter = Izero_u[filtervals & thresh]
+
+        unpump_1_filter     = unpump[filterIu & thresh & filtervals]
+        Izero_unpump_filter = Izero_u[filterIu & thresh & filtervals]
         
         unpump_filter = unpump_1_filter / Izero_unpump_filter
         
