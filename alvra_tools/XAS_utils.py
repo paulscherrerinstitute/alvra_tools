@@ -7,7 +7,7 @@ import glob
 
 ################################################
 
-def Plot_reduced_data(pgroup, runlist, scan, data, withTT, timescan=False):
+def Plot_reduced_data_old(pgroup, runlist, scan, data, withTT, timescan=False):
 
     Izero_pump = data['Izero_pump']
     Izero_unpump = data['Izero_unpump']
@@ -37,6 +37,53 @@ def Plot_reduced_data(pgroup, runlist, scan, data, withTT, timescan=False):
     ax3.title.set_text('Delays')
     ax3.hist(Delays, bins = 100)
     ax3.set_xlim(min(Delays), max(Delays))
+    ax4.title.set_text('Energies')
+    ax4.hist(energy, bins=len(scan.values))
+    ax4.set_xlim(min(energy), max(energy))
+    ax1.grid()
+    ax2.grid()
+    ax3.grid()
+    ax4.grid()
+    plt.show()
+
+    if withTT:
+        print('Time delay axis rebinned with TT data')
+    else:
+        print('Time delay axis rebinned with delay stage data')
+
+################################################
+
+def Plot_reduced_data(data, scan, titleplot, withTT, timescan=False):
+
+    Izero_pump = data['Izero_pump']
+    Izero_unpump = data['Izero_unpump']
+    pump_1 = data['pump_1']
+    unpump_1 = data['unpump_1']
+    Delays_stage = data['Delays_stage']
+    Delays_corr = data['Delays_corr']
+    energy = data['energypad']
+    if timescan:
+        energy = data['energy']
+
+    if withTT:
+        Delays = Delays_corr
+    else:
+        Delays = Delays_stage
+    
+    fig, (ax1, ax2, ax3, ax4) = plt.subplots(1, 4, figsize=(9, 3), constrained_layout=True)
+    fig.suptitle(titleplot)
+    ax1.title.set_text('Izero')
+    ax1.hist(Izero_pump, bins = 200, alpha=0.5, label = 'on')
+    ax1.hist(Izero_unpump, bins = 200, alpha=0.5, label = 'off')
+    ax1.legend(loc='best')
+    ax2.title.set_text('Fluo')
+    ax2.hist(pump_1, bins = 200, alpha=0.5, label = 'on')
+    ax2.hist(unpump_1, bins = 200, alpha=0.5, label = 'off')
+    ax2.legend(loc='best')
+    ax3.title.set_text('Delays')
+    ax3.hist(Delays, bins = 100)
+    if len(Delays) !=0:
+        ax3.set_xlim(min(Delays), max(Delays))
     ax4.title.set_text('Energies')
     ax4.hist(energy, bins=len(scan.values))
     ax4.set_xlim(min(energy), max(energy))
@@ -141,7 +188,7 @@ def Plot_scan_2diodes(pgroup, reducedir, runlist, timescan=False, threshold=0, i
         pass
 
     if scan.parameters['Id'] == ['dummy']:
-        rbk = np.arange(len(scan.readbacks))
+        rbk = np.arange(1, len(scan.readbacks)+1)
   
     if timescan:
         xaxis    = np.asarray(data["Delays_stage"])
@@ -153,7 +200,7 @@ def Plot_scan_2diodes(pgroup, reducedir, runlist, timescan=False, threshold=0, i
     lines = next(linecycler)
 
     if scan.parameters['Id'] == ['dummy']:
-        rbk = np.arange(len(scan.readbacks))
+        rbk = np.arange(1, len(scan.readbacks)+1)
         xlabel = 'Acq number'
         xunits = 'N/A'
 
@@ -275,7 +322,7 @@ def Plot_correlations_scan(pgroup, reducedir, runlist, timescan=False, lowlim=0.
         corr2     = np.asarray(data["corr2"])
 
         if scan.parameters['Id'] == ['dummy']:
-            readbacks = np.arange(len(scan.readbacks))
+            readbacks = np.arange(1, len(scan.readbacks)+1)
             xlabel = 'Acq number'
             xunits = 'N/A'
 
