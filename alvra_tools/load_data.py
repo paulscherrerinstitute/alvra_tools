@@ -25,6 +25,14 @@ def _get_data(f):
     else:
         return f
 
+def get_json_from_run(runlist, pgroup, path='raw'):
+    import glob
+    jsonlist = []
+    for run in runlist:
+        jsonlist.append(glob.glob('/sf/alvra/data/{}/{}/*{:04d}*/meta/scan.json'.format(pgroup, path, run))[0])
+    return jsonlist
+
+
 def _get_modulo(pulse_ids, modulo):
     nshots = len(pulse_ids)
 #    print ("Found {} shots in the file".format(nshots))
@@ -156,9 +164,9 @@ def get_filesizes(step):
                 size = os.stat(bsfile).st_size
                 break
             else: 
-                size = np.NaN
+                size = np.nan
         else:
-            size = np.NaN
+            size = np.nan
     return size
 
 def get_filesize_diff(step):
@@ -1400,7 +1408,7 @@ def load_reduced_data(pgroup, loaddir, runlist, average_twodiodes=False, switch_
 
 def load_reduced_data_loop(pgroup, loaddir, runlist, acqlist, average_twodiodes=False, switch_diodes=False):
     from collections import defaultdict
-    titlestring = pgroup + ' --- ' +str(runlist)
+    titlestring = pgroup + ' --- ' +str(runlist) + ' --- ' +str(acqlist)
 
     d = defaultdict(list)
     for run in runlist:
