@@ -153,9 +153,9 @@ def Plot_reduced_data_noPair(pgroup, runlist, scan, data, withTT, timescan=False
 
 ################################################
 
-def Plot_scan_2diodes(pgroup, reducedir, runlist, timescan=False, threshold=0, indexrun=-1):
+def Plot_scan_2diodes(pgroup, reducedir, runlist, path = 'raw', timescan=False, threshold=0, indexrun=-1):
 
-    jsonfile = glob.glob('/sf/alvra/data/{}/raw/*{:04d}*/meta/scan.json'.format(pgroup, runlist[0]))[0]
+    jsonfile = glob.glob('/sf/alvra/data/{}/{}/*{:04d}*/meta/scan.json'.format(pgroup, path, runlist[0]))[0]
     from sfdata import SFScanInfo
     scan = SFScanInfo(jsonfile)
     
@@ -299,13 +299,13 @@ def Plot_scan_2diodes_noPair(pgroup, reducedir, runlist, timescan=False, thresho
 
 ################################################
 
-def Plot_correlations_scan(pgroup, reducedir, runlist, timescan=False, lowlim=0.99):
+def Plot_correlations_scan(pgroup, reducedir, runlist, path='raw', timescan=False, lowlim=0.99):
 
     _, titlestring_stack = load_reduced_data(pgroup, reducedir, runlist)
     fig, ((ax1, ax3)) = plt.subplots(1, 2, figsize=(10, 3), constrained_layout=True)
     plt.suptitle(titlestring_stack)
 
-    jsonfile = glob.glob('/sf/alvra/data/{}/raw/*{:04d}*/meta/scan.json'.format(pgroup, runlist[0]))[0]
+    jsonfile = glob.glob('/sf/alvra/data/{}/{}/*{:04d}*/meta/scan.json'.format(pgroup, path, runlist[0]))[0]
     from sfdata import SFScanInfo
     scan = SFScanInfo(jsonfile)
 
