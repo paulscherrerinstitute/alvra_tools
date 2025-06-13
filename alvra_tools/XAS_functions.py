@@ -465,7 +465,7 @@ def Rebin_energyscans_static(unpump, Iunpump, energy, readbacks, threshold=0):
 
 ######################################
 
-def Rebin_and_filter_energyscans_static(data, quantile, readbacks, threshold=0):
+def Rebin_and_filter_energyscans_static(data, quantile, readbacks, threshold=0, n_sigma=1):
 
     for k,v in data.items():
         data[k] = v
@@ -490,8 +490,7 @@ def Rebin_and_filter_energyscans_static(data, quantile, readbacks, threshold=0):
         Izero_u = Izero_unpump[s:e]
 
         ratio_u = unpump/Izero_u        
-
-        filterIu = Izero_u > (np.nanmedian(Izero_u) - np.std(Izero_u))        
+		filterIu = Izero_u > (np.nanmedian(Izero_u) - n_sigma*np.std(Izero_u))
         thresh   = (Izero_u > threshold)
         filtervals = create_corr_condition_u(ratio_u, quantile)
 
@@ -637,7 +636,7 @@ def Rebin_energyscans_PP_noPair(pump, Ipump, lights, darks, scanvar, readbacks, 
 
 ######################################
 
-def Rebin_and_filter_energyscans_PP(data, quantile, readbacks, threshold=0):
+def Rebin_and_filter_energyscans_PP(data, quantile, readbacks, threshold=0, n_sigma=1):
     
     for k,v in data.items():
         data[k] = v
@@ -669,8 +668,8 @@ def Rebin_and_filter_energyscans_PP(data, quantile, readbacks, threshold=0):
         Izero_u = Izero_unpump[s:e]
         
         thresh   = (Izero_p > threshold) & (Izero_u > threshold)
-        filterIp = Izero_p > (np.nanmedian(Izero_p) - np.std(Izero_p))
-        filterIu = Izero_u > (np.nanmedian(Izero_u) - np.std(Izero_u))
+        filterIp = Izero_p > (np.nanmedian(Izero_p) - n_sigma*np.std(Izero_p))
+        filterIu = Izero_u > (np.nanmedian(Izero_u) - n_sigma*np.std(Izero_u))
 
         pump    = pump[filterIp & filterIu & thresh]
         unpump  = unpump[filterIp & filterIu & thresh]
@@ -728,7 +727,7 @@ def Rebin_and_filter_energyscans_PP(data, quantile, readbacks, threshold=0):
 
 ######################################
 
-def Rebin_and_filter_energyscans_PP_noPair(data, quantile, readbacks, threshold=0):
+def Rebin_and_filter_energyscans_PP_noPair(data, quantile, readbacks, threshold=0, n_sigma=1):
     
     for k,v in data.items():
         data[k] = v
@@ -761,7 +760,7 @@ def Rebin_and_filter_energyscans_PP_noPair(data, quantile, readbacks, threshold=
         darks_e  = darks[s:e]       
 
         thresh  = Izero_p1 > threshold
-        filterI = Izero_p1 > (np.nanmedian(Izero_p1) - np.std(Izero_p1))
+        filterI = Izero_p1 > (np.nanmedian(Izero_p1) - n_sigma*np.std(Izero_p1))
         
         pump1    = pump1[filterI & thresh]
         Izero_p1 = Izero_p1[filterI & thresh]
@@ -954,7 +953,7 @@ def Rebin_timescans_noPair(pump, Ipump, lights, darks, delaystage, readbacks, th
 
 ######################################
 
-def Rebin_and_filter_timescans(data, binsize, minvalue, maxvalue, quantile, threshold=0, withTT=True, numbins=None, varbin_t=False):
+def Rebin_and_filter_timescans(data, binsize, minvalue, maxvalue, quantile, withTT, threshold=0, n_sigma=1, numbins=None, varbin_t=False):
 
     for k,v in data.items():
         data[k] = v
@@ -1001,8 +1000,8 @@ def Rebin_and_filter_timescans(data, binsize, minvalue, maxvalue, quantile, thre
         Izero_u = Izero_unpump[idx]
 
         thresh   = (Izero_p > threshold) & (Izero_u > threshold)
-        filterIp = Izero_p > (np.nanmedian(Izero_p) - np.std(Izero_p))
-        filterIu = Izero_u > (np.nanmedian(Izero_u) - np.std(Izero_u))
+        filterIp = Izero_p > (np.nanmedian(Izero_p) - n_sigma*np.std(Izero_p))
+        filterIu = Izero_u > (np.nanmedian(Izero_u) - n_sigma*np.std(Izero_u))
 
         pump    = pump[filterIp & filterIu & thresh]
         unpump  = unpump[filterIp & filterIu & thresh]
@@ -1034,7 +1033,7 @@ def Rebin_and_filter_timescans(data, binsize, minvalue, maxvalue, quantile, thre
 
 ######################################
 
-def Rebin_and_filter_timescans_noPair(data, binsize, minvalue, maxvalue, quantile, withTT, threshold=0, numbins=None, varbin_t=False):
+def Rebin_and_filter_timescans_noPair(data, binsize, minvalue, maxvalue, quantile, withTT, threshold=0, n_sigma=1, numbins=None, varbin_t=False):
     for k,v in data.items():
         data[k] = v
         
@@ -1085,8 +1084,8 @@ def Rebin_and_filter_timescans_noPair(data, binsize, minvalue, maxvalue, quantil
         delays_t = Delays[idx]
 
         thresh   = Izero_t > threshold
-        filterI  = Izero_t > (np.nanmedian(Izero_t) - np.std(Izero_t))
-
+        filterI  = Izero_t > (np.nanmedian(Izero_t) - n_sigma*np.std(Izero_t))
+ 
         diode_t  = diode_t[filterI & thresh]
         Izero_t  = Izero_t[filterI & thresh]
         lights_t = lights_t[filterI & thresh]
@@ -1243,7 +1242,7 @@ def Rebin_and_filter_2Dscans(data, binsize, minvalue, maxvalue, quantile, readba
 
 ######################################
 
-def Rebin_and_filter_2Dscans_noPair(data, binsize, minvalue, maxvalue, quantile, readbacks, withTT, threshold=0, varbin_t=False, numbins=None):
+def Rebin_and_filter_2Dscans_noPair(data, binsize, minvalue, maxvalue, quantile, readbacks, withTT, threshold=0, n_sigma=1, varbin_t=False, numbins=None):
     for k,v in data.items():
         data[k] = v
 
@@ -1302,7 +1301,7 @@ def Rebin_and_filter_2Dscans_noPair(data, binsize, minvalue, maxvalue, quantile,
         darks_in_ebin = darks[s:e]
 
         thresh   = (Izero_p_in_ebin > threshold)
-        filterIp = Izero_p_in_ebin > (np.nanmedian(Izero_p_in_ebin) - np.std(Izero_p_in_ebin))
+        filterIp = Izero_p_in_ebin > (np.nanmedian(Izero_p_in_ebin) - n_sigma*np.std(Izero_p_in_ebin))
 
         pump_in_ebin    = pump_in_ebin[filterIp & thresh]
         Izero_p_in_ebin = Izero_p_in_ebin[filterIp & thresh]
