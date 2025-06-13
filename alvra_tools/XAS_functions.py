@@ -488,9 +488,9 @@ def Rebin_and_filter_energyscans_static(data, quantile, readbacks, threshold=0, 
     for s, e in zip(starts, ends):
         unpump  = unpump_1[s:e]
         Izero_u = Izero_unpump[s:e]
-
-        ratio_u = unpump/Izero_u        
-		filterIu = Izero_u > (np.nanmedian(Izero_u) - n_sigma*np.std(Izero_u))
+        
+        ratio_u = unpump/Izero_u
+        filterIu = Izero_u > (np.nanmedian(Izero_u) - n_sigma*np.std(Izero_u))
         thresh   = (Izero_u > threshold)
         filtervals = create_corr_condition_u(ratio_u, quantile)
 
