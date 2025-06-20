@@ -636,13 +636,16 @@ def Rebin_energyscans_PP_noPair(pump, Ipump, lights, darks, scanvar, readbacks, 
 
 ######################################
 
-def Rebin_and_filter_energyscans_PP(data, quantile, readbacks, threshold=0, n_sigma=1):
+def Rebin_and_filter_energyscans_PP(data, quantile, readbacks, threshold=0, n_sigma=1, raw=False):
     
     for k,v in data.items():
         data[k] = v
     
     pump_1 = np.asarray(data['pump_1'])
     unpump_1 = np.asarray(data['unpump_1'])
+    if raw: 
+        pump_1 = np.asarray(data['pump_1_raw'])
+        unpump_1 = np.asarray(data['unpump_1_raw'])
     Izero_pump = np.asarray(data['Izero_pump'])
     Izero_unpump = np.asarray(data['Izero_unpump'])
     energy = np.asarray(data['energypad'])
@@ -727,12 +730,14 @@ def Rebin_and_filter_energyscans_PP(data, quantile, readbacks, threshold=0, n_si
 
 ######################################
 
-def Rebin_and_filter_energyscans_PP_noPair(data, quantile, readbacks, threshold=0, n_sigma=1):
+def Rebin_and_filter_energyscans_PP_noPair(data, quantile, readbacks, threshold=0, n_sigma=1, raw=False):
     
     for k,v in data.items():
         data[k] = v
     
     pump_1 = np.asarray(data['pump_1'])
+    if raw: 
+        pump_1 = np.asarray(data['pump_1_raw'])
     Izero_pump = np.asarray(data['Izero_pump'])
     energy = np.asarray(data['energypad'])
     lights = np.asarray(data['lights'])
@@ -953,13 +958,16 @@ def Rebin_timescans_noPair(pump, Ipump, lights, darks, delaystage, readbacks, th
 
 ######################################
 
-def Rebin_and_filter_timescans(data, binsize, minvalue, maxvalue, quantile, withTT, threshold=0, n_sigma=1, numbins=None, varbin_t=False):
+def Rebin_and_filter_timescans(data, binsize, minvalue, maxvalue, quantile, withTT, threshold=0, n_sigma=1, raw=False, numbins=None, varbin_t=False):
 
     for k,v in data.items():
         data[k] = v
     
     pump_1 = np.asarray(data['pump_1'])
     unpump_1 = np.asarray(data['unpump_1'])
+    if raw: 
+        pump_1 = np.asarray(data['pump_1_raw'])
+        unpump_1 = np.asarray(data['unpump_1_raw'])
     Izero_pump = np.asarray(data['Izero_pump'])
     Izero_unpump = np.asarray(data['Izero_unpump'])
     Delays_stage = np.asarray(data['Delays_stage'])
@@ -1033,11 +1041,13 @@ def Rebin_and_filter_timescans(data, binsize, minvalue, maxvalue, quantile, with
 
 ######################################
 
-def Rebin_and_filter_timescans_noPair(data, binsize, minvalue, maxvalue, quantile, withTT, threshold=0, n_sigma=1, numbins=None, varbin_t=False):
+def Rebin_and_filter_timescans_noPair(data, binsize, minvalue, maxvalue, quantile, withTT, threshold=0, n_sigma=1, raw=False, numbins=None, varbin_t=False):
     for k,v in data.items():
         data[k] = v
         
     diode = np.asarray(data['pump_1'])
+    if raw: 
+        diode = np.asarray(data['pump_1_raw'])
     Izero = np.asarray(data['Izero_pump'])
     lights = np.asarray(data['lights'])
     darks = np.asarray(data['darks'])
@@ -1128,12 +1138,15 @@ def Rebin_and_filter_timescans_noPair(data, binsize, minvalue, maxvalue, quantil
 
 ######################################
 
-def Rebin_and_filter_2Dscans(data, binsize, minvalue, maxvalue, quantile, readbacks, withTT, threshold=0, n_sigma=1, varbin_t=False, numbins=None):
+def Rebin_and_filter_2Dscans(data, binsize, minvalue, maxvalue, quantile, readbacks, withTT, threshold=0, n_sigma=1, raw=False, varbin_t=False, numbins=None):
     for k,v in data.items():
         data[k] = v
 
     pump_1 = np.asarray(data['pump_1'])
     unpump_1 = np.asarray(data['unpump_1'])
+    if raw: 
+        pump_1 = np.asarray(data['pump_1_raw'])
+        unpump_1 = np.asarray(data['unpump_1_raw'])
     Izero_pump = np.asarray(data['Izero_pump'])
     Izero_unpump = np.asarray(data['Izero_unpump'])
     energypad = np.asarray(data['energypad'])
@@ -1242,11 +1255,13 @@ def Rebin_and_filter_2Dscans(data, binsize, minvalue, maxvalue, quantile, readba
 
 ######################################
 
-def Rebin_and_filter_2Dscans_noPair(data, binsize, minvalue, maxvalue, quantile, readbacks, withTT, threshold=0, n_sigma=1, varbin_t=False, numbins=None):
+def Rebin_and_filter_2Dscans_noPair(data, binsize, minvalue, maxvalue, quantile, readbacks, withTT, threshold=0, n_sigma=1, raw=False, varbin_t=False, numbins=None):
     for k,v in data.items():
         data[k] = v
 
     pump_1 = np.asarray(data['pump_1'])
+    if raw: 
+        pump_1 = np.asarray(data['pump_1_raw'])
     Izero_pump = np.asarray(data['Izero_pump'])
     lights = np.asarray(data['lights'])    
     darks = np.asarray(data['darks'])
