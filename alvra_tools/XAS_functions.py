@@ -38,9 +38,11 @@ def Reduce_scan_PP(reducedir, saveflag, jsonlist, TT, motor, diode1, diode2, Ize
     for jsonfile in jsonlist:
         runname = jsonfile.split('/')[-3]
         scan = SFScanInfo(jsonfile)
-        rbk = np.ravel(scan.readbacks)
+        #rbk = np.ravel(scan.readbacks)
+        rbk = np.ravel(scan.values)
 
         unique = np.roll(np.diff(rbk, prepend=1)>0.05, -1)
+        unique[-1] = True
         if scan.parameters['Id'] == ['dummy']:
             unique = np.full(len(rbk), True)
         rbk = rbk[unique]
@@ -141,9 +143,11 @@ def Reduce_scan_PP_loop(reducedir, saveflag, jsonlist, TT, motor, diode1, diode2
     for jsonfile in jsonlist:
         runname = jsonfile.split('/')[-3]
         scan = SFScanInfo(jsonfile)
-        rbk = np.ravel(scan.readbacks)
+        #rbk = np.ravel(scan.readbacks)
+        rbk = np.ravel(scan.values)
 
         unique = np.roll(np.diff(rbk, prepend=1)>0.05, -1)
+        unique[-1] = True
         if scan.parameters['Id'] == ['dummy']:
             unique = np.full(len(rbk), True)
         rbk = rbk[unique]
@@ -271,9 +275,11 @@ def Reduce_scan_PP_noPair(reducedir, saveflag, jsonlist, TT, motor, diode1, diod
     for jsonfile in jsonlist:
         runname = jsonfile.split('/')[-3]
         scan = SFScanInfo(jsonfile)
-        rbk = np.ravel(scan.readbacks)
+        #rbk = np.ravel(scan.readbacks)
+        rbk = np.ravel(scan.values)
 
         unique = np.roll(np.diff(rbk, prepend=1)>0.001, -1)
+        unique[-1] = True
         if scan.parameters['Id'] == ['dummy']:
             unique = np.full(len(rbk), True)
         rbk = rbk[unique]
@@ -689,6 +695,8 @@ def Rebin_and_filter_energyscans_PP(data, quantile, readbacks, threshold=0, n_si
         unpump_1_filter     = unpump[filtervals]
         Izero_pump_filter   = Izero_p[filtervals]
         Izero_unpump_filter = Izero_u[filtervals]
+
+        #unpump_1_filter = unpump_1_filter1/np.nanmean(unpump_1_filter1)
 
         pump_filter = pump_1_filter / Izero_pump_filter
         unpump_filter = unpump_1_filter / Izero_unpump_filter
