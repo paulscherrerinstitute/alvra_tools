@@ -23,4 +23,5 @@ requirements:
         - h5py
         - numpy
         - scipy
+        - sfdata
         - jungfrau_utils=3
