@@ -1,9 +1,11 @@
 import numpy as np
 from matplotlib import pyplot as plt
 from alvra_tools.XAS_functions import *
+from alvra_tools.utils import *
 from cycler import cycler
 from itertools import cycle
-import glob
+from textwrap import wrap
+import glob, numbers
 
 ################################################
 
@@ -97,6 +99,50 @@ def Plot_reduced_data(data, scan, titleplot, withTT, timescan=False):
         print('Time delay axis rebinned with TT data')
     else:
         print('Time delay axis rebinned with delay stage data')
+
+################################################
+
+def plot_kinetic_trace(results, title, binsize, withTT, fitflag):
+    fig, ax = plt.subplots(constrained_layout=True, figsize=(6,4))
+    plt.suptitle(title)
+    label = 'Rebinned: {} fs'.format(binsize)
+    if withTT:
+        label = 'TT corrected: {} fs'.format(binsize)
+
+    pp_TT       = results['pp']
+    err_pp      = results['err_pp']
+    Delay_fs_TT = results['Delay']
+    
+    plt.errorbar(Delay_fs_TT, pp_TT, err_pp, 
+                  lw=1,color='red', markersize=0,capsize=1,capthick=1,
+                       ecolor='red',elinewidth=1,label=label)
+    plt.legend (loc = 'lower right')
+
+    if fitflag:
+        index = ~(np.isnan(Delay_fs_TT) | np.isnan(pp_TT))
+        Delay_fs_TT = Delay_fs_TT[index]
+        pp_TT=  pp_TT[index]
+        err_pp = err_pp[index]
+
+        fit = Fit(errfunc_fwhm, estimate_errfunc_parameters)
+        fit.estimate(Delay_fs_TT, pp_TT)
+        fit.p0 = better_p0(fit.p0, 0, 0) 
+
+        fit.fit(Delay_fs_TT,pp_TT, maxfev=200000)     
+        pp_fit = fit.eval(Delay_fs_TT)
+                           
+        t0_fs = fit.popt[0]
+        width_fs = fit.popt[2]
+
+        plt.plot(Delay_fs_TT, pp_fit, color='green')
+        print("Width = {:.4f} fs".format(abs(width_fs)))
+        print("t0 = {:.4f} fs".format(t0_fs))
+    plt.grid()
+    plt.ylabel('Difference signal', fontsize=14)
+    plt.xlabel('Delay (fs)', fontsize=14)
+    plt.show()
+
+    return pp_TT, Delay_fs_TT, pp_fit
 
 ################################################
 
@@ -338,6 +384,138 @@ def Plot_correlations_scan(pgroup, reducedir, runlist, path='raw', timescan=Fals
     ax3.set_ylim(lowlim,1)
     plt.show()
 
+################################################
+
+def plot_filtered_data(results, rbk, title):
+    
+    fig, (ax1, ax3) = plt.subplots(1, 2, figsize=(10, 4), constrained_layout=True)
+    plt.suptitle(title)
+
+    pp = results['pp']
+    ES = results['ES']
+    GS = results['GS']
+    err_ES = results['err_ES']
+    err_GS = results['err_GS']
+    err_pp = results['err_pp']
+        
+    ax1.fill_between(rbk, ES-err_ES, ES+err_ES, label='ON', color='royalblue', alpha = 0.8)
+    ax1.fill_between(rbk, GS-err_GS, GS+err_GS, label='OFF',color='orange', alpha = 0.8)
+    ax3.fill_between(rbk, pp-err_pp, pp+err_pp, label='pump probe',color='lightgreen')
+    #ax3.fill_between(rbk, pp-err_pp2, pp+err_pp2, label='pump probe',color='lightgreen')
+    ax3.plot(rbk, pp, color='green', marker='.')
+    
+    ax1.set_xlabel("Energy (eV)")
+    ax1.set_ylabel ("XAS Diode")
+    ax1.set_title('XAS (fluo)')
+    ax1.legend(loc="best")
+    ax1.grid()
+    
+    ax3.set_xlabel("Energy (eV)")
+    ax3.set_ylabel ("DeltaXAS")
+    ax3.set_title('pump probe')
+    ax3.legend(loc="best")
+    ax3.grid()
+    
+    plt.show()
+
+################################################
+
+def normalize_spectra (results):
+    res = results.copy()
+    norm = np.nanmean(np.array(results['GS']))
+    res['ES']     = results['ES']/norm
+    res['GS']     = results['GS']/norm
+    res['err_GS'] = results['err_GS']/norm
+    res['err_ES'] = results['err_ES']/norm
+
+    return res
+
+################################################
+
+def average_two_diodes(results1, results2, title1):
+    t = title1.replace('diode1', 'both diodes')
+    res = results1.copy()
+    pp1 = results1['pp']
+    ES1 = results1['ES']
+    GS1 = results1['GS']
+    err_ES1 = results1['err_ES']
+    err_GS1 = results1['err_GS']
+    err_pp1 = results1['err_pp']
+    pp2 = results2['pp']
+    ES2 = results2['ES']
+    GS2 = results2['GS']
+    err_ES2 = results2['err_ES']
+    err_GS2 = results2['err_GS']
+    err_pp2 = results2['err_pp']
+    
+    GS_mean = (GS1+GS2)/2
+    err_GS_mean = np.sqrt((err_GS1)**2+(err_GS2)**2)
+    ES_mean = (ES1+ES2)/2
+    err_ES_mean = np.sqrt((err_ES1)**2+(err_ES2)**2)
+    pp_mean = (pp1+pp2)/2
+    err_pp_mean = np.sqrt((err_pp1)**2+(err_pp2)**2)
+    
+    res['GS'] = GS_mean
+    res['err_GS'] = err_GS_mean
+    res['ES'] = ES_mean
+    res['err_ES'] = err_ES_mean
+    res['pp'] = pp_mean
+    res['err_pp'] = err_pp_mean
+    
+    return res, t
+
+################################################
+
+def plot_bins_population(results, titlestring_stack):
+    Delay_rebin = results['Delay']
+    howmany     = results['howmany']
+    fig = plt.figure(figsize = (7,5))
+    fig.suptitle("\n".join(wrap(titlestring_stack)))
+    ax1 = fig.add_subplot(111)
+    ax2 = plt.twinx(ax1)
+    
+    delayrange = np.arange(0, len(Delay_rebin), 1)
+    ax1.plot(Delay_rebin, howmany, color = 'darkorange')
+    
+    ax2.scatter(Delay_rebin, delayrange, s = 5)
+
+    ax1.grid()
+    plt.show()
+
+################################################
+
+def save_averaged_data(Loaddir, runlist, results, rbk, whichdiode):
+    SaveDir = Loaddir+'_single/'
+    if len(runlist)>1:
+        SaveDir = Loaddir+'_multiruns/'
+    runlist2save = '_'.join(str(x) for x in runlist)
+    check = isinstance(runlist2save, numbers.Number)
+    if check:
+        run2save = 'run{:04d}'.format(runlist2save)
+    else:
+        run2save = 'run{}'.format(runlist2save)
+    savedir = SaveDir+run2save
+    os.makedirs(savedir, exist_ok=True)
+    run_array = {}
+
+    pp = results['pp']
+    ES = results['ES']
+    GS = results['GS']
+    err_ES = results['err_ES']
+    err_GS = results['err_GS']
+    err_pp = results['err_pp']
+    
+    run_array[run2save] = {"name": run2save,
+                           "ES": results['ES'], 
+                           "err_ES": results['err_ES'],
+                           "GS": results['GS'],
+                           "err_GS": results['err_GS'],
+                           "pp": results['pp'],
+                           "err_pp": results['err_pp'],
+                           "readbacks": rbk
+                          }
+    np.save(savedir+'/run_array_{}'.format(whichdiode), run_array)
+    print('Data saved in {}/'.format(savedir))
 
 
 ################################################
