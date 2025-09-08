@@ -358,8 +358,7 @@ def Reduce_scan_PP_noPair(reducedir, saveflag, jsonlist, TT, motor, diode1, diod
 
 def Reduce_scan_static(reducedir, saveflag, jsonlist, diode1, diode2, Izero, shots2average=None):
     
-    channels_pp = [channel_Events, diode1, diode2, Izero, channel_monoEnergy]
-    channels_all = channels_pp
+    channels = [channel_Events, diode1, diode2, Izero, channel_monoEnergy]
 
     from sfdata import SFScanInfo
     
@@ -381,20 +380,19 @@ def Reduce_scan_static(reducedir, saveflag, jsonlist, diode1, diode2, Izero, sho
                 filename = scan.files[i][0].split('/')[-1].split('.')[0]
                 print (jsonfile)
                 print ('Step {} of {}: Processing {}'.format(i+1, len(scan.files), filename))
-                
-                resultsPP, results, _, _ = load_data_compact_pump_probe(channels_pp, channels_all, step)
-                #results,_ = load_data_compact(channels, step)
 
-                u1_raw.extend(resultsPP[diode1].unpump)
-                u2_raw.extend(resultsPP[diode2].unpump)
-                Iu.extend(resultsPP[Izero].unpump)
+                results, _ = load_data_compact(channels, step)
 
-                enshot = resultsPP[channel_monoEnergy].unpump
+                u1_raw.extend(results[diode1])
+                u2_raw.extend(results[diode2])
+                Iu.extend(results[Izero])
+
+                enshot = results[channel_monoEnergy]
                 en.extend(enshot)
                 en2 = np.pad(en2, (0,len(enshot)), constant_values=(np.random.normal(rbk[i],0.01,1)))
                 
-                pearsonr1 = pearsonr(resultsPP[diode1].unpump,resultsPP[Izero].unpump)[0]
-                pearsonr2 = pearsonr(resultsPP[diode2].unpump,resultsPP[Izero].unpump)[0]
+                pearsonr1 = pearsonr(results[diode1],results[Izero])[0]
+                pearsonr2 = pearsonr(results[diode2],results[Izero])[0]
 
                 c1.append(pearsonr1)
                 c2.append(pearsonr2)
@@ -409,8 +407,8 @@ def Reduce_scan_static(reducedir, saveflag, jsonlist, diode1, diode2, Izero, sho
             os.makedirs(reducedir+runname, exist_ok=True)
             save_reduced_data_scan_static(reducedir, runname, scan, u1, u2, u1_raw, u2_raw, Iu, en, en2, rbk, c1, c2)
                 
-        unpump_1.extend(u1)
-        unpump_2.extend(u2)
+        unpump_1.extend(u1_raw)
+        unpump_2.extend(u2_raw)
         Izero_unpump.extend(Iu)
         energy.extend(en)
         energypad.extend(en2)
@@ -471,12 +469,14 @@ def Rebin_energyscans_static(unpump, Iunpump, energy, readbacks, threshold=0):
 
 ######################################
 
-def Rebin_and_filter_energyscans_static(data, quantile, readbacks, threshold=0, n_sigma=1):
+def Rebin_and_filter_energyscans_static(data, quantile, readbacks, threshold=0, n_sigma=1, raw=True):
 
     for k,v in data.items():
         data[k] = v
     
     unpump_1 = np.asarray(data['unpump_1'])
+    if raw: 
+        unpump_1 = np.asarray(data['unpump_1_raw'])
     Izero_unpump = np.asarray(data['Izero_unpump'])
     energy = np.asarray(data['energypad'])
 
@@ -525,7 +525,11 @@ def Rebin_and_filter_energyscans_static(data, quantile, readbacks, threshold=0, 
     err_GS = np.sqrt(np.sum(err_GS**2, axis=1))
     #print(sum(filtered)/len(pump_1)*100)
 
-    return GS, err_GS, err_GS2
+    print ('{} shots out of {} survived'.format(np.sum(filtered), len(unpump_1)))
+
+    res = {'GS': np.array(GS), 'err_GS': np.array(err_GS), 'err_GS2': np.array(err_GS2), 'filtered': filtered}
+    
+    return res
 
 ######################################
 
@@ -642,7 +646,7 @@ def Rebin_energyscans_PP_noPair(pump, Ipump, lights, darks, scanvar, readbacks, 
 
 ######################################
 
-def Rebin_and_filter_energyscans_PP(data, quantile, readbacks, threshold=0, n_sigma=1, raw=False):
+def Rebin_and_filter_energyscans_PP(data, quantile, readbacks, threshold=0, n_sigma=1, raw=True):
     
     for k,v in data.items():
         data[k] = v
@@ -734,11 +738,13 @@ def Rebin_and_filter_energyscans_PP(data, quantile, readbacks, threshold=0, n_si
     err_pp = np.sqrt(np.sum(err_pp**2, axis=1))
 
     print ('{} shots out of {} survived'.format(np.sum(filtered), len(pump_1)))
-    return np.array(pp), np.array(GS), np.array(ES), np.array(err_pp), np.array(err_GS), np.array(err_ES), np.array(err_pp2), np.array(err_GS2), np.array(err_ES2), filtered
+    res = {'pp': np.array(pp), 'GS': np.array(GS), 'ES': np.array(ES), 'err_pp': np.array(err_pp), 'err_GS': np.array(err_GS), 'err_ES': np.array(err_ES), 'err_pp2': np.array(err_pp2), 'err_GS2': np.array(err_GS2), 'err_ES2': np.array(err_ES2), 'filtered': filtered}
+    return res
+#np.array(pp), np.array(GS), np.array(ES), np.array(err_pp), np.array(err_GS), np.array(err_ES), np.array(err_pp2), np.array(err_GS2), np.array(err_ES2), filtered
 
 ######################################
 
-def Rebin_and_filter_energyscans_PP_noPair(data, quantile, readbacks, threshold=0, n_sigma=1, raw=False):
+def Rebin_and_filter_energyscans_PP_noPair(data, quantile, readbacks, threshold=0, n_sigma=1, raw=True):
     
     for k,v in data.items():
         data[k] = v
@@ -966,7 +972,7 @@ def Rebin_timescans_noPair(pump, Ipump, lights, darks, delaystage, readbacks, th
 
 ######################################
 
-def Rebin_and_filter_timescans(data, binsize, minvalue, maxvalue, quantile, withTT, threshold=0, n_sigma=1, raw=False, numbins=None, varbin_t=False):
+def Rebin_and_filter_timescans(data, binsize, minvalue, maxvalue, quantile, withTT, threshold=0, n_sigma=1, raw=True, numbins=None, varbin_t=False):
 
     for k,v in data.items():
         data[k] = v
@@ -1045,11 +1051,15 @@ def Rebin_and_filter_timescans(data, binsize, minvalue, maxvalue, quantile, with
         print('Time delay axis rebinned with delay stage data')
 
     print ('{} shots out of {} survived (total shots: {})'.format(np.sum(howmany), np.sum(howmany_before), totalshots))
-    return pp_rebin, err_pp, delay_rebin, howmany
+
+    res = {'pp': np.array(pp_rebin), 'err_pp': np.array(err_pp), 'Delay': np.array(delay_rebin), 'howmany': howmany}   
+    return res
+
+#    return pp_rebin, err_pp, delay_rebin, howmany
 
 ######################################
 
-def Rebin_and_filter_timescans_noPair(data, binsize, minvalue, maxvalue, quantile, withTT, threshold=0, n_sigma=1, raw=False, numbins=None, varbin_t=False):
+def Rebin_and_filter_timescans_noPair(data, binsize, minvalue, maxvalue, quantile, withTT, threshold=0, n_sigma=1, raw=True, numbins=None, varbin_t=False):
     for k,v in data.items():
         data[k] = v
         
@@ -1146,7 +1156,7 @@ def Rebin_and_filter_timescans_noPair(data, binsize, minvalue, maxvalue, quantil
 
 ######################################
 
-def Rebin_and_filter_2Dscans(data, binsize, minvalue, maxvalue, quantile, readbacks, withTT, threshold=0, n_sigma=1, raw=False, varbin_t=False, numbins=None):
+def Rebin_and_filter_2Dscans(data, binsize, minvalue, maxvalue, quantile, readbacks, withTT, threshold=0, n_sigma=1, raw=True, varbin_t=False, numbins=None):
     for k,v in data.items():
         data[k] = v
 
@@ -1259,11 +1269,14 @@ def Rebin_and_filter_2Dscans(data, binsize, minvalue, maxvalue, quantile, readba
         print('Time delay axis rebinned with delay stage data')
     print ('{} shots out of {} survived ({:.2f}%)'.format(np.sum(howmany), np.sum(howmany_before), 100*np.sum(howmany)/np.sum(howmany_before)))
 
-    return pp_rebin, err_pp, GS_rebin, ES_rebin, delay_rebin, howmany
+    res = {'GS': np.array(GS_rebin), 'ES': np.array(ES_rebin), 'pp': np.array(pp_rebin), 'err_pp': np.array(err_pp), 'Delay': np.array(delay_rebin), 'howmany': howmany}
+    return res
+
+#    return pp_rebin, err_pp, GS_rebin, ES_rebin, delay_rebin, howmany
 
 ######################################
 
-def Rebin_and_filter_2Dscans_noPair(data, binsize, minvalue, maxvalue, quantile, readbacks, withTT, threshold=0, n_sigma=1, raw=False, varbin_t=False, numbins=None):
+def Rebin_and_filter_2Dscans_noPair(data, binsize, minvalue, maxvalue, quantile, readbacks, withTT, threshold=0, n_sigma=1, raw=True, varbin_t=False, numbins=None):
     for k,v in data.items():
         data[k] = v
 
