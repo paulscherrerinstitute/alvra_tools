@@ -1372,12 +1372,17 @@ def load_data_OTA(channels_pump_unpump, data, offsets=None):
 
 ########################################################################################
 
-def load_reduced_data(pgroup, loaddir, runlist, average_twodiodes=False, switch_diodes=False):
+def load_reduced_data(pgroup, loaddir, runlist, switch_diodes=False, t0_offset=None):
     from collections import defaultdict
-    titlestring = pgroup + ' --- ' +str(runlist)
+    if t0_offset == None:
+        t0_offset = [0]*len(runlist)
+    titlestring = pgroup + ' --- ' +str(runlist) + ' --- diode1'
+    if switch_diodes:
+        titlestring = pgroup + ' --- ' +str(runlist) + ' --- diode2'
 
     d = defaultdict(list)
-    for run in runlist:
+    for i, run in enumerate(runlist):
+        offset = np.asarray(t0_offset[i])
         #data = {}
         file = sorted(glob.glob(loaddir + '/run{:04d}*/*run_array*'.format(run)))
         run_array = np.load(file[0], allow_pickle=True).item()
@@ -1387,28 +1392,31 @@ def load_reduced_data(pgroup, loaddir, runlist, average_twodiodes=False, switch_
                 if key == "timezero_mm" or key=="name" or key=='readbacks':
                     d[key].append(value)
                 else:
-                    d[key].extend(value)
+                    if "Delay" in key:
+                        d[key].extend(value+offset)
+                        if offset != 0:
+                            print ("Run {}, {} offset by {} fs".format(run, key, offset))
+                    else:
+                        d[key].extend(value)
 
-    if average_twodiodes:
-        d2 = defaultdict(list)
-        for k,v in d.items():
-            if k == 'name' or k == "readbacks":
-                continue
-            elif k == 'pump_1':
-                d2[k] = d['pump_1'] + d['pump_2']
-            elif k == 'unpump_1':
-                d2[k] = d['unpump_1'] + d['unpump_2']
-            else:
-                d2[k] = d[k] + d[k]
-        d.update(d2)
+    if switch_diodes:
+        d3 = d.copy()
+        for k in d.keys():
+            if "1" in k:
+                d3[k] = d[k.replace('1', '2')]
+            if "2" in k:
+                d3[k] = d[k.replace('2', '1')]
+        d.update(d3)
 
     return d, titlestring
 
 ########################################################################################
 
-def load_reduced_data_loop(pgroup, loaddir, runlist, acqlist, average_twodiodes=False, switch_diodes=False):
+def load_reduced_data_loop(pgroup, loaddir, runlist, acqlist, switch_diodes=False):
     from collections import defaultdict
-    titlestring = pgroup + ' --- ' +str(runlist) + ' --- ' +str(acqlist)
+    titlestring = pgroup + ' --- ' +str(runlist) + ' --- ' +str(acqlist) + ' --- diode1'
+    if switch_diodes:
+        titlestring = pgroup + ' --- ' +str(runlist) + ' --- ' +str(acqlist) + ' --- diode2'
 
     d = defaultdict(list)
     for run in runlist:
@@ -1423,21 +1431,17 @@ def load_reduced_data_loop(pgroup, loaddir, runlist, acqlist, average_twodiodes=
                     #data[key] = value
                     if key == "timezero_mm" or key=="name" or key=='readbacks':
                         d[key].append(value)
-                    else:
+                    else:        
                         d[key].extend(value)
 
-    if average_twodiodes:
-        d2 = defaultdict(list)
-        for k,v in d.items():
-            if k == 'name' or k == "readbacks":
-                continue
-            elif k == 'pump_1':
-                d2[k] = d['pump_1'] + d['pump_2']
-            elif k == 'unpump_1':
-                d2[k] = d['unpump_1'] + d['unpump_2']
-            else:
-                d2[k] = d[k] + d[k]
-        d.update(d2)
+    if switch_diodes:
+        d3 = d.copy()
+        for k in d.keys():
+            if "1" in k:
+                d3[k] = d[k.replace('1', '2')]
+            if "2" in k:
+                d3[k] = d[k.replace('2', '1')]
+        d.update(d3)
 
     return d, titlestring
 
@@ -1445,7 +1449,7 @@ def load_reduced_data_loop(pgroup, loaddir, runlist, acqlist, average_twodiodes=
 
 ########################################################################################
 
-def load_reduced_data_noPair(pgroup, loaddir, runlist, average_twodiodes=False):
+def load_reduced_data_noPair(pgroup, loaddir, runlist, switch_diodes=False):
     from collections import defaultdict
     titlestring = pgroup + ' --- ' +str(runlist)
 
@@ -1461,24 +1465,21 @@ def load_reduced_data_noPair(pgroup, loaddir, runlist, average_twodiodes=False):
                     d[key].append(value)
                 else:
                     d[key].extend(value)
-    if average_twodiodes:
-        d2 = defaultdict(list)
-        for k,v in d.items():
-            if k == 'name' or k == "readbacks":
-                continue
-            elif k == 'pump_1':
-                d2[k] = d['pump_1'] + d['pump_2']
-            #elif k == 'unpump_1':
-            #    d2[k] = d['unpump_1'] + d['unpump_2']
-            else:
-                d2[k] = d[k] + d[k]
-        d.update(d2)
+
+    if switch_diodes:
+        d3 = d.copy()
+        for k in d.keys():
+            if "1" in k:
+                d3[k] = d[k.replace('1', '2')]
+            if "2" in k:
+                d3[k] = d[k.replace('2', '1')]
+        d.update(d3)
 
     return d, titlestring
 
 ########################################################################################
 
-def load_reduced_data_offset(pgroup, loaddir, runlist, t0_offset, average_twodiodes=False, switch_diodes=False):
+def load_reduced_data_offset(pgroup, loaddir, runlist, t0_offset, switch_diodes=False):
     from collections import defaultdict
     titlestring = pgroup + ' --- ' +str(runlist)
 
@@ -1498,19 +1499,6 @@ def load_reduced_data_offset(pgroup, loaddir, runlist, t0_offset, average_twodio
                         print ("Run {}, {} offset by {} fs".format(run, key, offset))
                     else:
                         d[key].extend(value)
-
-    if average_twodiodes:
-        d2 = defaultdict(list)
-        for k,v in d.items():
-            if k == 'name' or k == "readbacks":
-                continue
-            elif k == 'pump_1':
-                d2[k] = d['pump_1'] + d['pump_2']
-            elif k == 'unpump_1':
-                d2[k] = d['unpump_1'] + d['unpump_2']
-            else:
-                d2[k] = d[k] + d[k]
-        d.update(d2)              
 
     if switch_diodes:
             d3 = d.copy()
