@@ -27,6 +27,10 @@ def Reduce_scan_PP(reducedir, saveflag, jsonlist, TT, motor, diode1, diode2, Ize
         TT = [channel_PSEN126_arrTimes, channel_PSEN126_arrTimesAmp]
         channel_arrTimes = channel_PSEN126_arrTimes
         channel_arrTimesAmp = channel_PSEN126_arrTimesAmp
+    elif TT == None:
+        TT = [motor, motor]
+        channel_arrTimes = motor
+        channel_arrTimesAmp = motor
 
     channels_pp = [channel_Events, diode1, diode2, Izero, motor, channel_monoEnergy] + TT
     channels_all = channels_pp
