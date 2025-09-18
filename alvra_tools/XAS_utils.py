@@ -420,6 +420,24 @@ def plot_filtered_data(results, rbk, title):
 
 ################################################
 
+def plot_shot_noise(results, xaxis, title, quantile):
+    howmany = results['filtered']
+    err_GS = results['err_GS']
+    GS = results['GS']
+    
+    fig = plt.figure()
+    fig.suptitle("\n".join(wrap(title))+' --- quantile={}%'.format(quantile*100))
+    ax1 = fig.add_subplot(111)
+    ax2 = plt.twinx(ax1)
+    ax1.plot(xaxis, err_GS/GS*100)
+    ax2.plot(xaxis, howmany, color='orange')
+    ax2.set_ylabel("Number of shots", color ='orange')
+    ax1.set_ylabel("std/mean (%)", color = 'blue')
+    ax1.grid()
+    plt.show()
+
+################################################
+
 def normalize_spectra (results):
     res = results.copy()
     norm = np.nanmean(np.array(results['GS']))
