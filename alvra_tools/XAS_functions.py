@@ -697,7 +697,8 @@ def Rebin_and_filter_energyscans_PP(data, quantile, readbacks, threshold=0, n_si
         ratio_u = unpump/Izero_u
     
         filtervals = create_corr_condition(ratio_p, ratio_u, quantile)
-        filtered.extend(filtervals)
+        #filtered.extend(filtervals)
+        filtered.append(np.sum(filtervals))
 
         pump_1_filter       = pump[filtervals]
         unpump_1_filter     = unpump[filtervals]
@@ -714,9 +715,9 @@ def Rebin_and_filter_energyscans_PP(data, quantile, readbacks, threshold=0, n_si
         GS.append(np.nanmean(unpump_filter))
         ES.append(np.nanmean(pump_filter))
         pp.append(np.nanmean(pp_shot))
-        err_GS.append(np.nanstd(unpump_filter)/np.sqrt(len(unpump_filter)))
-        err_ES.append(np.nanstd(pump_filter)/np.sqrt(len(pump_filter)))
-        err_pp.append(np.nanstd(pp_shot)/np.sqrt(len(pp_shot)))
+        err_GS.append(np.nanstd(unpump_filter))#/np.sqrt(len(unpump_filter)))
+        err_ES.append(np.nanstd(pump_filter))#/np.sqrt(len(pump_filter)))
+        err_pp.append(np.nanstd(pp_shot))#/np.sqrt(len(pp_shot)))
 
     print (len(peaks), len(readbacks), len(GS))
 
