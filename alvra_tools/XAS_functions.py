@@ -2855,6 +2855,7 @@ def save_run_array_XANES(reducedir, run_name, En, D1p, D1u, PP1, gs1):
                                     "Energy_eV" : En}
 
     np.save(reducedir+run_name+'/run_array', run_array)
+    os.chmod(reducedir+run_name+'/run_array.npy', 0o775)
 
 ######################################
 
@@ -2875,6 +2876,7 @@ def save_data_XANES(reducedir, run_name, En, D1p, D1u, PP1, gs1):
     np.save(reducedir+run_name+'/XANES_Pump_probe_Diode1', PP1)
 
     np.save(reducedir+run_name+'/run_array', run_array)
+    os.chmod(reducedir+run_name+'/run_array.npy', 0o775)
 
 ######################################
 
@@ -2889,6 +2891,7 @@ def save_run_array_timescans(reducedir, run_name, delaymm, delayfs, D1p, D1u, PP
                                     "Delay_fs" : delayfs}
 
     np.save(reducedir+run_name+'/run_array', run_array)
+    os.chmod(reducedir+run_name+'/run_array.npy', 0o775)
 
 ######################################
 
@@ -2911,6 +2914,7 @@ def save_data_timescans(reducedir, run_name, delaymm, delayfs, D1p, D1u, PP1, gs
     np.save(reducedir+run_name+'/timescan_Pump_probe_Diode1', PP1)
 
     np.save(reducedir+run_name+'/run_array', run_array)
+    os.chmod(reducedir+run_name+'/run_array.npy', 0o775)
 
 ######################################
 
@@ -2939,6 +2943,7 @@ def save_data_timescans_TT(reducedir, run_name, delaymm, delaystage, delayfs, de
     np.save(reducedir+run_name+'/timescan_Pump_probe_scan', PPscan)
 
     np.save(reducedir+run_name+'/run_array', run_array)
+    os.chmod(reducedir+run_name+'/run_array.npy', 0o775)
 
 ######################################
 
@@ -2956,6 +2961,7 @@ def save_run_array_XANES_2diodes(reducedir, run_name, En, D1p, D1u, PP1, gs1, D2
                                     "Energy_eV" : En}
    
     np.save(reducedir+run_name+'/run_array', run_array)
+    os.chmod(reducedir+run_name+'/run_array.npy', 0o775)
 
 ######################################
 
@@ -2985,6 +2991,7 @@ def save_data_XANES_2diodes(reducedir, run_name, En, D1p, D1u, PP1, gs1, D2p, D2
     np.save(reducedir+run_name+'/XANES_Pump_probe_Diode2', PP2)
 
     np.save(reducedir+run_name+'/run_array', run_array)
+    os.chmod(reducedir+run_name+'/run_array.npy', 0o775)
 
 ######################################
 
@@ -3003,6 +3010,7 @@ def save_run_array_timescans_2diodes(reducedir, run_name, delaymm, delayfs, D1p,
                                     "Delay_fs" : delayfs}
    
     np.save(reducedir+run_name+'/run_array', run_array)
+    os.chmod(reducedir+run_name+'/run_array.npy', 0o775)
 
 ######################################
 
@@ -3035,6 +3043,7 @@ def save_data_timescans_2diodes(reducedir, run_name, delaymm, delayfs, D1p, D1u,
     np.save(reducedir+run_name+'/timescan_Pump_probe_Diode2', PP2)
 
     np.save(reducedir+run_name+'/run_array', run_array)
+    os.chmod(reducedir+run_name+'/run_array.npy', 0o775)
     
 ################################################
 
@@ -3070,6 +3079,7 @@ def save_data_timescans_TT_2diodes(reducedir, run_name, delaymm, delaystage, del
     np.save(reducedir+run_name+'/timescan_Pump_probe_Diode2', PP2)
 
     np.save(reducedir+run_name+'/run_array', run_array)
+    os.chmod(reducedir+run_name+'/run_array.npy', 0o775)
 
 ################################################
 ################################################
@@ -3091,6 +3101,7 @@ def save_reduced_data_1diode(reducedir, run_name, scan, D1p, D1u, PP1, gs1, corr
                                     "correlation1": corr1}
 
     np.save(reducedir+run_name+'/run_array', run_array)
+    os.chmod(reducedir+run_name+'/run_array.npy', 0o775)
 
 ################################################
 
@@ -3114,6 +3125,7 @@ def save_reduced_data_1diode_TT(reducedir, run_name, scan, D1p, D1u, PP1, gs1, c
                                     "Delays_corr_scan" : delaycorr}
 
     np.save(reducedir+run_name+'/run_array', run_array)
+    os.chmod(reducedir+run_name+'/run_array.npy', 0o775)
 
 ################################################
 
@@ -3139,6 +3151,7 @@ def save_reduced_data_2diodes(reducedir, run_name, scan, D1p, D1u, PP1, gs1, cor
                                     "correlation2": corr2}
 
     np.save(reducedir+run_name+'/run_array', run_array)
+    os.chmod(reducedir+run_name+'/run_array.npy', 0o775)
 
 ################################################
 
@@ -3170,6 +3183,7 @@ def save_reduced_data_2diodes_TT(reducedir, run_name, scan, D1p, D1u, PP1, gs1, 
                                     "Delays_corr_scan2" : delaycorr2}
 
     np.save(reducedir+run_name+'/run_array', run_array)
+    os.chmod(reducedir+run_name+'/run_array.npy', 0o775)
 
 ################################################
 
@@ -3198,6 +3212,8 @@ def save_reduced_data_scanPP(reducedir, run_name, scan, D1p, D1u, D2p, D2u, D1p_
                                          "corr2": c2}
                                          
     np.save(reducedir+run_name+'/run_array', run_array)
+    os.chmod(reducedir+run_name+'/run_array.npy', 0o775)
+
 
 ################################################
 
@@ -3223,6 +3239,7 @@ def save_reduced_data_scanPP_noPair(reducedir, run_name, scan, D1p, D2p, D1p_raw
                                          "darks": darks}
                                          
     np.save(reducedir+run_name+'/run_array', run_array)
+    os.chmod(reducedir+run_name+'/run_array.npy', 0o775)
 
 ################################################
 
@@ -3243,6 +3260,7 @@ def save_reduced_data_scan_static(reducedir, run_name, scan, D1u, D2u, D1u_raw, 
                                          "corr2": c2}
                                          
     np.save(reducedir+run_name+'/run_array', run_array)
+    os.chmod(reducedir+run_name+'/run_array.npy', 0o775)
 
 ################################################
 

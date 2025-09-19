@@ -513,7 +513,9 @@ def save_averaged_data(Loaddir, runlist, results, rbk, whichdiode):
     else:
         run2save = 'run{}'.format(runlist2save)
     savedir = SaveDir+run2save
+
     os.makedirs(savedir, exist_ok=True)
+    os.chmod(savedir, 0o775)
     run_array = {}
 
     pp = results['pp']
@@ -533,6 +535,7 @@ def save_averaged_data(Loaddir, runlist, results, rbk, whichdiode):
                            "readbacks": rbk
                           }
     np.save(savedir+'/run_array_{}'.format(whichdiode), run_array)
+    os.chmod(savedir+'/run_array_{}.npy'.format(whichdiode), 0o775)
     print('Data saved in {}/'.format(savedir))
 
 
