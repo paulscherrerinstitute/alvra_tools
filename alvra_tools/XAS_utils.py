@@ -118,11 +118,14 @@ def plot_kinetic_trace(results, title, binsize, withTT, fitflag):
                        ecolor='red',elinewidth=1,label=label)
     plt.legend (loc = 'lower right')
 
+    pp_fit = np.zeros(len(Delay_fs_TT))
+    indexNans  = np.ones(len(Delay_fs_TT), dtype=bool)
+
     if fitflag:
-        index = ~(np.isnan(Delay_fs_TT) | np.isnan(pp_TT))
-        Delay_fs_TT = Delay_fs_TT[index]
-        pp_TT=  pp_TT[index]
-        err_pp = err_pp[index]
+        indexNans = ~(np.isnan(Delay_fs_TT) | np.isnan(pp_TT))
+        Delay_fs_TT = Delay_fs_TT[indexNans]
+        pp_TT=  pp_TT[indexNans]
+        err_pp = err_pp[indexNans]
 
         fit = Fit(errfunc_fwhm, estimate_errfunc_parameters)
         fit.estimate(Delay_fs_TT, pp_TT)
@@ -142,7 +145,7 @@ def plot_kinetic_trace(results, title, binsize, withTT, fitflag):
     plt.xlabel('Delay (fs)', fontsize=14)
     plt.show()
 
-    return pp_TT, Delay_fs_TT, pp_fit
+    return pp_TT, Delay_fs_TT, pp_fit, indexNans
 
 ################################################
 
@@ -397,11 +400,12 @@ def plot_filtered_data(results, rbk, title):
     err_ES = results['err_ES']
     err_GS = results['err_GS']
     err_pp = results['err_pp']
+    err_pp2 = results['err_pp2']
         
     ax1.fill_between(rbk, ES-err_ES, ES+err_ES, label='ON', color='royalblue', alpha = 0.8)
     ax1.fill_between(rbk, GS-err_GS, GS+err_GS, label='OFF',color='orange', alpha = 0.8)
     ax3.fill_between(rbk, pp-err_pp, pp+err_pp, label='pump probe',color='lightgreen')
-    #ax3.fill_between(rbk, pp-err_pp2, pp+err_pp2, label='pump probe',color='lightgreen')
+    ax3.fill_between(rbk, pp-err_pp2, pp+err_pp2, color='green')
     ax3.plot(rbk, pp, color='green', marker='.')
     
     ax1.set_xlabel("Energy (eV)")
@@ -502,7 +506,7 @@ def plot_bins_population(results, titlestring_stack):
 
 ################################################
 
-def save_averaged_data(Loaddir, runlist, results, rbk, whichdiode):
+def save_averaged_data(Loaddir, runlist, results, rbk, whichdiode, idxNans):
     SaveDir = Loaddir+'_single/'
     if len(runlist)>1:
         SaveDir = Loaddir+'_multiruns/'
@@ -518,20 +522,22 @@ def save_averaged_data(Loaddir, runlist, results, rbk, whichdiode):
     os.chmod(savedir, 0o775)
     run_array = {}
 
-    pp = results['pp']
-    ES = results['ES']
-    GS = results['GS']
-    err_ES = results['err_ES']
-    err_GS = results['err_GS']
-    err_pp = results['err_pp']
+    pp = results['pp'][idxNans]
+    ES = results['ES'][idxNans]
+    GS = results['GS'][idxNans]
+    err_ES = results['err_ES'][idxNans]
+    err_GS = results['err_GS'][idxNans]
+    err_pp = results['err_pp'][idxNans]
+    err_pp2 = results['err_pp2'][idxNans]
     
     run_array[run2save] = {"name": run2save,
-                           "ES": results['ES'], 
-                           "err_ES": results['err_ES'],
-                           "GS": results['GS'],
-                           "err_GS": results['err_GS'],
-                           "pp": results['pp'],
-                           "err_pp": results['err_pp'],
+                           "ES": ES, 
+                           "err_ES": err_ES,
+                           "GS": GS,
+                           "err_GS": err_GS,
+                           "pp": pp,
+                           "err_pp": err_pp,
+                           "err_pp2": err_pp2,
                            "readbacks": rbk
                           }
     np.save(savedir+'/run_array_{}'.format(whichdiode), run_array)
