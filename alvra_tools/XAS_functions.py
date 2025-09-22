@@ -715,10 +715,10 @@ def Rebin_and_filter_energyscans_PP(data, quantile, readbacks, threshold=0, n_si
         GS.append(np.nanmean(unpump_filter))
         ES.append(np.nanmean(pump_filter))
         pp.append(np.nanmean(pp_shot))
-        err_GS.append(np.nanstd(unpump_filter))#/np.sqrt(len(unpump_filter)))
-        err_ES.append(np.nanstd(pump_filter))#/np.sqrt(len(pump_filter)))
+        err_GS.append(np.nanstd(unpump_filter)/np.sqrt(len(unpump_filter)))
+        err_ES.append(np.nanstd(pump_filter)/np.sqrt(len(pump_filter)))
         err_pp.append(np.nanstd(pp_shot))#/np.sqrt(len(pp_shot)))
-        err_pp.append(np.sqrt(np.nanstd(unpump_filter)**2 + np.nanstd(pump_filter)**2)) 
+        err_pp.append(np.sqrt(np.nanstd(unpump_filter)**2 + np.nanstd(pump_filter)**2)/np.sqrt(len(pump_filter))) 
 
     print (len(peaks), len(readbacks), len(GS))
 
