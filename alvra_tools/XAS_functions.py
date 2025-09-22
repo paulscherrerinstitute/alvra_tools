@@ -718,6 +718,7 @@ def Rebin_and_filter_energyscans_PP(data, quantile, readbacks, threshold=0, n_si
         err_GS.append(np.nanstd(unpump_filter))#/np.sqrt(len(unpump_filter)))
         err_ES.append(np.nanstd(pump_filter))#/np.sqrt(len(pump_filter)))
         err_pp.append(np.nanstd(pp_shot))#/np.sqrt(len(pp_shot)))
+        err_pp.append(np.sqrt(np.nanstd(unpump_filter)**2 + np.nanstd(pump_filter)**2)) 
 
     print (len(peaks), len(readbacks), len(GS))
 
@@ -1006,7 +1007,12 @@ def Rebin_and_filter_timescans(data, binsize, minvalue, maxvalue, quantile, with
     if varbin_t:
         delay_rebin = bin_centres
 
+    GS = np.zeros(len(bin_centres))
+    ES = np.zeros(len(bin_centres))
     pp_rebin = np.zeros(len(bin_centres))
+
+    err_GS = np.zeros(len(bin_centres))
+    err_ES = np.zeros(len(bin_centres))    
     err_pp = np.zeros(len(bin_centres))
 
     totalshots = len(pump_1)
@@ -1044,12 +1050,18 @@ def Rebin_and_filter_timescans(data, binsize, minvalue, maxvalue, quantile, with
 
         pump_filter = pump_filter / Izero_pump_filter
         unpump_filter = unpump_filter / Izero_unpump_filter
-    
         #Pump_probe_shot = np.log10(pump_filter/unpump_filter)
         Pump_probe_shot = pump_filter - unpump_filter
-    
+
+        GS[i] = np.nanmean(unpump_filter)
+        ES[i] = np.nanmean(pump_filter)
         pp_rebin[i]  = np.nanmean(Pump_probe_shot)
+        err_GS[i] = np.nanstd(unpump_filter)/np.sqrt(len(unpump_filter))
+        err_ES[i] = np.nanstd(pump_filter)/np.sqrt(len(pump_filter))
         err_pp[i] = np.nanstd(Pump_probe_shot)/np.sqrt(len(Pump_probe_shot))
+    
+        #pp_rebin[i]  = np.nanmean(Pump_probe_shot)
+        #err_pp[i] = np.nanstd(Pump_probe_shot)/np.sqrt(len(Pump_probe_shot))
     if withTT:
         print('Time delay axis rebinned with TT data')
     else:
@@ -1057,7 +1069,7 @@ def Rebin_and_filter_timescans(data, binsize, minvalue, maxvalue, quantile, with
 
     print ('{} shots out of {} survived (total shots: {})'.format(np.sum(howmany), np.sum(howmany_before), totalshots))
 
-    res = {'pp': np.array(pp_rebin), 'err_pp': np.array(err_pp), 'Delay': np.array(delay_rebin), 'howmany': howmany}   
+    res = {'GS':np.array(GS), 'ES':np.array(ES), 'pp': np.array(pp_rebin), 'err_GS': np.array(err_GS), 'err_ES': np.array(err_ES), 'err_pp': np.array(err_pp), 'Delay': np.array(delay_rebin), 'howmany': howmany}   
     return res
 
 #    return pp_rebin, err_pp, delay_rebin, howmany
