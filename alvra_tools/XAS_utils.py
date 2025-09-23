@@ -528,7 +528,7 @@ def save_averaged_data(Loaddir, runlist, results, rbk, whichdiode, idxNans):
     err_ES = results['err_ES'][idxNans]
     err_GS = results['err_GS'][idxNans]
     err_pp = results['err_pp'][idxNans]
-    err_pp2 = results['err_pp2'][idxNans]
+    #err_pp2 = results['err_pp2'][idxNans]
     
     run_array[run2save] = {"name": run2save,
                            "ES": ES, 
@@ -537,7 +537,7 @@ def save_averaged_data(Loaddir, runlist, results, rbk, whichdiode, idxNans):
                            "err_GS": err_GS,
                            "pp": pp,
                            "err_pp": err_pp,
-                           "err_pp2": err_pp2,
+                           #"err_pp2": err_pp2,
                            "readbacks": rbk
                           }
     np.save(savedir+'/run_array_{}'.format(whichdiode), run_array)
