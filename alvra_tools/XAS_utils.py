@@ -471,11 +471,11 @@ def average_two_diodes(results1, results2, title1):
     err_pp2 = results2['err_pp']
     
     GS_mean = (GS1+GS2)/2
-    err_GS_mean = np.sqrt((err_GS1)**2+(err_GS2)**2)
+    err_GS_mean = np.sqrt((err_GS1)**2+(err_GS2)**2)/2
     ES_mean = (ES1+ES2)/2
-    err_ES_mean = np.sqrt((err_ES1)**2+(err_ES2)**2)
+    err_ES_mean = np.sqrt((err_ES1)**2+(err_ES2)**2)/2
     pp_mean = (pp1+pp2)/2
-    err_pp_mean = np.sqrt((err_pp1)**2+(err_pp2)**2)
+    err_pp_mean = np.sqrt((err_pp1)**2+(err_pp2)**2)/2
     
     res['GS'] = GS_mean
     res['err_GS'] = err_GS_mean
