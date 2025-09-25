@@ -17,7 +17,7 @@ from alvra_tools.timing_tool import *
 from alvra_tools.XAS_functions import *
 
 
-def Reduce_scan_PP(reducedir, saveflag, jsonlist, TT, motor, diode1, diode2, Izero, shots2average=None):
+def Reduce_scan_PP(reducedir, saveflag, jsonlist, TT, motor, diode1, diode2, Izero, tolerance=0.05, shots2average=None):
     
     if TT == TT_PSEN124:
         TT = [channel_PSEN124_arrTimes, channel_PSEN124_arrTimesAmp]
@@ -45,7 +45,7 @@ def Reduce_scan_PP(reducedir, saveflag, jsonlist, TT, motor, diode1, diode2, Ize
         #rbk = np.ravel(scan.readbacks)
         rbk = np.ravel(scan.values)
 
-        unique = np.roll(np.diff(rbk, prepend=1)>0.05, -1)
+        unique = np.roll(np.diff(rbk, prepend=1)>tolerance, -1)
         unique[-1] = True
         if scan.parameters['Id'] == ['dummy']:
             unique = np.full(len(rbk), True)
