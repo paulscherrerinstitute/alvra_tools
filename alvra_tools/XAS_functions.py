@@ -37,13 +37,14 @@ def Reduce_scan_PP(reducedir, saveflag, jsonlist, TT, motor, diode1, diode2, Ize
     
     from sfdata import SFScanInfo
     
-    pump_1, unpump_1, pump_2, unpump_2, pump_1_raw, unpump_1_raw, pump_2_raw, unpump_2_raw, Izero_pump, Izero_unpump, Delays_stage, arrTimes, Delays_corr, energy, energypad, readbacks, corr1, corr2 = ([] for i in range(18))
+    pump_1, unpump_1, pump_2, unpump_2, pump_1_raw, unpump_1_raw, pump_2_raw, unpump_2_raw, Izero_pump, Izero_unpump, Delays_stage, arrTimes, Delays_corr, energy, scanvar, readbacks, corr1, corr2 = ([] for i in range(18))
     
     for jsonfile in jsonlist:
         runname = jsonfile.split('/')[-3]
         scan = SFScanInfo(jsonfile)
         #rbk = np.ravel(scan.readbacks)
-        rbk = np.ravel(scan.values)
+        #rbk = np.ravel(scan.values)
+        rbk = scan.values
 
         unique = np.roll(np.diff(rbk, prepend=1)>tolerance, -1)
         unique[-1] = True
@@ -51,7 +52,7 @@ def Reduce_scan_PP(reducedir, saveflag, jsonlist, TT, motor, diode1, diode2, Ize
             unique = np.full(len(rbk), True)
         rbk = rbk[unique]
 
-        p1_raw, u1_raw, p2_raw, u2_raw, p1, u1, p2, u2, Ip, Iu, ds, aT, dc, en, en2, c1, c2 = ([] for i in range(17))
+        p1_raw, u1_raw, p2_raw, u2_raw, p1, u1, p2, u2, Ip, Iu, ds, aT, dc, en, sv, c1, c2 = ([] for i in range(17))
 
         for i, step in enumerate(scan):
             check_files_and_data(step)
@@ -79,7 +80,7 @@ def Reduce_scan_PP(reducedir, saveflag, jsonlist, TT, motor, diode1, diode2, Ize
                 enshot = resultsPP[channel_monoEnergy].pump
                 en.extend(enshot)
                 #en2 = np.pad(en2, (0,len(enshot)), constant_values=(np.random.normal(rbk[i],0.01,1)))
-                en2 = np.pad(en2, (0,len(enshot)), constant_values=(np.nanmean(enshot)))
+                sv = np.pad(sv, (0,len(enshot)), constant_values=(rbk[i]))
 
                 pearsonr1 = pearsonr(resultsPP[diode1].unpump,resultsPP[Izero].unpump)[0]
                 pearsonr2 = pearsonr(resultsPP[diode2].unpump,resultsPP[Izero].unpump)[0]
@@ -90,15 +91,14 @@ def Reduce_scan_PP(reducedir, saveflag, jsonlist, TT, motor, diode1, diode2, Ize
                 print ("correlation Diode1 (dark shots) = {}".format(pearsonr1))
                 print ("correlation Diode2 (dark shots) = {}".format(pearsonr2))
 
-        u1 = u1_raw/np.nanmean(np.array(u1_raw)[:shots2average])
-        p1 = p1_raw/np.nanmean(np.array(u1_raw)[:shots2average])
-        u2 = u2_raw/np.nanmean(np.array(u2_raw)[:shots2average])        
-        p2 = p2_raw/np.nanmean(np.array(u2_raw)[:shots2average])        
+        u1 = u1_raw#/np.nanmean(np.array(u1_raw)[:shots2average])
+        p1 = p1_raw#/np.nanmean(np.array(u1_raw)[:shots2average])
+        u2 = u2_raw#/np.nanmean(np.array(u2_raw)[:shots2average])        
+        p2 = p2_raw#/np.nanmean(np.array(u2_raw)[:shots2average])        
 
         if saveflag:
-            os.makedirs(reducedir+runname, exist_ok=True)
-            os.chmod(reducedir+runname, 0o775)
-            save_reduced_data_scanPP(reducedir, runname, scan, p1, u1, p2, u2, p1_raw, u1_raw, p2_raw, u2_raw, Ip, Iu, ds, aT, dc, en, en2, rbk, c1, c2)
+            os.makedirs(reducedir+runname, mode=0o775, exist_ok=True)
+            save_reduced_data_scanPP(reducedir, runname, scan, p1, u1, p2, u2, p1_raw, u1_raw, p2_raw, u2_raw, Ip, Iu, ds, aT, dc, en, sv, rbk, c1, c2)
                 
         pump_1.extend(p1)
         unpump_1.extend(u1)
@@ -114,7 +114,7 @@ def Reduce_scan_PP(reducedir, saveflag, jsonlist, TT, motor, diode1, diode2, Ize
         arrTimes.extend(aT)
         Delays_corr.extend(dc)
         energy.extend(en)
-        energypad.extend(en2)
+        scanvar.extend(sv)
         #readbacks.append(rbk)
         corr1.append(c1)
         corr2.append(c2)
@@ -122,7 +122,10 @@ def Reduce_scan_PP(reducedir, saveflag, jsonlist, TT, motor, diode1, diode2, Ize
     print ('----------------------------')
     print ('Loaded {} total on/off pairs'.format(len(Delays_corr)))
 
-    return (pump_1, unpump_1, pump_2, unpump_2, pump_1_raw, unpump_1_raw, pump_2_raw, unpump_2_raw, Izero_pump, Izero_unpump, Delays_stage, arrTimes, Delays_corr, energy, energypad, rbk, corr1, corr2)
+    res = {'pump_1': np.array(pump_1), 'unpump_1': np.array(unpump_1), 'pump_2': np.array(pump_2), 'unpump_2': np.array(unpump_2), 'Izero_pump': np.array(Izero_pump), 'Izero_unpump': np.array(Izero_unpump), 'Delays_stage': np.array(Delays_stage), 'arrTimes': np.array(arrTimes), 'Delays_corr': np.array(Delays_corr), 'energy': np.array(energy), 'scanvar': np.array(scanvar), 'rbk': np.array(rbk), 'corr1': np.array(corr1, dtype=object), 'corr2': np.array(corr2, dtype=object)}
+
+    return (res)
+#    return (pump_1, unpump_1, pump_2, unpump_2, pump_1_raw, unpump_1_raw, pump_2_raw, unpump_2_raw, Izero_pump, Izero_unpump, Delays_stage, arrTimes, Delays_corr, energy, scanvar, rbk, corr1, corr2)
 
 ##################################################################
 
@@ -142,7 +145,7 @@ def Reduce_scan_PP_loop(reducedir, saveflag, jsonlist, TT, motor, diode1, diode2
     
     from sfdata import SFScanInfo
     
-    pump_1, unpump_1, pump_2, unpump_2, pump_1_raw, unpump_1_raw, pump_2_raw, unpump_2_raw, Izero_pump, Izero_unpump, Delays_stage, arrTimes, Delays_corr, energy, energypad, readbacks, corr1, corr2 = ([] for i in range(18))
+    pump_1, unpump_1, pump_2, unpump_2, pump_1_raw, unpump_1_raw, pump_2_raw, unpump_2_raw, Izero_pump, Izero_unpump, Delays_stage, arrTimes, Delays_corr, energy, scanvar, readbacks, corr1, corr2 = ([] for i in range(18))
     
     for jsonfile in jsonlist:
         runname = jsonfile.split('/')[-3]
@@ -156,7 +159,7 @@ def Reduce_scan_PP_loop(reducedir, saveflag, jsonlist, TT, motor, diode1, diode2
             unique = np.full(len(rbk), True)
         rbk = rbk[unique]
 
-        p1_raw, u1_raw, p2_raw, u2_raw, p1, u1, p2, u2, Ip, Iu, ds, aT, dc, en, en2, c1, c2 = ([] for i in range(17))
+        p1_raw, u1_raw, p2_raw, u2_raw, p1, u1, p2, u2, Ip, Iu, ds, aT, dc, en, sv, c1, c2 = ([] for i in range(17))
 
         for i, step in enumerate(scan):
             check_files_and_data(step)
@@ -183,7 +186,7 @@ def Reduce_scan_PP_loop(reducedir, saveflag, jsonlist, TT, motor, diode1, diode2
 
                 enshot = resultsPP[channel_monoEnergy].pump                 
                 en_acq = enshot                         
-                en2 = np.pad(en2, (0,len(enshot)), constant_values=(np.nanmean(enshot)))  
+                sv = np.pad(sv, (0,len(enshot)), constant_values=(rbk[i])) 
 
                 pearsonr1 = pearsonr(resultsPP[diode1].unpump,resultsPP[Izero].unpump)[0]
                 pearsonr2 = pearsonr(resultsPP[diode2].unpump,resultsPP[Izero].unpump)[0]
@@ -214,9 +217,9 @@ def Reduce_scan_PP_loop(reducedir, saveflag, jsonlist, TT, motor, diode1, diode2
                 p2_acq = p2_raw_acq/np.nanmean(np.array(u2_raw_acq)[:shots2average])        
 
                 if saveflag:
-                    os.makedirs(reducedir+runname+'/'+filename, exist_ok=True)
-                    os.chmod(reducedir+runname+'/'+filename, 0o775)
-                    save_reduced_data_scanPP(reducedir, runname+'/'+filename, scan, p1_acq, u1_acq, p2_acq, u2_acq, p1_raw_acq, u1_raw_acq, p2_raw_acq, u2_raw_acq, Ip_acq, Iu_acq, ds_acq, aT_acq, dc_acq, en_acq, en2, rbk, c1_acq, c2_acq)
+                    os.makedirs(reducedir+runname+'/'+filename, mode=0o775, exist_ok=True)
+                    #os.chmod(reducedir+runname+'/'+filename, 0o775)
+                    save_reduced_data_scanPP(reducedir, runname+'/'+filename, scan, p1_acq, u1_acq, p2_acq, u2_acq, p1_raw_acq, u1_raw_acq, p2_raw_acq, u2_raw_acq, Ip_acq, Iu_acq, ds_acq, aT_acq, dc_acq, en_acq, sv, rbk, c1_acq, c2_acq)
                 print ('Saved in: {}'.format(reducedir+runname+'/'+filename+'/'))
                 #except:
                 #    print ('Error in loading this acquisition, skipped!')
@@ -227,9 +230,9 @@ def Reduce_scan_PP_loop(reducedir, saveflag, jsonlist, TT, motor, diode1, diode2
         p2 = p2_raw/np.nanmean(np.array(u2_raw)[:shots2average])   
 
         if saveflag:
-            os.makedirs(reducedir+runname, exist_ok=True)
-            os.chmod(reducedir+runname, 0o775)
-            save_reduced_data_scanPP(reducedir, runname, scan, p1, u1, p2, u2, p1_raw, u1_raw, p2_raw, u2_raw, Ip, Iu, ds, aT, dc, en, en2, rbk, c1, c2)
+            os.makedirs(reducedir+runname,  mode=0o775, exist_ok=True)
+            #os.chmod(reducedir+runname, 0o775)
+            save_reduced_data_scanPP(reducedir, runname, scan, p1, u1, p2, u2, p1_raw, u1_raw, p2_raw, u2_raw, Ip, Iu, ds, aT, dc, en, sv, rbk, c1, c2)
             print ('Saved in: {}'.format(reducedir+runname+'/'))
 
         pump_1.extend(p1)
@@ -246,7 +249,7 @@ def Reduce_scan_PP_loop(reducedir, saveflag, jsonlist, TT, motor, diode1, diode2
         arrTimes.extend(aT)
         Delays_corr.extend(dc)
         energy.extend(en)
-        energypad.extend(en2)
+        scanvar.extend(sv)
         #readbacks.append(rbk)
         corr1.append(c1)
         corr2.append(c2)
@@ -254,7 +257,7 @@ def Reduce_scan_PP_loop(reducedir, saveflag, jsonlist, TT, motor, diode1, diode2
     print ('----------------------------')
     print ('Loaded {} total on/off pairs'.format(len(Delays_corr)))
 
-    return (pump_1, unpump_1, pump_2, unpump_2, pump_1_raw, unpump_1_raw, pump_2_raw, unpump_2_raw, Izero_pump, Izero_unpump, Delays_stage, arrTimes, Delays_corr, energy, energypad, rbk, corr1, corr2)
+    return (pump_1, unpump_1, pump_2, unpump_2, pump_1_raw, unpump_1_raw, pump_2_raw, unpump_2_raw, Izero_pump, Izero_unpump, Delays_stage, arrTimes, Delays_corr, energy, scanvar, rbk, corr1, corr2)
 
 ##################################################################
 
@@ -274,7 +277,7 @@ def Reduce_scan_PP_noPair(reducedir, saveflag, jsonlist, TT, motor, diode1, diod
     
     from sfdata import SFScanInfo
     
-    pump_1, pump_2, pump_1_raw, pump_2_raw, Izero_pump, Delays_stage, arrTimes, Delays_corr, energy, energypad, readbacks, corr1, corr2, lights, darks = ([] for i in range(15))
+    pump_1, pump_2, pump_1_raw, pump_2_raw, Izero_pump, Delays_stage, arrTimes, Delays_corr, energy, scanvar, readbacks, corr1, corr2, lights, darks = ([] for i in range(15))
     
     for jsonfile in jsonlist:
         runname = jsonfile.split('/')[-3]
@@ -288,7 +291,7 @@ def Reduce_scan_PP_noPair(reducedir, saveflag, jsonlist, TT, motor, diode1, diod
             unique = np.full(len(rbk), True)
         rbk = rbk[unique]
 
-        p1_raw, p2_raw, p1, p2, Ip, ds, aT, dc, en, en2, c1, c2, light, dark = ([] for i in range(14))
+        p1_raw, p2_raw, p1, p2, Ip, ds, aT, dc, en, sv, c1, c2, light, dark = ([] for i in range(14))
 
         for i, step in enumerate(scan):
             check_files_and_data(step)
@@ -318,7 +321,7 @@ def Reduce_scan_PP_noPair(reducedir, saveflag, jsonlist, TT, motor, diode1, diod
                 enshot = results[channel_monoEnergy]
                 en.extend(enshot)
                 #en2 = np.pad(en2, (0,len(enshot)), constant_values=(np.random.normal(rbk[i],0.01,1)))
-                en2 = np.pad(en2, (0,len(enshot)), constant_values=(np.nanmean(enshot)))
+                sv = np.pad(sv, (0,len(enshot)), constant_values=(rbk[i]))
 
                 pearsonr1 = pearsonr(results[diode1],results[det_Izero])[0]
                 pearsonr2 = pearsonr(results[diode2],results[det_Izero])[0]
@@ -333,8 +336,8 @@ def Reduce_scan_PP_noPair(reducedir, saveflag, jsonlist, TT, motor, diode1, diod
         p2 = p2_raw/np.nanmean(np.array(p2_raw)[:shots2average])
 
         if saveflag:
-            os.makedirs(reducedir+runname, exist_ok=True)
-            save_reduced_data_scanPP_noPair(reducedir, runname, scan, p1, p2, p1_raw, p2_raw, Ip, ds, aT, dc, en, en2, rbk, c1, c2, light, dark)
+            os.makedirs(reducedir+runname,  mode=0o775, exist_ok=True)
+            save_reduced_data_scanPP_noPair(reducedir, runname, scan, p1, p2, p1_raw, p2_raw, Ip, ds, aT, dc, en, sv, rbk, c1, c2, light, dark)
                 
         pump_1.extend(p1)
         pump_2.extend(p2)
@@ -346,7 +349,7 @@ def Reduce_scan_PP_noPair(reducedir, saveflag, jsonlist, TT, motor, diode1, diod
         arrTimes.extend(aT)
         Delays_corr.extend(dc)
         energy.extend(en)
-        energypad.extend(en2)
+        scanvar.extend(sv)
         #readbacks.append(rbk)
         corr1.append(c1)
         corr2.append(c2)
@@ -356,7 +359,7 @@ def Reduce_scan_PP_noPair(reducedir, saveflag, jsonlist, TT, motor, diode1, diod
     print ('----------------------------')
     print ('Loaded {} total on/off pairs'.format(len(Delays_corr)))
 
-    return (pump_1, pump_2, pump_1_raw, pump_2_raw, Izero_pump, Delays_stage, arrTimes, Delays_corr, energy, energypad, rbk, corr1, corr2, lights, darks)
+    return (pump_1, pump_2, pump_1_raw, pump_2_raw, Izero_pump, Delays_stage, arrTimes, Delays_corr, energy, scanvar, rbk, corr1, corr2, lights, darks)
 
 ##################################################################
 
@@ -366,14 +369,14 @@ def Reduce_scan_static(reducedir, saveflag, jsonlist, diode1, diode2, Izero, sho
 
     from sfdata import SFScanInfo
     
-    unpump_1, unpump_2, unpump_1_raw, unpump_2_raw, Izero_unpump, energy, energypad, readbacks, corr1, corr2 = ([] for i in range(10))
+    unpump_1, unpump_2, unpump_1_raw, unpump_2_raw, Izero_unpump, energy, scanvar, readbacks, corr1, corr2 = ([] for i in range(10))
     
     for jsonfile in jsonlist:
         runname = jsonfile.split('/')[-3]
         scan = SFScanInfo(jsonfile)
         rbk = scan.readbacks
 
-        u1, u2, u1_raw, u2_raw, Iu, en, en2, c1, c2 = ([] for i in range(9))
+        u1, u2, u1_raw, u2_raw, Iu, en, sv, c1, c2 = ([] for i in range(9))
 
         for i, step in enumerate(scan):
             check_files_and_data(step)
@@ -393,7 +396,7 @@ def Reduce_scan_static(reducedir, saveflag, jsonlist, diode1, diode2, Izero, sho
 
                 enshot = results[channel_monoEnergy]
                 en.extend(enshot)
-                en2 = np.pad(en2, (0,len(enshot)), constant_values=(np.random.normal(rbk[i],0.01,1)))
+                sv = np.pad(sv, (0,len(enshot)), constant_values=(rbk[i]))
                 
                 pearsonr1 = pearsonr(results[diode1],results[Izero])[0]
                 pearsonr2 = pearsonr(results[diode2],results[Izero])[0]
@@ -408,14 +411,14 @@ def Reduce_scan_static(reducedir, saveflag, jsonlist, diode1, diode2, Izero, sho
         u2 = u2_raw/np.nanmean(np.array(u2_raw)[:shots2average])
 
         if saveflag:
-            os.makedirs(reducedir+runname, exist_ok=True)
-            save_reduced_data_scan_static(reducedir, runname, scan, u1, u2, u1_raw, u2_raw, Iu, en, en2, rbk, c1, c2)
+            os.makedirs(reducedir+runname,  mode=0o775, exist_ok=True)
+            save_reduced_data_scan_static(reducedir, runname, scan, u1, u2, u1_raw, u2_raw, Iu, en, sv, rbk, c1, c2)
                 
         unpump_1.extend(u1_raw)
         unpump_2.extend(u2_raw)
         Izero_unpump.extend(Iu)
         energy.extend(en)
-        energypad.extend(en2)
+        scanvar.extend(sv)
         readbacks.append(rbk)
         corr1.append(c1)
         corr2.append(c2)
@@ -423,7 +426,7 @@ def Reduce_scan_static(reducedir, saveflag, jsonlist, diode1, diode2, Izero, sho
     print ('----------------------------')
     print ('Loaded {} total shots'.format(len(unpump_1)))
 
-    return (unpump_1, unpump_2, Izero_unpump, energy, energypad, readbacks, corr1, corr2)
+    return (unpump_1, unpump_2, Izero_unpump, energy, scanvar, readbacks, corr1, corr2)
 
 ######################################
 
@@ -482,7 +485,7 @@ def Rebin_and_filter_energyscans_static(data, quantile, readbacks, threshold=0, 
     if raw: 
         unpump_1 = np.asarray(data['unpump_1_raw'])
     Izero_unpump = np.asarray(data['Izero_unpump'])
-    energy = np.asarray(data['energypad'])
+    energy = np.asarray(data['scanvar'])
 
     ordered = np.argsort(np.asarray(energy))
     peaks, what = find_peaks(np.diff(energy[ordered]))
@@ -550,7 +553,7 @@ def create_corr_condition_u(unpump, quantile):
 
 ######################################
 
-def Rebin_energyscans_PP(pump, unpump, Ipump, Iunpump, scanvar, readbacks, threshold=0):
+def Rebin_scans_PP(pump, unpump, Ipump, Iunpump, scanvar, readbacks, threshold):
     
     ordered = np.argsort(np.asarray(scanvar))
     peaks, what = find_peaks(np.diff(scanvar[ordered]))
@@ -662,7 +665,7 @@ def Rebin_and_filter_energyscans_PP(data, quantile, readbacks, threshold=0, n_si
         unpump_1 = np.asarray(data['unpump_1_raw'])
     Izero_pump = np.asarray(data['Izero_pump'])
     Izero_unpump = np.asarray(data['Izero_unpump'])
-    energy = np.asarray(data['energypad'])
+    energy = np.asarray(data['scanvar'])
     
     ordered = np.argsort(np.asarray(energy))
     peaks, what = find_peaks(np.diff(energy[ordered]))
@@ -759,7 +762,7 @@ def Rebin_and_filter_energyscans_PP_noPair(data, quantile, readbacks, threshold=
     if raw: 
         pump_1 = np.asarray(data['pump_1_raw'])
     Izero_pump = np.asarray(data['Izero_pump'])
-    energy = np.asarray(data['energypad'])
+    energy = np.asarray(data['scanvar'])
     lights = np.asarray(data['lights'])
     darks  = np.asarray(data['darks'])    
     
@@ -978,7 +981,7 @@ def Rebin_timescans_noPair(pump, Ipump, lights, darks, delaystage, readbacks, th
 
 ######################################
 
-def Rebin_and_filter_timescans(data, binsize, minvalue, maxvalue, quantile, withTT, threshold=0, n_sigma=1, raw=True, numbins=None, varbin_t=False):
+def Rebin_and_filter_timescans(data, binsize, minvalue, maxvalue, quantile, withTT, threshold=0, n_sigma=1, raw=True, numbins=None, varbin_t=False, lxt=False):
 
     for k,v in data.items():
         data[k] = v
@@ -992,11 +995,14 @@ def Rebin_and_filter_timescans(data, binsize, minvalue, maxvalue, quantile, with
     Izero_unpump = np.asarray(data['Izero_unpump'])
     Delays_stage = np.asarray(data['Delays_stage'])
     Delays_corr = np.asarray(data['Delays_corr'])
+    scanvar = np.asarray(data['scanvar'])
 
     if withTT:
         Delays = Delays_corr
     else:
         Delays = Delays_stage
+    if lxt:
+        Delays = scanvar
 
     binList = np.arange(minvalue, maxvalue, binsize)
     if varbin_t:
@@ -1184,7 +1190,7 @@ def Rebin_and_filter_2Dscans(data, binsize, minvalue, maxvalue, quantile, readba
         unpump_1 = np.asarray(data['unpump_1_raw'])
     Izero_pump = np.asarray(data['Izero_pump'])
     Izero_unpump = np.asarray(data['Izero_unpump'])
-    energypad = np.asarray(data['energypad'])
+    energy = np.asarray(data['scanvar'])
     Delays_stage = np.asarray(data['Delays_stage'])
     Delays_corr = np.asarray(data['Delays_corr'])
 
@@ -1202,8 +1208,8 @@ def Rebin_and_filter_2Dscans(data, binsize, minvalue, maxvalue, quantile, readba
     if varbin_t:
         delay_rebin = bin_centres
 
-    ordered = np.argsort(np.asarray(energypad))
-    peaks, what = find_peaks(np.diff(energypad[ordered]))
+    ordered = np.argsort(np.asarray(energy))
+    peaks, what = find_peaks(np.diff(energy[ordered]))
     
     pump_1 = pump_1[ordered]
     unpump_1 = unpump_1[ordered]
@@ -1306,7 +1312,7 @@ def Rebin_and_filter_2Dscans_noPair(data, binsize, minvalue, maxvalue, quantile,
 
     print (len(pump_1), len(Izero_pump), len(lights), len(darks))
 
-    energypad = np.asarray(data['energypad'])
+    energy = np.asarray(data['scanvar'])
     Delays_stage = np.asarray(data['Delays_stage'])
     Delays_corr = np.asarray(data['Delays_corr'])
 
@@ -1324,8 +1330,8 @@ def Rebin_and_filter_2Dscans_noPair(data, binsize, minvalue, maxvalue, quantile,
     if varbin_t:
         delay_rebin = bin_centres
 
-    ordered = np.argsort(np.asarray(energypad))
-    peaks, what = find_peaks(np.diff(energypad[ordered]))
+    ordered = np.argsort(np.asarray(energy))
+    peaks, what = find_peaks(np.diff(energy[ordered]))
     
     pump_1 = pump_1[ordered]    
     Izero_pump = Izero_pump[ordered]
@@ -1436,7 +1442,7 @@ def Rebin_and_filter_2Dscans_noPair(data, binsize, minvalue, maxvalue, quantile,
 ######################################
 ######################################
 
-def Rebin_scans_PP(pump, unpump, Ipump, Iunpump, scanvar, readbacks):
+def Rebin_scans_PP_old(pump, unpump, Ipump, Iunpump, scanvar, readbacks):
     
     ordered = np.argsort(np.asarray(scanvar))
     peaks, what = find_peaks(np.diff(scanvar[ordered]))
@@ -1473,7 +1479,7 @@ def Rebin_scans_PP(pump, unpump, Ipump, Iunpump, scanvar, readbacks):
 
 ######################################
 
-def Rebin_scans_PP_old(pump, unpump, Ipump, Iunpump, energy, readbacks, varbin_e=False):
+def Rebin_scans_PP_old2(pump, unpump, Ipump, Iunpump, energy, readbacks, varbin_e=False):
 
     stepsize_energy = (readbacks[-1]-readbacks[0])/(len(readbacks)-1)
     binList_energy = np.linspace(readbacks[0]-stepsize_energy/2, readbacks[-1]+stepsize_energy/2, len(readbacks)+1)
@@ -3199,7 +3205,7 @@ def save_reduced_data_2diodes_TT(reducedir, run_name, scan, D1p, D1u, PP1, gs1, 
 
 ################################################
 
-def save_reduced_data_scanPP(reducedir, run_name, scan, D1p, D1u, D2p, D2u, D1p_raw, D1u_raw, D2p_raw, D2u_raw, I0p, I0u, delaystage, arrTimes, delaycorr, energy, energypad, rbk, c1, c2):
+def save_reduced_data_scanPP(reducedir, run_name, scan, D1p, D1u, D2p, D2u, D1p_raw, D1u_raw, D2p_raw, D2u_raw, I0p, I0u, delaystage, arrTimes, delaycorr, energy, scanvar, rbk, c1, c2):
     readbacks = scan.readbacks
     setValues = scan.values
     run_array = {}
@@ -3218,7 +3224,7 @@ def save_reduced_data_scanPP(reducedir, run_name, scan, D1p, D1u, D2p, D2u, D1p_
                                          "arrTimes": arrTimes,
                                          "Delays_corr": delaycorr,
                                          "energy": energy,
-                                         "energypad": energypad,
+                                         "scanvar": scanvar,
                                          "readbacks": rbk, 
                                          "corr1": c1,
                                          "corr2": c2}
@@ -3229,7 +3235,7 @@ def save_reduced_data_scanPP(reducedir, run_name, scan, D1p, D1u, D2p, D2u, D1p_
 
 ################################################
 
-def save_reduced_data_scanPP_noPair(reducedir, run_name, scan, D1p, D2p, D1p_raw, D2p_raw, I0p, delaystage, arrTimes, delaycorr, energy, energypad, rbk, c1, c2, lights, darks):
+def save_reduced_data_scanPP_noPair(reducedir, run_name, scan, D1p, D2p, D1p_raw, D2p_raw, I0p, delaystage, arrTimes, delaycorr, energy, scanvar, rbk, c1, c2, lights, darks):
     readbacks = scan.readbacks
     setValues = scan.values
     run_array = {}
@@ -3243,7 +3249,7 @@ def save_reduced_data_scanPP_noPair(reducedir, run_name, scan, D1p, D2p, D1p_raw
                                          "arrTimes": arrTimes,
                                          "Delays_corr": delaycorr,
                                          "energy": energy,
-                                         "energypad": energypad,
+                                         "scanvar": scanvar,
                                          "readbacks": rbk, 
                                          "corr1": c1,
                                          "corr2": c2, 
@@ -3255,7 +3261,7 @@ def save_reduced_data_scanPP_noPair(reducedir, run_name, scan, D1p, D2p, D1p_raw
 
 ################################################
 
-def save_reduced_data_scan_static(reducedir, run_name, scan, D1u, D2u, D1u_raw, D2u_raw, I0u, energy, energypad, rbk, c1, c2):
+def save_reduced_data_scan_static(reducedir, run_name, scan, D1u, D2u, D1u_raw, D2u_raw, I0u, energy, scanvar, rbk, c1, c2):
     readbacks = scan.readbacks
     setValues = scan.values
     run_array = {}
@@ -3266,7 +3272,7 @@ def save_reduced_data_scan_static(reducedir, run_name, scan, D1u, D2u, D1u_raw, 
                                          "unpump_2_raw": D2u_raw,
                                          "Izero_unpump": I0u,
                                          "energy": energy, 
-                                         "energypad": energypad, 
+                                         "scanvar": scanvar, 
                                          "readbacks": rbk, 
                                          "corr1": c1,
                                          "corr2": c2}
@@ -3295,7 +3301,7 @@ def LoadTimescansXANES(with_TT, Two_diodes, scan, TT, channel_delay_motor, detec
              Izero_pump, Izero_unpump, correlation, correlation2, readbacks, goodshots, goodshots2) = \
              XAS_scanPP_2diodes_PSEN_bs(scan, TT, channel_delay_motor, detector_XAS_1, detector_XAS_2, detector_Izero, quantile_corr, timezero_offset)
             if saveflag:
-                os.makedirs(reducedir+runname, exist_ok=True)
+                os.makedirs(reducedir+runname,  mode=0o775, exist_ok=True)
                 save_reduced_data_2diodes_TT(reducedir, runname, scan, 
                                              DataDiode_pump, DataDiode_unpump, Pump_probe_Diode, goodshots, correlation, Pump_probe_scan,
                                              DataDiode2_pump, DataDiode2_unpump, Pump_probe_Diode2, goodshots2, correlation2, Pump_probe_scan2,
@@ -3305,7 +3311,7 @@ def LoadTimescansXANES(with_TT, Two_diodes, scan, TT, channel_delay_motor, detec
              Izero_pump_scan, Izero_unpump_scan, correlation, readbacks, goodshots) = \
              XAS_scanPP_PSEN_bs(scan, TT, channel_delay_motor, detector_XAS_1, detector_Izero, quantile_corr, timezero_offset)
             if saveflag:
-                os.makedirs(reducedir+runname, exist_ok=True)
+                os.makedirs(reducedir+runname,  mode=0o775, exist_ok=True)
                 save_reduced_data_1diode_TT(reducedir, runname, scan, 
                                             DataDiode_pump, DataDiode_unpump, Pump_probe_Diode, goodshots, correlation, Pump_probe_scan, Delays_fs_scan, Delays_corr_scan, timezero_offset)                
     else:
@@ -3315,7 +3321,7 @@ def LoadTimescansXANES(with_TT, Two_diodes, scan, TT, channel_delay_motor, detec
              Izero_pump, Izero_unpump, correlation1, correlation2, readbacks, goodshots1, goodshots2) = \
              XAS_scanPP_2diodes_noTT(scan, detector_XAS_1, detector_XAS_2, detector_Izero, quantile_corr)
             if saveflag:
-                os.makedirs(reducedir+runname, exist_ok=True)
+                os.makedirs(reducedir+runname,  mode=0o775, exist_ok=True)
                 save_reduced_data_2diodes(reducedir, runname, scan, 
                                           DataDiode1_pump, DataDiode1_unpump, Pump_probe_Diode1, goodshots1, correlation1,
                                           DataDiode2_pump, DataDiode2_unpump, Pump_probe_Diode2, goodshots2, correlation2, timezero_offset)
@@ -3325,7 +3331,7 @@ def LoadTimescansXANES(with_TT, Two_diodes, scan, TT, channel_delay_motor, detec
              Izero_pump_scan, Izero_unpump_scan, correlation, readbacks, goodshots) = \
              XAS_scanPP_1diode_noTT(scan, detector_XAS_1, detector_Izero, quantile_corr)
             if saveflag:
-                os.makedirs(reducedir+runname, exist_ok=True)
+                os.makedirs(reducedir+runname,  mode=0o775, exist_ok=True)
                 save_reduced_data_1diode(reducedir, runname, scan, 
                                          DataDiode_pump, DataDiode_unpump, Pump_probe_Diode, goodshots, correlation, timezero_offset)
 
@@ -3338,7 +3344,7 @@ def LoadXANES(Two_diodes, scan, detector_XAS_1, detector_XAS_2, detector_Izero, 
          Izero_pump, Izero_unpump, correlation1, correlation2, Energy_eV, goodshots1, goodshots2) = \
         XAS_scanPP_2diodes_noTT(scan, detector_XAS_1, detector_XAS_2, detector_Izero, quantile_corr)
         if saveflag:
-            os.makedirs(reducedir+runname, exist_ok=True)
+            os.makedirs(reducedir+runname, mode=0o775, exist_ok=True)
             save_reduced_data_2diodes(reducedir, runname, scan, 
                                       DataDiode1_pump, DataDiode1_unpump, Pump_probe_Diode1, goodshots1, correlation1,
                                       DataDiode2_pump, DataDiode2_unpump, Pump_probe_Diode2, goodshots2, correlation2)
@@ -3347,7 +3353,7 @@ def LoadXANES(Two_diodes, scan, detector_XAS_1, detector_XAS_2, detector_Izero, 
          Izero_pump_scan, Izero_unpump_scan, correlation1, Energy_eV, goodshots1) = \
         XAS_scanPP_1diode_noTT(scan, detector_XAS_1, detector_Izero, quantile_corr)
         if saveflag:
-                os.makedirs(reducedir+runname, exist_ok=True)
+                os.makedirs(reducedir+runname,  mode=0o775, exist_ok=True)
                 save_reduced_data_1diode(reducedir, runname, scan, 
                                          DataDiode1_pump, DataDiode1_unpump, Pump_probe_Diode1, goodshots1, correlation1)
 

@@ -7,6 +7,26 @@ from itertools import cycle
 from textwrap import wrap
 import glob, numbers
 
+def initialize (pgroup, runlist):
+    from sfdata import SFScanInfo
+    jsonlist = []
+    runnames = []
+    for run in runlist:
+        jsonfile = ''
+        try:
+            jsonfile = glob.glob('/sf/alvra/data/{}/raw/*{:04d}*/meta/scan.json'.format(pgroup, run))[0]
+            runnames.append(jsonfile.split('/')[6])
+            jsonlist.append(jsonfile)
+        except IndexError:
+            print ("Could not find run {} in pgroup {}".format(run, pgroup))
+            runlist=np.setdiff1d(runlist, [run])
+            break
+    print ("will reduce {} run(s): {}".format(len(jsonlist), runlist))
+    print ("Run name(s): {}".format(runnames))
+    titlestring = pgroup + ' --- ' +str(runlist)    
+        
+    return (jsonlist, runlist, titlestring)
+
 ################################################
 
 def Plot_reduced_data_old(pgroup, runlist, scan, data, withTT, timescan=False):
@@ -55,7 +75,7 @@ def Plot_reduced_data_old(pgroup, runlist, scan, data, withTT, timescan=False):
 
 ################################################
 
-def Plot_reduced_data(data, scan, titleplot, withTT, timescan=False):
+def Plot_reduced_data(data, scan, titleplot, withTT=False):#, timescan=False):
 
     Izero_pump = data['Izero_pump']
     Izero_unpump = data['Izero_unpump']
@@ -63,9 +83,12 @@ def Plot_reduced_data(data, scan, titleplot, withTT, timescan=False):
     unpump_1 = data['unpump_1']
     Delays_stage = data['Delays_stage']
     Delays_corr = data['Delays_corr']
-    energy = data['energypad']
-    if timescan:
-        energy = data['energy']
+    scanvar = data['scanvar']
+    #if timescan:
+    #    energy = data['energy']
+
+    xlabel = scan.parameters['name'][0]
+    xunits = scan.parameters['units'][0]
 
     if withTT:
         Delays = Delays_corr
@@ -86,9 +109,10 @@ def Plot_reduced_data(data, scan, titleplot, withTT, timescan=False):
     ax3.hist(Delays, bins = 100)
     if len(Delays) !=0:
         ax3.set_xlim(min(Delays), max(Delays))
-    ax4.title.set_text('Energies')
-    ax4.hist(energy, bins=len(scan.values))
-    ax4.set_xlim(min(energy), max(energy))
+    ax4.title.set_text('Scanvar')
+    ax4.hist(scanvar, bins=len(scan.values))
+    ax4.set_xlim(min(scanvar), max(scanvar))
+    ax4.set_xlabel("{} ({})".format(xlabel, xunits))
     ax1.grid()
     ax2.grid()
     ax3.grid()
@@ -202,20 +226,20 @@ def Plot_reduced_data_noPair(pgroup, runlist, scan, data, withTT, timescan=False
 
 ################################################
 
-def Plot_scan_2diodes(pgroup, reducedir, runlist, path = 'raw', timescan=False, threshold=0, indexrun=-1):
+def Plot_scan_2diodes(pgroup, reducedir, run, threshold, path = 'raw', timescan=False):#, indexrun=-1):
 
-    jsonfile = glob.glob('/sf/alvra/data/{}/{}/*{:04d}*/meta/scan.json'.format(pgroup, path, runlist[0]))[0]
+    jsonfile = glob.glob('/sf/alvra/data/{}/{}/*{:04d}*/meta/scan.json'.format(pgroup, path, run))[0]
     from sfdata import SFScanInfo
     scan = SFScanInfo(jsonfile)
     
-    _, titlestring_stack = load_reduced_data(pgroup, reducedir, runlist)
+    _, titlestring_stack = load_reduced_data(pgroup, reducedir, [run])
     fig, ((ax1, ax3), (ax2, ax4)) = plt.subplots(2, 2, figsize=(10, 6), constrained_layout=True)
     plt.suptitle(titlestring_stack)
 
     lines =  ['-', '--', ':', '-.', ' ', '', 'solid', 'dashed', 'dashdot', 'dotted']
     linecycler = cycle(lines)
 
-    run = runlist[indexrun]
+    #run = runlist[indexrun]
     
     #for index, run in enumerate(runlist):
     data, _ = load_reduced_data(pgroup, reducedir, [run])
@@ -225,7 +249,7 @@ def Plot_scan_2diodes(pgroup, reducedir, runlist, path = 'raw', timescan=False, 
     unpump_2     = np.asarray(data["unpump_2_raw"])
     Izero_pump   = np.asarray(data["Izero_pump"])
     Izero_unpump = np.asarray(data["Izero_unpump"])
-    xaxis        = np.asarray(data["energypad"])
+    xaxis        = np.asarray(data["scanvar"])
     readbacks    = np.asarray(data["readbacks"])
     runname      = 'run{:04d}'.format(run)    
             
@@ -244,8 +268,9 @@ def Plot_scan_2diodes(pgroup, reducedir, runlist, path = 'raw', timescan=False, 
         pp1, GS1, ES1, err_pp1, err_GS1, err_ES1, rbk = Rebin_timescans(pump_1, unpump_1, Izero_pump, Izero_unpump, xaxis, rbk, threshold, varbin_t=False)
         pp2, GS2, ES2, err_pp2, err_GS2, err_ES2, rbk = Rebin_timescans(pump_2, unpump_2, Izero_pump, Izero_unpump, xaxis, rbk, threshold, varbin_t=False)
     else:            
-        pp1, GS1, ES1, err_pp1, err_GS1, err_ES1 = Rebin_energyscans_PP(pump_1, unpump_1, Izero_pump, Izero_unpump, xaxis, rbk, threshold)
-        pp2, GS2, ES2, err_pp2, err_GS2, err_ES2 = Rebin_energyscans_PP(pump_2, unpump_2, Izero_pump, Izero_unpump, xaxis, rbk, threshold)
+        #print (pump_1[0], unpump_1[0], Izero_pump[0], Izero_unpump[0], xaxis[0], rbk[0], threshold)
+        pp1, GS1, ES1, err_pp1, err_GS1, err_ES1 = Rebin_scans_PP(pump_1, unpump_1, Izero_pump, Izero_unpump, xaxis, rbk, threshold)
+        pp2, GS2, ES2, err_pp2, err_GS2, err_ES2 = Rebin_scans_PP(pump_2, unpump_2, Izero_pump, Izero_unpump, xaxis, rbk, threshold)
     lines = next(linecycler)
 
     if scan.parameters['Id'] == ['dummy']:
@@ -348,13 +373,13 @@ def Plot_scan_2diodes_noPair(pgroup, reducedir, runlist, timescan=False, thresho
 
 ################################################
 
-def Plot_correlations_scan(pgroup, reducedir, runlist, path='raw', timescan=False, lowlim=0.99):
+def Plot_correlations_scan(pgroup, reducedir, run, path='raw', timescan=False, lowlim=0.99):
 
-    _, titlestring_stack = load_reduced_data(pgroup, reducedir, runlist)
+    _, titlestring_stack = load_reduced_data(pgroup, reducedir, [run])
     fig, ((ax1, ax3)) = plt.subplots(1, 2, figsize=(10, 3), constrained_layout=True)
     plt.suptitle(titlestring_stack)
 
-    jsonfile = glob.glob('/sf/alvra/data/{}/{}/*{:04d}*/meta/scan.json'.format(pgroup, path, runlist[0]))[0]
+    jsonfile = glob.glob('/sf/alvra/data/{}/{}/*{:04d}*/meta/scan.json'.format(pgroup, path, run))[0]
     from sfdata import SFScanInfo
     scan = SFScanInfo(jsonfile)
 
@@ -364,19 +389,19 @@ def Plot_correlations_scan(pgroup, reducedir, runlist, path='raw', timescan=Fals
     except:
         pass
     
-    for index, run in enumerate(runlist):
-        data, _ = load_reduced_data(pgroup, reducedir, [run])
-        readbacks = np.asarray(data["readbacks"])[0]
-        corr1     = np.asarray(data["corr1"])
-        corr2     = np.asarray(data["corr2"])
+    #for index, run in enumerate(runlist):
+    data, _ = load_reduced_data(pgroup, reducedir, [run])
+    readbacks = np.asarray(data["readbacks"])[0]
+    corr1     = np.asarray(data["corr1"])
+    corr2     = np.asarray(data["corr2"])
 
-        if scan.parameters['Id'] == ['dummy']:
-            readbacks = np.arange(1, len(scan.readbacks)+1)
-            xlabel = 'Acq number'
-            xunits = 'N/A'
+    if scan.parameters['Id'] == ['dummy']:
+        readbacks = np.arange(1, len(scan.readbacks)+1)
+        xlabel = 'Acq number'
+        xunits = 'N/A'
 
-        ax1.plot(readbacks, corr1, label='diode1 run{:04d}'.format(run))
-        ax3.plot(readbacks, corr2, label='diode2 run{:04d}'.format(run))
+    ax1.plot(readbacks, corr1, label='diode1 run{:04d}'.format(run))
+    ax3.plot(readbacks, corr2, label='diode2 run{:04d}'.format(run))
     ax1.legend()
     ax1.set_xlabel("{} ({})".format(xlabel, xunits))
     ax1.grid()
@@ -389,10 +414,13 @@ def Plot_correlations_scan(pgroup, reducedir, runlist, path='raw', timescan=Fals
 
 ################################################
 
-def plot_filtered_data(results, rbk, title):
+def plot_filtered_data(results, scan, rbk, title):
     
     fig, (ax1, ax3) = plt.subplots(1, 2, figsize=(10, 4), constrained_layout=True)
     plt.suptitle(title)
+
+    xlabel = scan.parameters['name'][0]
+    xunits = scan.parameters['units'][0]
 
     pp = results['pp']
     ES = results['ES']
@@ -408,13 +436,13 @@ def plot_filtered_data(results, rbk, title):
     ax3.fill_between(rbk, pp-err_pp2, pp+err_pp2, color='green')
     ax3.plot(rbk, pp, color='green', marker='.')
     
-    ax1.set_xlabel("Energy (eV)")
+    ax1.set_xlabel("{} ({})".format(xlabel, xunits))
     ax1.set_ylabel ("XAS Diode")
     ax1.set_title('XAS (fluo)')
     ax1.legend(loc="best")
     ax1.grid()
     
-    ax3.set_xlabel("Energy (eV)")
+    ax3.set_xlabel("{} ({})".format(xlabel, xunits))
     ax3.set_ylabel ("DeltaXAS")
     ax3.set_title('pump probe')
     ax3.legend(loc="best")
@@ -507,7 +535,7 @@ def plot_bins_population(results, titlestring_stack):
 ################################################
 
 def save_averaged_data(Loaddir, runlist, results, rbk, whichdiode, idxNans):
-    SaveDir = Loaddir+'_single/'
+    SaveDir = Loaddir+'_singlerun/'
     if len(runlist)>1:
         SaveDir = Loaddir+'_multiruns/'
     runlist2save = '_'.join(str(x) for x in runlist)
@@ -517,9 +545,7 @@ def save_averaged_data(Loaddir, runlist, results, rbk, whichdiode, idxNans):
     else:
         run2save = 'run{}'.format(runlist2save)
     savedir = SaveDir+run2save
-
-    os.makedirs(savedir, exist_ok=True)
-    os.chmod(savedir, 0o775)
+    os.makedirs(savedir, mode=0o775, exist_ok=True)
     run_array = {}
 
     pp = results['pp'][idxNans]
