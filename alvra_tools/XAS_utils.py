@@ -84,6 +84,7 @@ def Plot_reduced_data(data, scan, titleplot, withTT=False):#, timescan=False):
     Delays_stage = data['Delays_stage']
     Delays_corr = data['Delays_corr']
     scanvar = data['scanvar']
+    energy = data['energy']
     #if timescan:
     #    energy = data['energy']
 
@@ -95,7 +96,7 @@ def Plot_reduced_data(data, scan, titleplot, withTT=False):#, timescan=False):
     else:
         Delays = Delays_stage
     
-    fig, (ax1, ax2, ax3, ax4) = plt.subplots(1, 4, figsize=(9, 3), constrained_layout=True)
+    fig, (ax1, ax2, ax3, ax4, ax5) = plt.subplots(1, 5, figsize=(10, 3), constrained_layout=True)
     fig.suptitle(titleplot)
     ax1.title.set_text('Izero')
     ax1.hist(Izero_pump, bins = 200, alpha=0.5, label = 'on')
@@ -109,14 +110,18 @@ def Plot_reduced_data(data, scan, titleplot, withTT=False):#, timescan=False):
     ax3.hist(Delays, bins = 100)
     if len(Delays) !=0:
         ax3.set_xlim(min(Delays), max(Delays))
-    ax4.title.set_text('Scanvar')
-    ax4.hist(scanvar, bins=len(scan.values))
-    ax4.set_xlim(min(scanvar), max(scanvar))
-    ax4.set_xlabel("{} ({})".format(xlabel, xunits))
+    ax4.title.set_text('Energy')
+    ax4.hist(energy, bins=len(scan.values))
+    ax4.set_xlim(min(energy), max(energy))
+    ax5.title.set_text('Scanvar')
+    ax5.hist(scanvar, bins=100)
+    ax5.set_xlim(min(scanvar), max(scanvar))
+    ax5.set_xlabel("{} ({})".format(xlabel, xunits))
     ax1.grid()
     ax2.grid()
     ax3.grid()
     ax4.grid()
+    ax5.grid()
     plt.show()
 
     if withTT:

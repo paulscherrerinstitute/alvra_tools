@@ -8,7 +8,7 @@ from IPython.display import clear_output, display
 from datetime import datetime
 from scipy.stats import pearsonr
 from scipy.signal import find_peaks
-import itertools
+import itertools, pickle
 
 from alvra_tools.load_data import *
 from alvra_tools.channels import *
@@ -3208,8 +3208,10 @@ def save_reduced_data_2diodes_TT(reducedir, run_name, scan, D1p, D1u, PP1, gs1, 
 def save_reduced_data_scanPP(reducedir, run_name, scan, D1p, D1u, D2p, D2u, D1p_raw, D1u_raw, D2p_raw, D2u_raw, I0p, I0u, delaystage, arrTimes, delaycorr, energy, scanvar, rbk, c1, c2):
     readbacks = scan.readbacks
     setValues = scan.values
+    metadata  = list(scan.parameters.items())
     run_array = {}
     run_array[run_name.split('-')[0]] = {"name": run_name,
+                                         "meta": metadata,
                                          "pump_1": D1p,
                                          "unpump_1": D1u,
                                          "pump_2": D2p,
@@ -3225,7 +3227,7 @@ def save_reduced_data_scanPP(reducedir, run_name, scan, D1p, D1u, D2p, D2u, D1p_
                                          "Delays_corr": delaycorr,
                                          "energy": energy,
                                          "scanvar": scanvar,
-                                         "readbacks": rbk, 
+                                         "readbacks": readbacks, 
                                          "corr1": c1,
                                          "corr2": c2}
                                          
@@ -3238,8 +3240,10 @@ def save_reduced_data_scanPP(reducedir, run_name, scan, D1p, D1u, D2p, D2u, D1p_
 def save_reduced_data_scanPP_noPair(reducedir, run_name, scan, D1p, D2p, D1p_raw, D2p_raw, I0p, delaystage, arrTimes, delaycorr, energy, scanvar, rbk, c1, c2, lights, darks):
     readbacks = scan.readbacks
     setValues = scan.values
+    metadata  = scan.parameters
     run_array = {}
     run_array[run_name.split('-')[0]] = {"name": run_name,
+                                         "meta": metadata,
                                          "pump_1": D1p,                                
                                          "pump_2": D2p,
                                          "pump_1_raw": D1p_raw, 
@@ -3264,8 +3268,10 @@ def save_reduced_data_scanPP_noPair(reducedir, run_name, scan, D1p, D2p, D1p_raw
 def save_reduced_data_scan_static(reducedir, run_name, scan, D1u, D2u, D1u_raw, D2u_raw, I0u, energy, scanvar, rbk, c1, c2):
     readbacks = scan.readbacks
     setValues = scan.values
+    metadata  = scan.parameters
     run_array = {}
-    run_array[run_name.split('-')[0]] = {"name": run_name,           
+    run_array[run_name.split('-')[0]] = {"name": run_name, 
+                                         "meta": metadata,          
                                          "unpump_1": D1u,
                                          "unpump_2": D2u,
                                          "unpump_1_raw": D1u_raw, 
