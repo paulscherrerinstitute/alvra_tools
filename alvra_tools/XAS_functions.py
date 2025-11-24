@@ -44,13 +44,13 @@ def Reduce_scan_PP(reducedir, saveflag, jsonlist, TT, motor, diode1, diode2, Ize
         scan = SFScanInfo(jsonfile)
         #rbk = np.ravel(scan.readbacks)
         #rbk = np.ravel(scan.values)
-        rbk = scan.values
+        rbk_raw = scan.values
 
-        unique = np.roll(np.diff(rbk, prepend=1)>tolerance, -1)
+        unique = np.roll(np.diff(rbk_raw, prepend=1)>tolerance, -1)
         unique[-1] = True
         if scan.parameters['Id'] == ['dummy']:
-            unique = np.full(len(rbk), True)
-        rbk = rbk[unique]
+            unique = np.full(len(rbk_raw), True)
+        rbk = rbk_raw[unique]
 
         p1_raw, u1_raw, p2_raw, u2_raw, p1, u1, p2, u2, Ip, Iu, ds, aT, dc, en, sv, c1, c2 = ([] for i in range(17))
 
@@ -80,7 +80,7 @@ def Reduce_scan_PP(reducedir, saveflag, jsonlist, TT, motor, diode1, diode2, Ize
                 enshot = resultsPP[channel_monoEnergy].pump
                 en.extend(enshot)
                 #en2 = np.pad(en2, (0,len(enshot)), constant_values=(np.random.normal(rbk[i],0.01,1)))
-                sv = np.pad(sv, (0,len(enshot)), constant_values=(rbk[i]))
+                sv = np.pad(sv, (0,len(enshot)), constant_values=(rbk_raw[i]))
 
                 pearsonr1 = pearsonr(resultsPP[diode1].unpump,resultsPP[Izero].unpump)[0]
                 pearsonr2 = pearsonr(resultsPP[diode2].unpump,resultsPP[Izero].unpump)[0]
@@ -3206,7 +3206,7 @@ def save_reduced_data_2diodes_TT(reducedir, run_name, scan, D1p, D1u, PP1, gs1, 
 ################################################
 
 def save_reduced_data_scanPP(reducedir, run_name, scan, D1p, D1u, D2p, D2u, D1p_raw, D1u_raw, D2p_raw, D2u_raw, I0p, I0u, delaystage, arrTimes, delaycorr, energy, scanvar, rbk, c1, c2):
-    readbacks = scan.readbacks
+    #readbacks = scan.readbacks
     setValues = scan.values
     metadata  = list(scan.parameters.items())
     run_array = {}
@@ -3227,7 +3227,7 @@ def save_reduced_data_scanPP(reducedir, run_name, scan, D1p, D1u, D2p, D2u, D1p_
                                          "Delays_corr": delaycorr,
                                          "energy": energy,
                                          "scanvar": scanvar,
-                                         "readbacks": readbacks, 
+                                         "readbacks": rbk, 
                                          "corr1": c1,
                                          "corr2": c2}
                                          

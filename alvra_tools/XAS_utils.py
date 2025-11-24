@@ -459,7 +459,8 @@ def plot_filtered_data(results, scan, rbk, title):
 
 def plot_shot_noise(results, xaxis, title, quantile):
     howmany = results['filtered']
-    err_GS = results['err_GS']
+    err_GS  = results['err_GS']
+    err_GS2 = results['err_GS2']
     GS = results['GS']
     
     fig = plt.figure()
@@ -467,6 +468,7 @@ def plot_shot_noise(results, xaxis, title, quantile):
     ax1 = fig.add_subplot(111)
     ax2 = plt.twinx(ax1)
     ax1.plot(xaxis, err_GS/GS*100)
+    ax1.plot(xaxis, err_GS2/GS*100)
     ax2.plot(xaxis, howmany, color='orange')
     ax2.set_ylabel("Number of shots", color ='orange')
     ax1.set_ylabel("std/mean (%)", color = 'blue')
