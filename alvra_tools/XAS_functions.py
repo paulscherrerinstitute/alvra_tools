@@ -747,7 +747,7 @@ def Rebin_and_filter_energyscans_PP(data, quantile, readbacks, threshold=0, n_si
     err_pp = np.sqrt(np.sum(err_pp**2, axis=1))
 
     print ('{} shots out of {} survived'.format(np.sum(filtered), len(pump_1)))
-    res = {'pp': np.array(pp), 'GS': np.array(GS), 'ES': np.array(ES), 'err_pp': np.array(err_pp), 'err_GS': np.array(err_GS), 'err_ES': np.array(err_ES), 'err_pp2': np.array(err_pp2), 'err_GS2': np.array(err_GS2), 'err_ES2': np.array(err_ES2), 'filtered': filtered}
+    res = {'pp': np.array(pp), 'GS': np.array(GS), 'ES': np.array(ES), 'err_pp': np.array(err_pp), 'err_GS': np.array(err_GS), 'err_ES': np.array(err_ES), 'err_pp2': np.array(err_pp2), 'err_GS2': np.array(err_GS2), 'err_ES2': np.array(err_ES2), 'filtered': filtered, 'energy': energy}
     return res
 #np.array(pp), np.array(GS), np.array(ES), np.array(err_pp), np.array(err_GS), np.array(err_ES), np.array(err_pp2), np.array(err_GS2), np.array(err_ES2), filtered
 
