@@ -678,7 +678,7 @@ def Rebin_and_filter_energyscans_PP(data, quantile, readbacks, threshold=0, n_si
     starts = np.append(0, peaks)
     ends = np.append(peaks, None)
 
-    pp, GS, ES, err_pp, err_GS, err_ES = ([] for i in range(6))
+    pp, GS, ES, err_pp, err_GS, err_ES, energy_rebin = ([] for i in range(7))
     filtered = []
 
     for s, e in zip(starts, ends):
@@ -721,6 +721,8 @@ def Rebin_and_filter_energyscans_PP(data, quantile, readbacks, threshold=0, n_si
         err_GS.append(np.nanstd(unpump_filter)/np.sqrt(len(unpump_filter)))
         err_ES.append(np.nanstd(pump_filter)/np.sqrt(len(pump_filter)))
         err_pp.append(np.nanstd(pp_shot)/np.sqrt(len(pp_shot)))
+
+        energy_rebin.append(np.nanmean(energy[s:e]))
         #err_pp.append(np.sqrt(np.nanstd(unpump_filter)**2 + np.nanstd(pump_filter)**2)/np.sqrt(len(pump_filter))) 
 
     print (len(peaks), len(readbacks), len(GS))
@@ -747,7 +749,7 @@ def Rebin_and_filter_energyscans_PP(data, quantile, readbacks, threshold=0, n_si
     err_pp = np.sqrt(np.sum(err_pp**2, axis=1))
 
     print ('{} shots out of {} survived'.format(np.sum(filtered), len(pump_1)))
-    res = {'pp': np.array(pp), 'GS': np.array(GS), 'ES': np.array(ES), 'err_pp': np.array(err_pp), 'err_GS': np.array(err_GS), 'err_ES': np.array(err_ES), 'err_pp2': np.array(err_pp2), 'err_GS2': np.array(err_GS2), 'err_ES2': np.array(err_ES2), 'filtered': filtered, 'energy': energy}
+    res = {'pp': np.array(pp), 'GS': np.array(GS), 'ES': np.array(ES), 'err_pp': np.array(err_pp), 'err_GS': np.array(err_GS), 'err_ES': np.array(err_ES), 'err_pp2': np.array(err_pp2), 'err_GS2': np.array(err_GS2), 'err_ES2': np.array(err_ES2), 'filtered': filtered, 'energy': energy_rebin}
     return res
 #np.array(pp), np.array(GS), np.array(ES), np.array(err_pp), np.array(err_GS), np.array(err_ES), np.array(err_pp2), np.array(err_GS2), np.array(err_ES2), filtered
 
