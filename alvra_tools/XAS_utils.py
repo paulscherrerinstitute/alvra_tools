@@ -88,8 +88,8 @@ def Plot_reduced_data(data, scan, titleplot, withTT=False):#, timescan=False):
     #if timescan:
     #    energy = data['energy']
 
-    xlabel = scan.parameters['name'][0]
-    xunits = scan.parameters['units'][0]
+    xlabel = scan.parameters.get("name")[0]
+    xunits = scan.parameters.get('units')
 
     if withTT:
         Delays = Delays_corr
@@ -259,11 +259,8 @@ def Plot_scan_2diodes(pgroup, reducedir, run, threshold, path = 'raw', timescan=
     runname      = 'run{:04d}'.format(run)    
             
     rbk = readbacks[0]
-    xlabel = scan.parameters['name'][0]
-    try:
-        xunits = scan.parameters['units'][0]
-    except:
-        pass
+    xlabel = scan.parameters.get("name")[0]
+    xunits = scan.parameters.get('units')
 
     if scan.parameters['Id'] == ['dummy']:
         rbk = np.arange(1, len(scan.readbacks)+1)
@@ -388,11 +385,8 @@ def Plot_correlations_scan(pgroup, reducedir, run, path='raw', timescan=False, l
     from sfdata import SFScanInfo
     scan = SFScanInfo(jsonfile)
 
-    xlabel = scan.parameters['name'][0]
-    try:
-        xunits = scan.parameters['units'][0]
-    except:
-        pass
+    xlabel = scan.parameters.get("name")[0]
+    xunits = scan.parameters.get('units')
     
     #for index, run in enumerate(runlist):
     data, _ = load_reduced_data(pgroup, reducedir, [run])
@@ -424,8 +418,8 @@ def plot_filtered_data(results, scan, rbk, title):
     fig, (ax1, ax3) = plt.subplots(1, 2, figsize=(10, 4), constrained_layout=True)
     plt.suptitle(title)
 
-    xlabel = scan.parameters['name'][0]
-    xunits = scan.parameters['units'][0]
+    xlabel = scan.parameters.get("name")[0]
+    xunits = scan.parameters.get('units')
 
     pp = results['pp']
     ES = results['ES']
@@ -593,8 +587,8 @@ def Plot_correlation(titlestring, scan, data, quantile, det1, det2, timescan, xl
     plt.figure(figsize = (7,5))
     plt.suptitle(titlestring, fontsize = 12)
 
-    units = scan.parameters['units'][0]
-    label = scan.parameters['name'][0]
+    xlabel = scan.parameters.get("name")[0]
+    xunits = scan.parameters.get('units')
 
     plt.plot(readbacks, np.asarray(data["correlation1"]), label='{}, {}%'.format(det1.split(':')[-1], quantile*100),marker='.', color = 'orange')
     try:
@@ -639,8 +633,8 @@ def Plot_1diode(titlestring, scan, data, quantile, det1, timescan, xlim=None, yl
     fig, (ax1, ax3) = plt.subplots(1, 2, figsize=(9, 5), constrained_layout=True)
     plt.suptitle(titlestring, fontsize = 12)
     
-    units = scan.parameters['units'][0]
-    label = scan.parameters['name'][0]
+    xlabel = scan.parameters.get("name")[0]
+    xunits = scan.parameters.get('units')
     
     ax1.plot(readbacks, XAS1_pump, label='ON, {}, {}%'.format(det1.split(':')[-1], quantile*100),marker='.')
     ax1.fill_between(readbacks, err1_low_pump, err1_high_pump, color='lightblue')
@@ -719,8 +713,8 @@ def Plot_2diodes_3figs(titlestring, scan, data, quantile, det1, det2, timescan, 
     
     plt.suptitle(titlestring, fontsize = 12)
     
-    units = scan.parameters['units'][0]
-    label = scan.parameters['name'][0]
+    xlabel = scan.parameters.get("name")[0]
+    xunits = scan.parameters.get('units')
     
     ax1.plot(readbacks, XAS1_pump, label='ON, {}, {}%'.format(det1.split(':')[-1], quantile*100),marker='.')
     ax1.fill_between(readbacks, err1_low_pump, err1_high_pump, color='lightblue')
@@ -816,8 +810,8 @@ def Plot_2diodes_4figs(titlestring, scan, data, quantile, det1, det2, timescan, 
     
     plt.suptitle(titlestring, fontsize = 12)
     
-    units = scan.parameters['units'][0]
-    label = scan.parameters['name'][0]
+    xlabel = scan.parameters.get("name")[0]
+    xunits = scan.parameters.get('units')
     
     ax1.plot(readbacks, XAS1_pump, label='ON, {}, {}%'.format(det1.split(':')[-1], quantile*100),marker='.')
     ax1.fill_between(readbacks, err1_low_pump, err1_high_pump, color='lightblue')
@@ -919,8 +913,8 @@ def Plot_2diodes_2figs(titlestring, scan, data, quantile, det1, det2, timescan, 
     
     plt.suptitle(titlestring, fontsize = 12)
     
-    units = scan.parameters['units'][0]
-    label = scan.parameters['name'][0]
+    xlabel = scan.parameters.get("name")[0]
+    xunits = scan.parameters.get('units')
     
     ax1.plot(readbacks, XAS1_pump, label='ON, {}, {}%'.format(det1.split(':')[-1], quantile*100),marker='.')
     ax1.fill_between(readbacks, err1_low_pump, err1_high_pump, color='lightblue')
@@ -1000,8 +994,8 @@ def Plot_AveScans_1diode(titlestring, scan, data, nscans, timescan, xlim=None, y
     ax3.fill_between(readbacks, XAS1_pump_probe - err1_low_pump_probe, XAS1_pump_probe + err1_low_pump_probe, label='pump probe 1',color='limegreen')
     ax3.plot(readbacks, XAS1_pump_probe, color='green', marker='.')
 
-    units = scan.parameters['units'][0]
-    label = scan.parameters['name'][0]
+    xlabel = scan.parameters.get("name")[0]
+    xunits = scan.parameters.get('units')
 
     ax1.set_xlabel("{} ({})".format(label, units))
     ax1.set_ylabel ("XAS Diode 1 (I0 norm)")
@@ -1079,8 +1073,8 @@ def Plot_AveScans_2diodes(titlestring, scan, data, nscans, timescan, xlim=None, 
     fig, ((ax1, ax3), (ax2, ax4)) = plt.subplots(2, 2, figsize=(10, 6), constrained_layout=True)
     plt.suptitle(titlestring)
 
-    units = scan.parameters['units'][0]
-    label = scan.parameters['name'][0]
+    xlabel = scan.parameters.get("name")[0]
+    xunits = scan.parameters.get('units')
 
     ax1.fill_between(readbacks, XAS1_pump - err1_low_pump, XAS1_pump + err1_high_pump , label='diode 1 ON', color='royalblue', alpha = 0.8)
     ax1.fill_between(readbacks, XAS1_unpump - err1_low_unpump, XAS1_unpump + err1_high_unpump, label='diode 1 OFF',color='orange', alpha = 0.8)
@@ -1200,8 +1194,8 @@ def Plot_2diodes_Averaged_1fig(titlestring, scan, data, timescan, nscans=1, xlim
     fig, ax1= plt.subplots(1, 1, figsize=(9, 5), constrained_layout=True)
     plt.suptitle(titlestring)
     
-    units = scan.parameters['units'][0]
-    label = scan.parameters['name'][0]
+    xlabel = scan.parameters.get("name")[0]
+    xunits = scan.parameters.get('units')
 
     ax1.plot(readbacks,ave_pump,lw=1,marker='o',markersize=3,label='ON') 
     ax1.plot(readbacks,ave_unpump,lw=1,marker='o',markersize=3,label='ON') 
@@ -1303,8 +1297,8 @@ def Plot_2diodes_Averaged_2figs(titlestring, scan, data, timescan, nscans=1, xli
     fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(9, 5), constrained_layout=True)
     plt.suptitle(titlestring, fontsize = 12)
 
-    units = scan.parameters['units'][0]
-    label = scan.parameters['name'][0]
+    xlabel = scan.parameters.get("name")[0]
+    xunits = scan.parameters.get('units')
 
     ax1.fill_between(readbacks,ave_unpump-ave_unpump_err_l, ave_unpump+ave_unpump_err_h,color='royalblue',label='unpumped')
     ax1.fill_between(readbacks,ave_pump-ave_pump_err_l, ave_pump+ave_pump_err_h,color='orange',label='pumped')
