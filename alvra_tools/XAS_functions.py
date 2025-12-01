@@ -46,7 +46,7 @@ def Reduce_scan_PP(reducedir, saveflag, jsonlist, TT, motor, diode1, diode2, Ize
         #rbk = np.ravel(scan.values)
         rbk_raw = scan.values
 
-        unique = np.roll(np.diff(rbk_raw, prepend=1)>tolerance, -1)
+        unique = np.roll(abs(np.diff(rbk_raw, prepend=1))>tolerance, -1)
         unique[-1] = True
         if scan.parameters['Id'] == ['dummy']:
             unique = np.full(len(rbk_raw), True)
