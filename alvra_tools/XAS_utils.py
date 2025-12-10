@@ -7,15 +7,27 @@ from itertools import cycle
 from textwrap import wrap
 import glob, numbers
 
-def initialize (pgroup, runlist):
+def correct_path(path, pgroup):
+    correct_path = '/das/work/{}/retrieve/{}'.format(pgroup[:3], pgroup) + path
+    return correct_path
+
+################################################
+
+def initialize (pgroup, runlist, retrieved=False):
     from sfdata import SFScanInfo
     jsonlist = []
     runnames = []
     for run in runlist:
         jsonfile = ''
         try:
-            jsonfile = glob.glob('/sf/alvra/data/{}/raw/*{:04d}*/meta/scan.json'.format(pgroup, run))[0]
-            runnames.append(jsonfile.split('/')[6])
+            path = '/sf/alvra/data/{}/raw/*{:04d}*/meta/scan.json'.format(pgroup, run)
+            #jsonfile = glob.glob(path)
+            if retrieved:
+                path = correct_path(path, pgroup)
+                #jsonfile = glob.glob('/das/work/{}/retrieve/{}'.format(pgroup[:3], pgroup)+path)
+            #jsonfile=jsonfile[0]
+            jsonfile=glob.glob(path)[0]
+            runnames.append(jsonfile.split('/')[-3])
             jsonlist.append(jsonfile)
         except IndexError:
             print ("Could not find run {} in pgroup {}".format(run, pgroup))
@@ -231,9 +243,12 @@ def Plot_reduced_data_noPair(pgroup, runlist, scan, data, withTT, timescan=False
 
 ################################################
 
-def Plot_scan_2diodes(pgroup, reducedir, run, threshold, path = 'raw', timescan=False):#, indexrun=-1):
-
-    jsonfile = glob.glob('/sf/alvra/data/{}/{}/*{:04d}*/meta/scan.json'.format(pgroup, path, run))[0]
+def Plot_scan_2diodes(pgroup, reducedir, run, threshold, path = 'raw', timescan=False, retrieved=False):#, indexrun=-1):
+    path2data = '/sf/alvra/data/{}/{}/*{:04d}*/meta/scan.json'.format(pgroup, path, run)
+    if retrieved: 
+        path2data = correct_path(path2data, pgroup)
+    jsonfile = glob.glob(path2data)[0]
+    #jsonfile = glob.glob('/sf/alvra/data/{}/{}/*{:04d}*/meta/scan.json'.format(pgroup, path, run))[0]
     from sfdata import SFScanInfo
     scan = SFScanInfo(jsonfile)
     
@@ -375,13 +390,18 @@ def Plot_scan_2diodes_noPair(pgroup, reducedir, runlist, timescan=False, thresho
 
 ################################################
 
-def Plot_correlations_scan(pgroup, reducedir, run, path='raw', timescan=False, lowlim=0.99):
+def Plot_correlations_scan(pgroup, reducedir, run, path='raw', timescan=False, lowlim=0.99, retrieved=False):
 
     _, titlestring_stack = load_reduced_data(pgroup, reducedir, [run])
     fig, ((ax1, ax3)) = plt.subplots(1, 2, figsize=(10, 3), constrained_layout=True)
     plt.suptitle(titlestring_stack)
+    
+    path2data = '/sf/alvra/data/{}/{}/*{:04d}*/meta/scan.json'.format(pgroup, path, run)
+    if retrieved:
+        path2data = correct_path(path2data, pgroup)
+    jsonfile = glob.glob(path2data)[0]
 
-    jsonfile = glob.glob('/sf/alvra/data/{}/{}/*{:04d}*/meta/scan.json'.format(pgroup, path, run))[0]
+    #path2data = '/sf/alvra/data/{}/{}/*{:04d}*/meta/scan.json'.format(pgroup, path, run)
     from sfdata import SFScanInfo
     scan = SFScanInfo(jsonfile)
 
