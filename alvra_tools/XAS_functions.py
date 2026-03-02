@@ -17,17 +17,17 @@ from alvra_tools.timing_tool import *
 from alvra_tools.XAS_functions import *
 
 
-def Reduce_scan_PP(reducedir, saveflag, jsonlist, TT, motor, diode1, diode2, Izero, tolerance=0.05, shots2average=None):
+def Reduce_scan_PP(reducedir, saveflag, jsonlist, whichTT, motor, diode1, diode2, Izero, tolerance=0.05, shots2average=None):
     
-    if TT == TT_PSEN124:
+    if whichTT == TT_PSEN124:
         TT = [channel_PSEN124_arrTimes, channel_PSEN124_arrTimesAmp]
         channel_arrTimes = channel_PSEN124_arrTimes
         channel_arrTimesAmp = channel_PSEN124_arrTimesAmp
-    elif TT == TT_PSEN126:
+    elif whichTT == TT_PSEN126:
         TT = [channel_PSEN126_arrTimes, channel_PSEN126_arrTimesAmp]
         channel_arrTimes = channel_PSEN126_arrTimes
         channel_arrTimesAmp = channel_PSEN126_arrTimesAmp
-    elif TT == None:
+    elif whichTT == None:
         TT = [motor, motor]
         channel_arrTimes = motor
         channel_arrTimesAmp = motor
@@ -75,7 +75,10 @@ def Reduce_scan_PP(reducedir, saveflag, jsonlist, TT, motor, diode1, diode2, Ize
                 Iu.extend(resultsPP[Izero].unpump)
                 ds.extend(resultsPP[motor].pump)
                 aT.extend(resultsPP[channel_arrTimes].pump)
-                dc.extend(resultsPP[motor].pump + resultsPP[channel_arrTimes].pump)
+                if whichTT == None:
+                    aT = [0]*len(aT)
+                dc.extend(resultsPP[motor].pump + aT) # + resultsPP[channel_arrTimes].pump
+                #dc.extend(resultsPP[motor].pump + resultsPP[channel_arrTimes].pump)
 
                 enshot = resultsPP[channel_monoEnergy].pump
                 en.extend(enshot)

@@ -21,15 +21,19 @@ TT_PSEN126 = [channel_PSEN126_signal, channel_PSEN126_bkg, channel_PSEN126_arrTi
 
 #########################################################
 
-def YAG_scanPP(reducedir, saveflag, jsonlist, TT, motor, laser, Izero):
-    if TT == TT_PSEN124:
+def YAG_scanPP(reducedir, saveflag, jsonlist, whichTT, motor, laser, Izero):
+    if whichTT == TT_PSEN124:
         TT = [channel_PSEN124_arrTimes, channel_PSEN124_arrTimesAmp]
         channel_arrTimes = channel_PSEN124_arrTimes
         channel_arrTimesAmp = channel_PSEN124_arrTimesAmp
-    elif TT == TT_PSEN126:
+    elif whichTT == TT_PSEN126:
         TT = [channel_PSEN126_arrTimes, channel_PSEN126_arrTimesAmp]
         channel_arrTimes = channel_PSEN126_arrTimes
         channel_arrTimesAmp = channel_PSEN126_arrTimesAmp
+    elif whichTT == None:
+        TT = [motor, motor]
+        channel_arrTimes = motor
+        channel_arrTimesAmp = motor
 
     channels_pp = [channel_Events, laser, Izero, motor] + TT
     channels_all = channels_pp
@@ -62,7 +66,9 @@ def YAG_scanPP(reducedir, saveflag, jsonlist, TT, motor, laser, Izero):
                 Iu.extend(resultsPP[Izero].unpump)
                 ds.extend(resultsPP[motor].pump)
                 aT.extend(resultsPP[channel_arrTimes].pump)
-                dc.extend(resultsPP[motor].pump + resultsPP[channel_arrTimes].pump)
+                if whichTT == None:
+                    aT = [0]*len(aT)
+                dc.extend(resultsPP[motor].pump + aT) # resultsPP[channel_arrTimes].pump)
 
         if saveflag:
             os.makedirs(reducedir+runname, exist_ok=True)
@@ -84,15 +90,19 @@ def YAG_scanPP(reducedir, saveflag, jsonlist, TT, motor, laser, Izero):
 
 #########################################################
 
-def YAG_scanPP_loop(reducedir, saveflag, jsonlist, TT, motor, laser, Izero):
-    if TT == TT_PSEN124:
+def YAG_scanPP_loop(reducedir, saveflag, jsonlist, whichTT, motor, laser, Izero):
+    if whichTT == TT_PSEN124:
         TT = [channel_PSEN124_arrTimes, channel_PSEN124_arrTimesAmp]
         channel_arrTimes = channel_PSEN124_arrTimes
         channel_arrTimesAmp = channel_PSEN124_arrTimesAmp
-    elif TT == TT_PSEN126:
+    elif whichTT == TT_PSEN126:
         TT = [channel_PSEN126_arrTimes, channel_PSEN126_arrTimesAmp]
         channel_arrTimes = channel_PSEN126_arrTimes
         channel_arrTimesAmp = channel_PSEN126_arrTimesAmp
+    elif whichTT == None:
+        TT = [motor, motor]
+        channel_arrTimes = motor
+        channel_arrTimesAmp = motor
 
     channels_pp = [channel_Events, laser, Izero, motor] + TT
     channels_all = channels_pp
@@ -112,7 +122,7 @@ def YAG_scanPP_loop(reducedir, saveflag, jsonlist, TT, motor, laser, Izero):
             check = get_filesize_diff(step)
 
             if check:
-                clear_output(wait=True)
+                #clear_output(wait=True)
                 filename = scan.files[i][0].split('/')[-1].split('.')[0]
                 print (jsonfile)
                 print ('Step {} of {}: Processing {}'.format(i+1, len(scan.files), filename))
@@ -125,7 +135,9 @@ def YAG_scanPP_loop(reducedir, saveflag, jsonlist, TT, motor, laser, Izero):
                 Iu = resultsPP[Izero].unpump
                 ds = resultsPP[motor].pump
                 aT = resultsPP[channel_arrTimes].pump
-                dc = resultsPP[motor].pump + resultsPP[channel_arrTimes].pump
+                if whichTT == None:
+                    aT = [0]*len(aT)
+                dc = resultsPP[motor].pump + aT # + resultsPP[channel_arrTimes].pump
 
                 if saveflag:
                     os.makedirs(reducedir+runname+'/'+filename, exist_ok=True)
