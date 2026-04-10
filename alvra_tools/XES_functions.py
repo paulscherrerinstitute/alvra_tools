@@ -143,10 +143,9 @@ def edge_removal(module_edge, roi_removal, array):
 
 ######################################
 
-def XES_static_ROIs(scan, channels_list, thr_low, thr_high, index=0, angle_rot=defaultdict(int), del_bkg=True):
+def XES_static_ROIs(scan, channels_list, thr_low, thr_high, index=0, angle_rot=defaultdict(int), del_bkg=True, detector = "JF02T09V03"):
     s = scan[index]
     angle_rot=defaultdict(int, angle_rot)
-    detector = "JF02T09V03"
 #    channels_ROI = add_ROI_channels(s, detector)
 
     channels_ROI = Get_ROI_names(s, detector)
@@ -192,11 +191,11 @@ def XES_static_ROIs(scan, channels_list, thr_low, thr_high, index=0, angle_rot=d
 
 ######################################
 
-def XES_PumpProbe_ROIs(scan, channels_list, thr_low, thr_high, index=0, angle_rot=defaultdict(int), del_bkg=True):
+def XES_PumpProbe_ROIs(scan, channels_list, thr_low, thr_high, index=0, angle_rot=defaultdict(int), del_bkg=True, detector="JF02T09V03"):
     clock_int = clock.Clock()
     angle_rot=defaultdict(int, angle_rot)
     s = scan[index]
-    channels_ROI = Get_ROI_names(s, "JF02T09V03")
+    channels_ROI = Get_ROI_names(s, detector)
     if del_bkg:
         channels_ROI = clean_ROI_names(channels_ROI)
     channels_pp = [channel_Events] + channels_list + channels_ROI
@@ -260,11 +259,11 @@ def XES_PumpProbe_ROIs(scan, channels_list, thr_low, thr_high, index=0, angle_ro
 
 ######################################
 
-def XES_delayscan_ROIs(scan, channels_list, thr_low, thr_high, angle_rot=defaultdict(int), del_bkg=True):
+def XES_delayscan_ROIs(scan, channels_list, thr_low, thr_high, angle_rot=defaultdict(int), del_bkg=True, detector="JF02T09V03"):
     angle_rot=defaultdict(int, angle_rot)
     clock_int = clock.Clock()
     s = scan[0]
-    channels_ROI = Get_ROI_names(s, "JF02T09V03")
+    channels_ROI = Get_ROI_names(s, detector)
     if del_bkg:
         channels_ROI = clean_ROI_names(channels_ROI)
     channels_pp = [channel_Events] + channels_list + channels_ROI
@@ -363,11 +362,11 @@ def XES_delayscan_ROIs(scan, channels_list, thr_low, thr_high, angle_rot=default
 
 TT_PSEN126 = [channel_PSEN126_signal, channel_PSEN126_bkg, channel_PSEN126_arrTimes, channel_PSEN126_arrTimesAmp, channel_PSEN126_peaks, channel_PSEN126_edges]
 
-def XES_delayscan_TT_ROIs(scan, channels_list, TT, channel_delay_motor, timezero_mm, thr_low, thr_high, angle_rot=defaultdict(int), del_bkg=True):
+def XES_delayscan_TT_ROIs(scan, channels_list, TT, channel_delay_motor, timezero_mm, thr_low, thr_high, angle_rot=defaultdict(int), del_bkg=True, detector="JF02T09V03"):
     angle_rot=defaultdict(int, angle_rot)
     clock_int = clock.Clock()
     s = scan[0]
-    channels_ROI = Get_ROI_names(s, "JF02T09V03")
+    channels_ROI = Get_ROI_names(s, detector)
     if del_bkg:
         channels_ROI = clean_ROI_names(channels_ROI)
     channels_pp = [channel_Events, channel_delay_motor] + channels_list + channels_ROI + TT
@@ -461,11 +460,11 @@ def XES_delayscan_TT_ROIs(scan, channels_list, TT, channel_delay_motor, timezero
 
 ######################################
 
-def RIXS_PumpProbe_ROIs(scan, channels_list, thr_low, thr_high, angle_rot=defaultdict(int)):
+def RIXS_PumpProbe_ROIs(scan, channels_list, thr_low, thr_high, angle_rot=defaultdict(int), detector="JF02T09V03"):
     angle_rot=defaultdict(int, angle_rot)
 
     s = scan[0]
-    channels_ROI = Get_ROI_names(s, "JF02T09V03")
+    channels_ROI = Get_ROI_names(s, detector)
     channels_pp = [channel_Events] + channels_list + channels_ROI
     channels_all = channels_pp
 
@@ -794,8 +793,8 @@ def XES_delayscan_4ROIs(scan, pgroup, roi1, roi2, roi3, roi4, thr_low, thr_high,
 
 ######################################
 
-def XES_PumpProbe_4ROIs_sfdata(SFDfile, pgroup, roi1, roi2, roi3, roi4, thr_low, thr_high, nshots, correctFlag, binsize):
-    channels_pp = [channel_Events, 'JF02T09V03']
+def XES_PumpProbe_4ROIs_sfdata(SFDfile, pgroup, roi1, roi2, roi3, roi4, thr_low, thr_high, nshots, correctFlag, binsize, detector="JF02T09V03"):
+    channels_pp = [channel_Events, detector]
     channels_all = channels_pp
     
     clock_int = clock.Clock()
@@ -951,9 +950,9 @@ def XES_delayscan_4ROIs_sfdata(scan, pgroup, roi1, roi2, roi3, roi4, thr_low, th
 
 TT_PSEN126 = [channel_PSEN126_signal, channel_PSEN126_bkg, channel_PSEN126_arrTimes, channel_PSEN126_arrTimesAmp, channel_PSEN126_peaks, channel_PSEN126_edges]
 
-def XES_delayscan_TT_4ROIs(scan, pgroup, TT, channel_delay_motor, timezero_mm, roi1, roi2, roi3, roi4, thr_low, thr_high, nshots, nsteps=None):
+def XES_delayscan_TT_4ROIs(scan, pgroup, TT, channel_delay_motor, timezero_mm, roi1, roi2, roi3, roi4, thr_low, thr_high, nshots, nsteps=None, detector="JF02T09V03"):
     clock_int = clock.Clock()
-    channels_pp = [channel_Events, channel_delay_motor, 'JF02T09V03'] + TT
+    channels_pp = [channel_Events, channel_delay_motor, detector] + TT
     channels_all = channels_pp
 
 #    from sfdata import SFScanInfo
@@ -1069,11 +1068,11 @@ def XES_delayscan_TT_4ROIs(scan, pgroup, TT, channel_delay_motor, timezero_mm, r
 
 ######################################
 
-def XES_delayscan_TT_reduced(scan, pgroup, TT, channel_delay_motor, timezero_mm, thr_low, thr_high, nshots, nsteps=None):
+def XES_delayscan_TT_reduced(scan, pgroup, TT, channel_delay_motor, timezero_mm, thr_low, thr_high, nshots, nsteps=None, detector="JF02T09V03"):
     from collections import defaultdict
 
     clock_int = clock.Clock()
-    channels_pp = [channel_Events, channel_delay_motor, 'JF02T09V03'] + TT
+    channels_pp = [channel_Events, channel_delay_motor, detector] + TT
     channels_all = channels_pp
 
     if ' as delay' in scan.parameters['name'][0]:
@@ -1101,7 +1100,7 @@ def XES_delayscan_TT_reduced(scan, pgroup, TT, channel_delay_motor, timezero_mm,
         subset = step[channels_all]
         subset.print_stats(show_complete=True)
         subset.drop_missing()
-        valid_idx = subset['JF02T09V03'].valid
+        valid_idx = subset[detector].valid
 
         Event_code = subset[channel_Events].data
 
@@ -1132,7 +1131,7 @@ def XES_delayscan_TT_reduced(scan, pgroup, TT, channel_delay_motor, timezero_mm,
         roi_name = []	
 	
         for nroi in range(8):
-            imgs = step['JF02T09V03'].juf[f'data_roi_{nroi}'][valid_idx]
+            imgs = step[detector].juf[f'data_roi_{nroi}'][valid_idx]
 
             imgs_on = imgs[index_light]
             imgs_on = threshold(imgs_on, thr_low, thr_high)
