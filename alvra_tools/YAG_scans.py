@@ -122,7 +122,7 @@ def YAG_scanPP_loop(reducedir, saveflag, jsonlist, whichTT, motor, laser, Izero)
             check = get_filesize_diff(step)
 
             if check:
-                #clear_output(wait=True)
+                clear_output(wait=True)
                 filename = scan.files[i][0].split('/')[-1].split('.')[0]
                 print (jsonfile)
                 print ('Step {} of {}: Processing {}'.format(i+1, len(scan.files), filename))
