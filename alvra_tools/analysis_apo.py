@@ -1113,6 +1113,78 @@ class plotter:
 
         return fig, (ax1, ax2, ax3)
 
+    @classmethod
+    def bins_population(self, data, meta, figsize=(7, 5), show=True):
+
+        xlabel = meta.get('xlabel','')
+        if xlabel in [None, "None"]:
+            xlabel = "pp delay"
+        xunits = meta.get('units','')
+        if xunits in [None, "None"]:
+            xunits = "fs"
+        title  = meta.get('title','')
+
+        r = data['results']
+        p = data.get('params', {})
+        w = data.get('which', None)
+        s = p.get(w,"")
+        title = title + ' --- ' + s
+
+        rbk = r['scanvar_rebin']
+        howmany = r['howmany']
+
+        fig, (ax1) = plt.subplots(1, 1, figsize=figsize, constrained_layout=True)
+        plt.suptitle(title)
+
+        ax2 = plt.twinx(ax1)
+        xaxisrange = np.arange(0, len(rbk), 1)
+
+        ax1.plot(rbk, howmany, color = 'darkorange')
+        ax2.scatter(rbk, xaxisrange, s = 5)
+
+        ax1.set(xlabel="{} ({})".format(xlabel, xunits),
+                ylabel="Number of shots per bin")
+
+        ax2.set(ylabel="Step number")
+
+        ax1.grid()
+        return fig, ax1
+
+    @classmethod
+    def shot_noise(self, data, meta, figsize=(7, 5), show=True):
+
+        xlabel = meta.get('xlabel','')
+        if xlabel in [None, "None"]:
+            xlabel = "pp delay"
+        xunits = meta.get('units','')
+        if xunits in [None, "None"]:
+            xunits = "fs"
+        title  = meta.get('title','')
+
+        r = data['results']
+        p = data.get('params', {})
+        w = data.get('which', None)
+        s = p.get(w,"")
+        title = title + ' --- ' + s
+
+        rbk = r['scanvar_rebin']
+        howmany = r['howmany']
+
+        fig, (ax1) = plt.subplots(1, 1, figsize=figsize, constrained_layout=True)
+        plt.suptitle(title)
+
+        ax2 = plt.twinx(ax1)
+
+        ax1.plot(rbk, r['err_GS']/r['GS']*100)
+        ax2.plot(rbk, howmany, color = 'darkorange')
+
+        ax1.set_xlabel("{} ({})".format(xlabel, xunits))
+        ax1.set_ylabel("std/mean (%)", color='blue')
+        ax2.set_ylabel("Number of shots per bin", color = 'orange')
+    
+        ax1.grid()
+        return fig, ax1
+        
 
 def SaveData(SaveDir, runlist, plot1=None, plot2=None, plot_both=None):
     import numbers
