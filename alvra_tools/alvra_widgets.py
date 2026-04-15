@@ -30,17 +30,17 @@ def Rebin_widget(data, Rebin_and_filter=Rebin_and_filter,
 
     # Strings (dropdown or text depending on use case)
     signal1_w = widgets.Dropdown(
-        options=['diode1', 'diode2', 'laser'],
+        options=['diode1', 'diode2', 'diode3', 'laser'],
         description='Signal 1'
     )
 
     signal2_w = widgets.Dropdown(
-        options=['None', 'diode1', 'diode2', 'laser'],
+        options=['None', 'diode1', 'diode2', 'diode3', 'laser'],
         description='Signal 2'
     )
     
     izero_w = widgets.Dropdown(
-        options=['Izero110', 'Izero122', 'diode1', 'diode2'],
+        options=['Izero110', 'Izero122', 'diode1', 'diode2', 'diode3'],
         description='Izero:'
     )
 
@@ -99,11 +99,15 @@ def Rebin_widget(data, Rebin_and_filter=Rebin_and_filter,
                     )
 
                 print (f"Running signal: {signal1_w.value} / Izero: {izero_w.value}")   
+                kwargs_str = ", ".join(f"{k}={repr(v)}" for k, v in kwargs.items())
+                cmd = f"{func.__name__}(signal={repr(signal1_w.value)}, data=data, {kwargs_str})"
+                print (cmd)
                 out["results1"] = func(signal=signal1_w.value, data=data, **kwargs)
-
                 out["results2"] = None
                 if signal2_w.value != "None":
                     print (f"Running signal: {signal2_w.value} / Izero: {izero_w.value}") 
+                    cmd2 = f"{func.__name__}(signal={repr(signal2_w.value)}, data=data, {kwargs_str})"
+                    print (cmd2)
                     out["results2"] = func(signal=signal2_w.value, data=data, **kwargs)
 
                 out["params"] = {
