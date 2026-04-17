@@ -2,6 +2,7 @@ import numpy as np
 from tqdm import tqdm
 import pandas as pd
 import os, glob, copy, numbers
+import textwrap
 from matplotlib import pyplot as plt
 from scipy.signal import find_peaks
 from scipy.ndimage import gaussian_filter1d    
@@ -135,6 +136,7 @@ def plot_merged_data(data, meta, Signal, Izero, TT, withTT=False, bins=100, figs
 
     title = meta.get('title', '')
     title = title + ' --- ' + Signal
+    title = "\n".join(textwrap.wrap(title))
 
     fig, axes = plt.subplots(1, 6, figsize=figsize, constrained_layout=True)
     fig.suptitle(title, fontsize=12)
@@ -610,6 +612,7 @@ class plotter:
     def static_scan(self, data, meta, rbk, figsize=(6, 5)):
         
         title = meta['title']
+        title = "\n".join(textwrap.wrap(title))
         Int, err_low, err_high = unwrap_data(data)
 
         fig, (ax1) = plt.subplots(1, 1, figsize=figsize, constrained_layout=True)
@@ -638,6 +641,7 @@ class plotter:
         w = data.get('which', None)
         s = p.get(w,"")
         title = title + ' --- ' + s
+        title = "\n".join(textwrap.wrap(title))
         rbk = r['scanvar_rebin']
 
         fig, (ax1, ax3) = plt.subplots(1, 2, figsize=figsize, constrained_layout=True)
@@ -681,6 +685,7 @@ class plotter:
         w = data.get('which', None)
         s = p.get(w,"")
         title = title + ' --- ' + s
+        title = "\n".join(textwrap.wrap(title))
 
         rbk = r['scanvar_rebin']
 
@@ -722,6 +727,7 @@ class plotter:
         w = data.get('which', None)
         s = p.get(w,"")
         title = title + ' --- ' + s
+        title = "\n".join(textwrap.wrap(title))
 
         r, params_gauss = cls.doGaussianfit(r)
 
@@ -766,6 +772,7 @@ class plotter:
 
             fig, (ax1) = plt.subplots(1, 1, figsize=figsize, constrained_layout=True)
             title = title + ' --- center = {:.3f} um'.format(center)
+            title = "\n".join(textwrap.wrap(title))
             plt.suptitle(title)
 
             ax1.fill_between(rbk, err_low, err_high, color='lightblue', alpha = 0.8)
@@ -787,6 +794,7 @@ class plotter:
             
             fig, (ax1) = plt.subplots(1, 1, figsize=(8, 5), constrained_layout=True)
             title = title + ' --- centers = {:.3f} & {:.3f} um'.format(center1, center2)
+            title = "\n".join(textwrap.wrap(title))
             plt.suptitle(title)
 
             ax2 = ax1.twinx()
@@ -829,6 +837,7 @@ class plotter:
         title = title + ' --- ' + s
         if 'binsize' in p:
             title = title + ' --- ' +'binsize {} fs --- {} on/off pairs'.format(int(p['binsize']), np.sum(r['howmany']))
+        title = "\n".join(textwrap.wrap(title))
 
         t0_fit   = np.nan
         t0_Voigt = np.nan
@@ -901,6 +910,7 @@ class plotter:
         w = data.get('which', None)
         s = p.get(w,"")
         title = title + ' --- ' + s
+        title = "\n".join(textwrap.wrap(title))
 
         rbk = r['scanvar_rebin']
         
@@ -945,6 +955,7 @@ class plotter:
         w = data.get('which', None)
         s = p.get(w,"")
         title = title + ' --- ' + s
+        title = "\n".join(textwrap.wrap(title))
 
         rbk = r['scanvar_rebin']
         intensity = rbk.copy()
@@ -1001,6 +1012,7 @@ class plotter:
         centerpos_mm = fit.popt[0]
         width_mm = np.abs(fit.popt[2])
         title = title + ' --- fwhm = {:.2f} um'.format(width_mm*1000)
+        title = "\n".join(textwrap.wrap(title))
 
         fig, (ax1) = plt.subplots(1, 1, figsize=figsize, constrained_layout=True)
         plt.suptitle(title)
@@ -1029,6 +1041,8 @@ class plotter:
         w = data.get('which', None)
         s = p.get(w,"")
         title = title + ' --- ' + s
+        title = "\n".join(textwrap.wrap(title))
+
         rbk = r['scanvar_rebin']
         delays = r['delay_rebin']
 
@@ -1081,6 +1095,8 @@ class plotter:
         w = data.get('which', None)
         s = p.get(w,"")
         title = title + ' --- ' + s
+        title = "\n".join(textwrap.wrap(title))
+
         rbk = r['scanvar_rebin']
         delays = r['delay_rebin']
 
@@ -1158,6 +1174,7 @@ class plotter:
         w = data.get('which', None)
         s = p.get(w,"")
         title = title + ' --- ' + s
+        title = "\n".join(textwrap.wrap(title))
 
         rbk = r['scanvar_rebin']
         howmany = r['howmany']
@@ -1195,6 +1212,7 @@ class plotter:
         w = data.get('which', None)
         s = p.get(w,"")
         title = title + ' --- ' + s
+        title = "\n".join(textwrap.wrap(title))
 
         rbk = r['scanvar_rebin']
         howmany = r['howmany']
