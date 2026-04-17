@@ -1067,8 +1067,10 @@ class plotter:
         return fig, (ax1, ax2)
 
     @classmethod
-    def TwoD_scans_lineouts(self, data, meta, energylist, delayslist, delay_int, enegy_int, vmin=None, vmax=None, figsize=(9, 7), show=True):
+    def TwoD_scans_lineouts(self, data, meta, energylist, delayslist, delay_int, energy_int, vmin=None, vmax=None, figsize=(9, 7), show=True):
         import matplotlib.gridspec as gridspec
+        energy_int = energy_int / 2
+        delay_int = delay_int /2
 
         xlabel = meta.get('xlabel','')
         xunits = meta.get('units','')
@@ -1086,7 +1088,7 @@ class plotter:
         cmap = plt.get_cmap('turbo').copy()
         cmap.set_bad(color='white')
 
-        fig = plt.figure(figsize=figsize)
+        fig = plt.figure(figsize=figsize, constrained_layout=True)
         gs = gridspec.GridSpec(2,2, height_ratios=[2,2], width_ratios=[2,2])
 
         ax1 = plt.subplot(gs[0,0])
@@ -1096,9 +1098,18 @@ class plotter:
         pcm = ax1.pcolormesh(delays, rbk, pp, cmap=cmap, vmin=vmin, vmax=vmax, shading='auto')
 
         for energy in energylist:
-            idx = np.argmin(np.abs(np.array(rbk) - energy))
-            cut_e = pp[idx, :]
+            mask_e = np.abs(np.array(rbk) - energy) <= energy_int
+            if not np.any(mask_e):
+                print ('Energy integration range smaller than delay bin')
+                idx = np.argmin(np.abs(np.array(rbk) - energy))
+                mask_e[idx] = True
+
+            cut_e = np.nanmean(pp[mask_e, :], axis=0)
+
             ax2.plot(delays, cut_e, label = '{:.2f}'.format(energy))
+            y0 = energy - energy_int
+            y1 = energy + energy_int
+            ax1.axhspan(y0, y1, alpha=0.3)
             ax1.hlines(energy, xmin=min(delays), xmax=max(delays), linestyles='--', color='black')
 
         ax2.set_xlabel("Delay (fs)")
@@ -1106,16 +1117,25 @@ class plotter:
         ax2.grid()
 
         for delay in delayslist:
-            idx = np.argmin(np.abs(np.array(delays) - delay))
-            cut_d = pp[:, idx]
+            mask_d = np.abs(np.array(delays) - delay) <= delay_int
+            if not np.any(mask_d):
+                print ('Delay integration range smaller than delay bin')
+                idx = np.argmin(np.abs(np.array(delays) - delay))
+                mask_d[idx] = True
+
+            cut_d = np.nanmean(pp[:, mask_d], axis=1)
+
             ax3.plot(rbk, cut_d, label = '{}'.format(delay))
+            x0 = delay - delay_int
+            x1 = delay + delay_int
+            ax1.axvspan(x0, x1, alpha=0.3)
             ax1.vlines(delay, ymin=min(rbk), ymax=max(rbk), linestyles='--', color='gray')
 
         ax3.set_xlabel("Energy (eV)")
         ax3.legend()
         ax3.grid()
 
-        plt.tight_layout()
+        #plt.tight_layout()
 
         if show:
             plt.show()
