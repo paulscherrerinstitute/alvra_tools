@@ -6,6 +6,7 @@ from matplotlib import pyplot as plt
 from scipy.signal import find_peaks
 from scipy.ndimage import gaussian_filter1d    
 from scipy.optimize import curve_fit
+from scipy.stats import median_abs_deviation
 
 from alvra_tools.load_data import *
 from alvra_tools.utils import *
@@ -275,11 +276,15 @@ def Rebin_with_scanvar_and_filter(data, quantile, signal, izero, TT, YAGscan=Fal
             pp_bin = -np.log10(pump_bin/unpump_bin)/Izero_pump_bin
         
         scanvar_rebin[i] = np.average(scanvar_bin)
-        GS[i] = np.nanmean(unpump_bin/Izero_unpump_bin)
-        ES[i] = np.nanmean(pump_bin/Izero_pump_bin)
-        pp[i] = np.nanmean(pp_bin)
-        err_GS[i] = np.nanstd(unpump_bin/Izero_unpump_bin)#/np.sqrt(len(ratio_u))
-        err_ES[i] = np.nanstd(pump_bin/Izero_pump_bin)#/np.sqrt(len(ratio_p))
+        GS[i] = np.nanmedian(unpump_bin/Izero_unpump_bin)
+        ES[i] = np.nanmedian(pump_bin/Izero_pump_bin)
+        pp[i] = np.nanmedian(pp_bin)
+
+        err_GS[i] = median_abs_deviation(unpump_bin/Izero_unpump_bin)
+        ##err_ES[i] = median_abs_deviation(pump_bin/Izero_pump_bin)
+        
+        #err_GS[i] = np.nanstd(unpump_bin/Izero_unpump_bin)#/np.sqrt(len(ratio_u))
+        #err_ES[i] = np.nanstd(pump_bin/Izero_pump_bin)#/np.sqrt(len(ratio_p))
         err_pp[i] = np.sqrt(err_GS[i]**2 + err_ES[i]**2)
         if YAGscan:
             err_pp[i] = np.sqrt((err_GS[i]/GS[i])**2 + (err_ES[i]/ES[i])**2)
@@ -355,11 +360,15 @@ def Rebin_and_filter(data, binsize, minvalue, maxvalue, quantile, signal, izero,
             pp_bin = -np.log10(pump_bin/unpump_bin)/Izero_pump_bin
 
         scanvar_rebin[i] = np.average(scanvar_bin)
-        GS[i] = np.nanmean(unpump_bin/Izero_unpump_bin)
-        ES[i] = np.nanmean(pump_bin/Izero_pump_bin)
-        pp[i] = np.nanmean(pp_bin)
-        err_GS[i] = np.nanstd(unpump_bin/Izero_unpump_bin)#/np.sqrt(len(ratio_u))
-        err_ES[i] = np.nanstd(pump_bin/Izero_pump_bin)#/np.sqrt(len(ratio_p))
+        GS[i] = np.nanmedian(unpump_bin/Izero_unpump_bin)
+        ES[i] = np.nanmedian(pump_bin/Izero_pump_bin)
+        pp[i] = np.nanmedian(pp_bin)
+
+        err_GS[i] = median_abs_deviation(unpump_bin/Izero_unpump_bin)
+        err_ES[i] = median_abs_deviation(pump_bin/Izero_pump_bin)
+
+        #err_GS[i] = np.nanstd(unpump_bin/Izero_unpump_bin)#/np.sqrt(len(ratio_u))
+        #err_ES[i] = np.nanstd(pump_bin/Izero_pump_bin)#/np.sqrt(len(ratio_p))
         err_pp[i] = np.sqrt(err_GS[i]**2 + err_ES[i]**2)
         if YAGscan:
             #err_pp[i] = np.sqrt((err_GS[i]/GS[i])**2 + (err_ES[i]/ES[i])**2)
@@ -462,15 +471,15 @@ def Rebin_and_filter_2Dscans(data, binsize, minvalue, maxvalue, quantile, signal
 
             #delay_rebin[j] = np.average(scanvar_tebin)
 
-            GS[i, j] = np.nanmean(unpump_tebin/Izero_unpump_tebin)
-            ES[i, j] = np.nanmean(pump_tebin/Izero_pump_tebin)
-            pp[i, j] = np.nanmean(pp_tebin)
-            #err_GS[i] = np.nanstd(unpump_bin/Izero_unpump_bin)#/np.sqrt(len(ratio_u))
-            #err_ES[i] = np.nanstd(pump_bin/Izero_pump_bin)#/np.sqrt(len(ratio_p))
-            #err_pp[i] = np.sqrt(err_GS[i]**2 + err_ES[i]**2)
+            GS[i, j] = np.nanmedian(unpump_tebin/Izero_unpump_tebin)
+            ES[i, j] = np.nanmedian(pump_tebin/Izero_pump_tebin)
+            pp[i, j] = np.nanmedian(pp_tebin)
+            err_GS[i, j] = median_abs_deviation(unpump_tebin/Izero_unpump_tebin)
+            err_ES[i, j] = median_abs_deviation(pump_tebin/Izero_pump_tebin)
+            err_pp[i, j] = np.sqrt(err_GS[i, j]**2 + err_ES[i, j]**2)
 
     print ('2D scan: {} shots out of {} survived'.format(np.sum(howmany), len(scanvar_e)))
-    results = {'GS': GS, 'ES':ES, 'pp': pp, 'scanvar_rebin': scanvar_rebin, 'delay_rebin': delay_rebin, 'howmany': howmany}
+    results = {'GS': GS, 'ES':ES, 'pp': pp, 'err_GS': err_GS, 'err_ES': err_ES, 'err_pp': err_pp, 'scanvar_rebin': scanvar_rebin, 'delay_rebin': delay_rebin, 'howmany': howmany}   
     return results 
 
 
