@@ -37,7 +37,7 @@ def build_scanvar(dict_item, rbk_value):
     scanvar = np.pad(scanvar, (0,len(dict_item)), constant_values=(rbk_value))
     return scanvar
 
-def load_step_scan(pgroup, run, channel_list, quantile, norm=None):
+def load_step_scan(pgroup, run, channel_list, quantile, norm=None, what='allShots'):
     filelist = generate_filelistBS(pgroup, run)
     if not filelist:
         print ('===> run{:04d} not found in res/processed/ folder! <==='.format(run))
@@ -53,9 +53,9 @@ def load_step_scan(pgroup, run, channel_list, quantile, norm=None):
                 readbacks.extend(dd['meta']['scan_value'][:])
                 for j, ch in enumerate(channel_list):
                     if norm:
-                        df = pd.DataFrame(np.array(dd['allShots'][ch])/np.array(dd['allShots'][str(norm)]))
+                        df = pd.DataFrame(np.array(dd[what][ch])/np.array(dd[what][str(norm)]))
                     else:
-                        df = pd.DataFrame(np.array(dd['allShots'][ch]))
+                        df = pd.DataFrame(np.array(dd[what][ch]))
                     channels[j].append(np.nanquantile(df, [0.5, 0.5 - quantile/2, 0.5 + quantile/2]))
     return np.asarray(channels), np.asarray(readbacks), meta
 
@@ -609,7 +609,7 @@ class plotter:
         return fit_curve, center, width
 
     @classmethod
-    def static_scan(self, data, meta, rbk, figsize=(6, 5)):
+    def general_scan(self, data, meta, rbk, figsize=(6, 5)):
         
         title = meta['title']
         title = "\n".join(textwrap.wrap(title))
@@ -619,11 +619,10 @@ class plotter:
         plt.suptitle(title)
       
         ax1.fill_between(rbk, err_low, err_high, color='lightblue', alpha = 0.8)
-        ax1.plot(rbk, Int, marker='.', label=meta['xlabel'])
+        ax1.plot(rbk, Int, marker='.')
 
         ax1.set(xlabel="{} ({})".format(meta['xlabel'], meta['units']),
                 ylabel="Intensity")
-        ax1.legend()
         ax1.grid()
 
         return fig, (ax1)
