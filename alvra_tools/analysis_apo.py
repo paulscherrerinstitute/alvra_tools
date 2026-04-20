@@ -1030,7 +1030,7 @@ class plotter:
 
 
     @classmethod
-    def TwoD_scans(self, data, meta, vmin=None, vmax=None, figsize=(10, 4), show=True):
+    def TwoD_scans(self, data, meta, vmin=None, vmax=None, what='pp', figsize=(10, 4), show=True):
        
         xlabel = meta.get('xlabel','')
         xunits = meta.get('units','')
@@ -1046,22 +1046,22 @@ class plotter:
         rbk = r['scanvar_rebin']
         delays = r['delay_rebin']
 
-        pp = np.ma.masked_invalid(r['pp'])
+        whatplot = np.ma.masked_invalid(r[what])
         cmap = plt.get_cmap('turbo').copy()
         cmap.set_bad(color='white')
 
         if vmin is None:
-            vmin = np.nanmin(r['pp'])
+            vmin = np.nanmin(r[what])
         if vmax is None:
-            vmax = np.nanmax(r['pp'])
+            vmax = np.nanmax(r[what])
 
         levels = np.linspace(vmin, vmax, 31)
 
         fig, (ax1, ax2) = plt.subplots(1, 2, figsize=figsize, constrained_layout=True)
         plt.suptitle(title)
       
-        pcm = ax1.pcolormesh(delays, rbk, pp, cmap=cmap, vmin=vmin, vmax=vmax, shading='auto')
-        con = ax2.contourf(delays, rbk, pp, cmap=cmap, levels=levels, vmin=vmin, vmax=vmax, extend='both')
+        pcm = ax1.pcolormesh(delays, rbk, whatplot, cmap=cmap, vmin=vmin, vmax=vmax, shading='auto')
+        con = ax2.contourf(delays, rbk, whatplot, cmap=cmap, levels=levels, vmin=vmin, vmax=vmax, extend='both')
        
         ax1.set(ylabel="{} ({})".format(xlabel, xunits),
                 xlabel="Delays (fs)")
@@ -1114,15 +1114,15 @@ class plotter:
         pcm = ax1.pcolormesh(delays, rbk, pp, cmap=cmap, vmin=vmin, vmax=vmax, shading='auto')
 
         for energy in energylist:
+            idx = np.argmin(np.abs(np.array(rbk) - energy))
             mask_e = np.abs(np.array(rbk) - energy) <= energy_int
             if not np.any(mask_e):
                 print ('Energy integration range smaller than delay bin')
-                idx = np.argmin(np.abs(np.array(rbk) - energy))
                 mask_e[idx] = True
 
             cut_e = np.nanmean(pp[mask_e, :], axis=0)
 
-            ax2.plot(delays, cut_e, label = '{:.2f}'.format(energy))
+            ax2.plot(delays, cut_e, label = '{:.2f}'.format(np.array(rbk)[idx]))
             y0 = energy - energy_int
             y1 = energy + energy_int
             ax1.axhspan(y0, y1, alpha=0.3)
@@ -1133,15 +1133,15 @@ class plotter:
         ax2.grid()
 
         for delay in delayslist:
+            idx = np.argmin(np.abs(np.array(delays) - delay))
             mask_d = np.abs(np.array(delays) - delay) <= delay_int
             if not np.any(mask_d):
                 print ('Delay integration range smaller than delay bin')
-                idx = np.argmin(np.abs(np.array(delays) - delay))
                 mask_d[idx] = True
 
             cut_d = np.nanmean(pp[:, mask_d], axis=1)
 
-            ax3.plot(rbk, cut_d, label = '{}'.format(delay))
+            ax3.plot(rbk, cut_d, label = '{}'.format(np.array(delays)[idx]))
             x0 = delay - delay_int
             x1 = delay + delay_int
             ax1.axvspan(x0, x1, alpha=0.3)
