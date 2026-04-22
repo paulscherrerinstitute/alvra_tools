@@ -40,7 +40,7 @@ def Rebin_widget(data, Rebin_and_filter=Rebin_and_filter,
     )
     
     izero_w = widgets.Dropdown(
-        options=['Izero110', 'Izero122', 'diode1', 'diode2', 'diode3', 'laser'],
+        options=['Izero110', 'Izero122', 'diode1', 'diode2', 'diode3', 'laser', 'laserIzero'],
         description='Izero:'
     )
 
