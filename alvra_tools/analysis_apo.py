@@ -223,9 +223,6 @@ def Rebin_with_scanvar_and_filter(data, quantile, signal, izero, TT, YAGscan=Fal
     Izero_unpump = get_array(data, '{}_unpump'.format(izero))
     pump         = get_array(data, '{}_pump'.format(signal))
     unpump       = get_array(data, '{}_unpump'.format(signal))
-    if YAGscan:
-        pump     = get_array(data, 'laser_pump')
-        unpump   = get_array(data, 'laser_unpump')
     arrTimes     = get_array(data, 'arrTimes{}_pump'.format(TT))
     scanvar      = get_array(data, 'scanvar')
 
@@ -283,15 +280,9 @@ def Rebin_with_scanvar_and_filter(data, quantile, signal, izero, TT, YAGscan=Fal
         pp[i] = np.nanmedian(pp_bin)
 
         err_GS[i] = median_abs_deviation(unpump_bin/Izero_unpump_bin)
-        ##err_ES[i] = median_abs_deviation(pump_bin/Izero_pump_bin)
-        
-        #err_GS[i] = np.nanstd(unpump_bin/Izero_unpump_bin)#/np.sqrt(len(ratio_u))
-        #err_ES[i] = np.nanstd(pump_bin/Izero_pump_bin)#/np.sqrt(len(ratio_p))
-        err_pp[i] = np.sqrt(err_GS[i]**2 + err_ES[i]**2)
-        if YAGscan:
-            err_pp[i] = np.sqrt((err_GS[i]/GS[i])**2 + (err_ES[i]/ES[i])**2)
-        #err_pp [i] = np.nanstd(pp_bin)#/np.sqrt(len(pp_bin))
-        
+        err_ES[i] = median_abs_deviation(pump_bin/Izero_pump_bin)
+        err_pp[i] = median_abs_deviation(pp_bin)    
+    
     print ('{} shots out of {} survived'.format(np.sum(howmany), len(scanvar)))
     results = {'GS': GS, 'ES':ES, 'pp': pp, 'err_GS': err_GS, 'err_ES': err_ES, 'err_pp': err_pp, 'scanvar_rebin': scanvar_rebin, 'howmany': howmany}   
     return results
@@ -302,9 +293,6 @@ def Rebin_and_filter(data, binsize, minvalue, maxvalue, quantile, signal, izero,
     Izero_unpump = get_array(data, '{}_unpump'.format(izero))
     pump         = get_array(data, '{}_pump'.format(signal))
     unpump       = get_array(data, '{}_unpump'.format(signal))
-    #if YAGscan:
-    #    pump     = get_array(data, 'laser_pump')
-    #    unpump   = get_array(data, 'laser_unpump')
     arrTimes     = get_array(data, 'arrTimes{}_pump'.format(TT))
     scanvar      = get_array(data, 'scanvar')
     
@@ -368,14 +356,7 @@ def Rebin_and_filter(data, binsize, minvalue, maxvalue, quantile, signal, izero,
 
         err_GS[i] = median_abs_deviation(unpump_bin/Izero_unpump_bin)
         err_ES[i] = median_abs_deviation(pump_bin/Izero_pump_bin)
-
-        #err_GS[i] = np.nanstd(unpump_bin/Izero_unpump_bin)#/np.sqrt(len(ratio_u))
-        #err_ES[i] = np.nanstd(pump_bin/Izero_pump_bin)#/np.sqrt(len(ratio_p))
-        err_pp[i] = np.sqrt(err_GS[i]**2 + err_ES[i]**2)
-        if YAGscan:
-            #err_pp[i] = np.sqrt((err_GS[i]/GS[i])**2 + (err_ES[i]/ES[i])**2)
-            err_pp[i] = np.nanstd(pp_bin)
-        #err_pp [i] = np.nanstd(pp_bin)#/np.sqrt(len(pp_bin))
+        err_pp[i] = median_abs_deviation(pp_bin)
         
     print ('{} shots out of {} survived'.format(np.sum(howmany), len(scanvar)))
     results = {'GS': GS, 'ES':ES, 'pp': pp, 'err_GS': err_GS, 'err_ES': err_ES, 'err_pp': err_pp, 'scanvar_rebin': scanvar_rebin, 'howmany': howmany}   
@@ -478,7 +459,8 @@ def Rebin_and_filter_2Dscans(data, binsize, minvalue, maxvalue, quantile, signal
             pp[i, j] = np.nanmedian(pp_tebin)
             err_GS[i, j] = median_abs_deviation(unpump_tebin/Izero_unpump_tebin)
             err_ES[i, j] = median_abs_deviation(pump_tebin/Izero_pump_tebin)
-            err_pp[i, j] = np.sqrt(err_GS[i, j]**2 + err_ES[i, j]**2)
+            err_pp[i, j] = median_abs_deviation(pp_tebin)
+            #err_pp[i, j] = np.sqrt(err_GS[i, j]**2 + err_ES[i, j]**2)
 
     print ('2D scan: {} shots out of {} survived'.format(np.sum(howmany), len(scanvar_e)))
     results = {'GS': GS, 'ES':ES, 'pp': pp, 'err_GS': err_GS, 'err_ES': err_ES, 'err_pp': err_pp, 'scanvar_rebin': scanvar_rebin, 'delay_rebin': delay_rebin, 'howmany': howmany}   
