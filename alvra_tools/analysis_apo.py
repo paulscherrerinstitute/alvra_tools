@@ -224,16 +224,19 @@ def Rebin_with_scanvar_and_filter(data, quantile, signal, izero, TT, YAGscan=Fal
     pump         = get_array(data, '{}_pump'.format(signal))
     unpump       = get_array(data, '{}_unpump'.format(signal))
     arrTimes     = get_array(data, 'arrTimes{}_pump'.format(TT))
-    scanvar_set  = get_array(data, 'scanvar')
+    #scanvar_set  = get_array(data, 'scanvar')
+    scanvar      = get_array(data, 'scanvar')
 
-    ordered_set = np.argsort(np.asarray(scanvar_set))
-    peaks,_ = find_peaks(np.diff(scanvar_set[ordered_set]))
+    #ordered_set = np.argsort(np.asarray(scanvar_set))
+    #peaks,_ = find_peaks(np.diff(scanvar_set[ordered_set]))
 
-    scanvar = np.copy(scanvar_set)
+    #scanvar = np.copy(scanvar_set)
     if withTT:
-        scanvar = scanvar_set + arrTimes
+        #scanvar = scanvar_set + arrTimes
+        scanvar = scanvar + arrTimes
     
     ordered = np.argsort(np.asarray(scanvar))
+    peaks,_ = find_peaks(np.diff(scanvar[ordered]))
 
     Izero_pump = Izero_pump[ordered]
     Izero_unpump = Izero_unpump[ordered]
@@ -260,7 +263,8 @@ def Rebin_with_scanvar_and_filter(data, quantile, signal, izero, TT, YAGscan=Fal
         unpump_bin = unpump[s:e]
         Izero_pump_bin = Izero_pump[s:e]
         Izero_unpump_bin = Izero_unpump[s:e]
-        scanvar_bin = scanvar_set[s:e]
+        #scanvar_bin = scanvar_set[s:e]
+        scanvar_bin = scanvar[s:e]
 
         ratio_p = np.divide(pump_bin, Izero_pump_bin)
         ratio_u = np.divide(unpump_bin, Izero_unpump_bin)
