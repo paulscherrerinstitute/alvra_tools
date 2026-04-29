@@ -708,7 +708,7 @@ class plotter:
         ax1.grid()
         
         if errbars:
-            ax3.fill_between(rbk, r['pp']-r['err_pp'], r['pp']+r['err_pp'], label='pump probe',color='lightgreen')
+            ax3.fill_between(rbk, r['pp']-r['err_pp'], r['pp']+r['err_pp'], label='MAD',color='lightgreen')
         ax3.fill_between(rbk, r['pp']-r['err_pp_boot'], r['pp']+r['err_pp_boot'], label='error of median',color='limegreen')
         ax3.plot(rbk, r['pp'], color='darkgreen', marker='.')
         
@@ -754,7 +754,7 @@ class plotter:
         ax1.legend()
         ax1.grid()
         if errbars:
-            ax3.fill_between(rbk, r['pp']-r['err_pp'], r['pp']+r['err_pp'], label='pump probe',color='lightgreen')
+            ax3.fill_between(rbk, r['pp']-r['err_pp'], r['pp']+r['err_pp'], label='MAD',color='lightgreen')
         ax3.fill_between(rbk, r['pp']-r['err_pp_boot'], r['pp']+r['err_pp_boot'], label='error of median',color='limegreen')
         ax3.plot(rbk, r['pp'], color='darkgreen', marker='.')
         ax3.plot(rbk, gaussian(rbk,*params_gauss), color='red', label = 'fit Gauss, w= {:.4f} {}'.format(np.abs(params_gauss[2]*2.355), xunits[0]))
@@ -830,7 +830,7 @@ class plotter:
             return fig, (ax1, ax2)
 
     @classmethod
-    def fit_risetime(cls, data, meta, fitflag=True, figsize=(10,4)):
+    def fit_risetime(cls, data, meta, fitflag=True, errbars=True, figsize=(10,4)):
 
         xlabel = meta.get('xlabel','')
         if xlabel in [None, "None"]:
@@ -865,8 +865,10 @@ class plotter:
         fig, (ax1, ax2, ax3) = plt.subplots(1, 3, figsize=figsize, constrained_layout=True)
         plt.suptitle(title)
 
-        ax1.fill_between(rbk, r['pp']-r['err_pp'], r['pp']+r['err_pp'],color='lightgreen')
-        ax1.plot(rbk, r['pp'], color='green', marker='.', label='pump probe')
+        if errbars:
+            ax1.fill_between(rbk, r['pp']-r['err_pp'], r['pp']+r['err_pp'],color='lightgreen')
+        ax1.fill_between(rbk, r['pp']-r['err_pp_boot'], r['pp']+r['err_pp_boot'],color='limegreen')
+        ax1.plot(rbk, r['pp'], color='darkgreen', marker='.', label='pump probe')
         if fitflag:
             ax1.plot(rbk, sig_fit, color='red', label = 'fit, w = {:.2f} fs'.format(np.abs(params_fit[2])))
 
@@ -896,7 +898,7 @@ class plotter:
         return fig, (ax1, ax2, ax3)
 
     @classmethod
-    def fit_decay(cls, data, meta, fitfunction, p0=None, figsize=(6,4)):
+    def fit_decay(cls, data, meta, fitfunction, p0=None, errbars=True, figsize=(6,4)):
         def get_default_p0(fitfunction):
             if fitfunction.__name__ == 'model_decay_1exp':
                        #x0, sigma, amp1, tau1,  C
@@ -938,9 +940,11 @@ class plotter:
 
         fig, (ax1) = plt.subplots(1, 1, figsize=figsize, constrained_layout=True)
         plt.suptitle(title)
-    
-        ax1.fill_between(rbk, r['pp']-r['err_pp'], r['pp']+r['err_pp'],color='lightgreen')
-        ax1.plot(rbk, r['pp'], color='green', marker='.', label='pump probe')
+        
+        if errbars:
+            ax1.fill_between(rbk, r['pp']-r['err_pp'], r['pp']+r['err_pp'],color='lightgreen')
+        ax1.fill_between(rbk, r['pp']-r['err_pp_boot'], r['pp']+r['err_pp_boot'],color='limegreen')      
+        ax1.plot(rbk, r['pp'], color='darkgreen', marker='.', label='pump probe')
         ax1.plot(rbk, sig_fit, color='red', label = f'IRF = {IRF:.2f} {xunits}\n' \
                                                     f'tau1 = {tau1:.2f} {xunits}\n' \
                                                     f'tau2 = {tau2:.2f} {xunits}')
@@ -976,10 +980,11 @@ class plotter:
 
         fig, (ax1, ax2, ax3) = plt.subplots(1, 3, figsize=figsize, constrained_layout=True)
         plt.suptitle(title)
-      
-        ax1.fill_between(rbk, r['ES']-r['err_ES'], r['ES']+r['err_ES'], color='lightblue', alpha = 0.8)
+        if errbars:
+            ax1.fill_between(rbk, r['ES']-r['err_ES'], r['ES']+r['err_ES'], color='lightblue', alpha = 0.8)
         ax1.plot(rbk, r['ES'], color='blue', marker='.', label='ON')
-        ax1.fill_between(rbk, r['GS']-r['err_GS'], r['GS']+r['err_GS'], color='navajowhite', alpha = 0.6)
+        if errbars:        
+            ax1.fill_between(rbk, r['GS']-r['err_GS'], r['GS']+r['err_GS'], color='navajowhite', alpha = 0.6)
         ax1.plot(rbk, r['GS'], color='orange', marker='.', label='OFF')
 
         ax1.set(xlabel="{} ({})".format(xlabel, xunits),
@@ -988,8 +993,10 @@ class plotter:
         ax1.legend()
         ax1.grid()
         
-        ax2.fill_between(rbk, r['pp']-r['err_pp'], r['pp']+r['err_pp'],color='lightgreen')
-        ax2.plot(rbk, r['pp'], color='green', marker='.', label='pump probe')
+        if errbars:       
+            ax2.fill_between(rbk, r['pp']-r['err_pp'], r['pp']+r['err_pp'],color='lightgreen')
+        ax3.fill_between(rbk, r['pp']-r['err_pp_boot'], r['pp']+r['err_pp_boot'], label='error of median',color='limegreen')
+        ax2.plot(rbk, r['pp'], color='green', marker='.', label='MAD')
         
         ax2.set(xlabel="{} ({})".format(xlabel, xunits),
                 ylabel="DeltaXAS",
@@ -999,8 +1006,8 @@ class plotter:
         
         if errbars:
             ax3.fill_between(intensity, r['pp']-r['err_pp'], r['pp']+r['err_pp'],color='lightgreen')
-        ax3.fill_between(rbk, r['pp']-r['err_pp_boot'], r['pp']+r['err_pp_boot'], label='error of median',color='limegreen')
-        ax3.plot(intensity, r['pp'], color='darkgreen', marker='.', label='pump probe')
+        ax3.fill_between(intensity, r['pp']-r['err_pp_boot'], r['pp']+r['err_pp_boot'], label='error of median',color='limegreen')
+        ax3.plot(intensity, r['pp'], color='darkgreen', marker='.', label='MAD')
         
         ax3.set(xlabel="Pulse Energy (uJ)",
                 ylabel="DeltaXAS",
