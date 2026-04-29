@@ -215,6 +215,16 @@ def create_corr_condition(pump, unpump, quantile):
     condition = filtervals_p_l & filtervals_p_h & filtervals_u_l & filtervals_u_h
     return condition
 
+def bootstrap_median_error(data, n_boot=1000):
+    N = len(data) 
+    medians = np.empty(n_boot)
+
+    for j in range(n_boot):
+        sample = np.random.choice(data, size=N, replace=True)
+        medians[j] = np.median(sample)
+    return np.std(medians), medians
+
+
 def Rebin_with_scanvar_and_filter(data, quantile, signal, izero, TT, YAGscan=False, withTT=False, threshold=0):
 
     print ('{}_pump'.format(izero), '{}_pump'.format(signal))
@@ -255,7 +265,7 @@ def Rebin_with_scanvar_and_filter(data, quantile, signal, izero, TT, YAGscan=Fal
     ends   = np.concatenate((peaks+1, [len(scanvarf)]))
     nbins = len(starts)
 
-    GS, ES, pp, err_GS, err_ES, err_pp, scanvar_rebin = (np.empty(nbins) for _ in range(7))
+    GS, ES, pp, err_GS, err_ES, err_pp, err_pp_boot, scanvar_rebin = (np.empty(nbins) for _ in range(8))
     howmany = []
     
     for i, (s, e) in enumerate(zip(starts, ends)):
@@ -288,10 +298,11 @@ def Rebin_with_scanvar_and_filter(data, quantile, signal, izero, TT, YAGscan=Fal
 
         err_GS[i] = median_abs_deviation(unpump_bin/Izero_unpump_bin)
         err_ES[i] = median_abs_deviation(pump_bin/Izero_pump_bin)
-        err_pp[i] = median_abs_deviation(pp_bin)    
+        err_pp[i] = median_abs_deviation(pp_bin)
+        err_pp_boot[i], _ = bootstrap_median_error(pp_bin)
     
     print ('{} shots out of {} survived'.format(np.sum(howmany), len(scanvar)))
-    results = {'GS': GS, 'ES':ES, 'pp': pp, 'err_GS': err_GS, 'err_ES': err_ES, 'err_pp': err_pp, 'scanvar_rebin': scanvar_rebin, 'howmany': howmany}   
+    results = {'GS': GS, 'ES':ES, 'pp': pp, 'err_GS': err_GS, 'err_ES': err_ES, 'err_pp': err_pp, 'err_pp_boot': err_pp_boot, 'scanvar_rebin': scanvar_rebin, 'howmany': howmany}   
     return results
 
 def Rebin_and_filter(data, binsize, minvalue, maxvalue, quantile, signal, izero, TT, diode='diode1', YAGscan=False, withTT=False, threshold=0, numbins=None):
@@ -326,7 +337,7 @@ def Rebin_and_filter(data, binsize, minvalue, maxvalue, quantile, signal, izero,
     unpump       = unpump[Izero_mask]
     scanvarf     = scanvar[Izero_mask]
 
-    GS, ES, pp, err_GS, err_ES, err_pp, scanvar_rebin = (np.empty(nbins) for _ in range(7))
+    GS, ES, pp, err_GS, err_ES, err_pp, err_pp_boot, scanvar_rebin = (np.empty(nbins) for _ in range(8))
     howmany = []
 
     for i in range(len(bin_centres)):
@@ -364,9 +375,10 @@ def Rebin_and_filter(data, binsize, minvalue, maxvalue, quantile, signal, izero,
         err_GS[i] = median_abs_deviation(unpump_bin/Izero_unpump_bin)
         err_ES[i] = median_abs_deviation(pump_bin/Izero_pump_bin)
         err_pp[i] = median_abs_deviation(pp_bin)
+        err_pp_boot[i], _ = bootstrap_median_error(pp_bin)
         
     print ('{} shots out of {} survived'.format(np.sum(howmany), len(scanvar)))
-    results = {'GS': GS, 'ES':ES, 'pp': pp, 'err_GS': err_GS, 'err_ES': err_ES, 'err_pp': err_pp, 'scanvar_rebin': scanvar_rebin, 'howmany': howmany}   
+    results = {'GS': GS, 'ES':ES, 'pp': pp, 'err_GS': err_GS, 'err_ES': err_ES, 'err_pp': err_pp, 'err_pp_boot': err_pp_boot, 'scanvar_rebin': scanvar_rebin, 'howmany': howmany}   
     return results
 
 def Rebin_and_filter_2Dscans(data, binsize, minvalue, maxvalue, quantile, signal, izero, TT, withTT=False, threshold=0, numbins=None):
@@ -407,7 +419,7 @@ def Rebin_and_filter_2Dscans(data, binsize, minvalue, maxvalue, quantile, signal
     nbinsX = len(starts)
     
     scanvar_rebin = np.empty(nbinsX)
-    GS, ES, pp, err_GS, err_ES, err_pp = (np.empty((nbinsX, nbinsY)) for _ in range(6))
+    GS, ES, pp, err_GS, err_ES, err_pp, err_pp_boot = (np.empty((nbinsX, nbinsY)) for _ in range(7))
     howmany = []
     
     for i, (s, e) in enumerate(zip(starts, ends)):
@@ -467,10 +479,12 @@ def Rebin_and_filter_2Dscans(data, binsize, minvalue, maxvalue, quantile, signal
             err_GS[i, j] = median_abs_deviation(unpump_tebin/Izero_unpump_tebin)
             err_ES[i, j] = median_abs_deviation(pump_tebin/Izero_pump_tebin)
             err_pp[i, j] = median_abs_deviation(pp_tebin)
+            err_pp_boot[i, j], _ = bootstrap_median_error(pp_tebin)
+            
             #err_pp[i, j] = np.sqrt(err_GS[i, j]**2 + err_ES[i, j]**2)
 
     print ('2D scan: {} shots out of {} survived'.format(np.sum(howmany), len(scanvar_e)))
-    results = {'GS': GS, 'ES':ES, 'pp': pp, 'err_GS': err_GS, 'err_ES': err_ES, 'err_pp': err_pp, 'scanvar_rebin': scanvar_rebin, 'delay_rebin': delay_rebin, 'howmany': howmany}   
+    results = {'GS': GS, 'ES':ES, 'pp': pp, 'err_GS': err_GS, 'err_ES': err_ES, 'err_pp': err_pp, 'err_pp_boot': err_pp_boot, 'scanvar_rebin': scanvar_rebin, 'delay_rebin': delay_rebin, 'howmany': howmany}   
     return results 
 
 
@@ -618,7 +632,7 @@ class plotter:
 
 
     @classmethod
-    def energy_scans(self, data, meta, figsize=(10, 4)):
+    def energy_scans(self, data, meta, errbars=True, figsize=(10, 4)):
 
         xlabel = meta.get('xlabel','')
         xunits = meta.get('units','')
@@ -646,8 +660,10 @@ class plotter:
         ax1.legend()
         ax1.grid()
         
-        ax3.fill_between(rbk, r['pp']-r['err_pp'], r['pp']+r['err_pp'], label='pump probe',color='lightgreen')
-        ax3.plot(rbk, r['pp'], color='green', marker='.')
+        if errbars:
+            ax3.fill_between(rbk, r['pp']-r['err_pp'], r['pp']+r['err_pp'], label='MAD',color='lightgreen')
+        ax3.fill_between(rbk, r['pp']-r['err_pp_boot'], r['pp']+r['err_pp_boot'], label='error of median',color='limegreen')
+        ax3.plot(rbk, r['pp'], color='darkgreen', marker='.')
         
         ax3.set(xlabel="{} ({})".format(xlabel, xunits),
                 ylabel="DeltaXAS",
@@ -658,7 +674,7 @@ class plotter:
         return fig, (ax1, ax3)
 
     @classmethod
-    def delay_scans(self, data, meta, figsize=(10, 4)):
+    def delay_scans(self, data, meta, errbars=True, figsize=(10, 4)):
 
         xlabel = meta.get('xlabel','')
         if xlabel in [None, "None"]:
@@ -691,8 +707,10 @@ class plotter:
         ax1.legend()
         ax1.grid()
         
-        ax3.fill_between(rbk, r['pp']-r['err_pp'], r['pp']+r['err_pp'], label='pump probe',color='lightgreen')
-        ax3.plot(rbk, r['pp'], color='green', marker='.')
+        if errbars:
+            ax3.fill_between(rbk, r['pp']-r['err_pp'], r['pp']+r['err_pp'], label='pump probe',color='lightgreen')
+        ax3.fill_between(rbk, r['pp']-r['err_pp_boot'], r['pp']+r['err_pp_boot'], label='error of median',color='limegreen')
+        ax3.plot(rbk, r['pp'], color='darkgreen', marker='.')
         
         ax3.set(xlabel="{} ({})".format(xlabel, xunits),
                 ylabel="DeltaXAS",
@@ -703,7 +721,7 @@ class plotter:
         return fig, (ax1, ax3)
 
     @classmethod
-    def overlap_scans(cls, data, meta, figsize=(10, 4)):
+    def overlap_scans(cls, data, meta, errbars=True, figsize=(10, 4)):
         from matplotlib.ticker import MaxNLocator
 
         xlabel = meta.get('xlabel','')
@@ -735,9 +753,10 @@ class plotter:
         ax1.xaxis.set_major_locator(MaxNLocator(nbins=7))
         ax1.legend()
         ax1.grid()
-        
-        ax3.fill_between(rbk, r['pp']-r['err_pp'], r['pp']+r['err_pp'], label='pump probe',color='lightgreen')
-        ax3.plot(rbk, r['pp'], color='green', marker='.')
+        if errbars:
+            ax3.fill_between(rbk, r['pp']-r['err_pp'], r['pp']+r['err_pp'], label='pump probe',color='lightgreen')
+        ax3.fill_between(rbk, r['pp']-r['err_pp_boot'], r['pp']+r['err_pp_boot'], label='error of median',color='limegreen')
+        ax3.plot(rbk, r['pp'], color='darkgreen', marker='.')
         ax3.plot(rbk, gaussian(rbk,*params_gauss), color='red', label = 'fit Gauss, w= {:.4f} {}'.format(np.abs(params_gauss[2]*2.355), xunits[0]))
         
         ax3.set(xlabel="{} ({})".format(xlabel, xunits),
@@ -750,7 +769,7 @@ class plotter:
         return fig, (ax1, ax3)
 
     @classmethod
-    def jet_scans(cls, data, meta, rbk, twodiodes=False, figsize=(6, 5)):
+    def jet_scans(cls, data, meta, rbk, twodiodes=False, errbars=True, figsize=(6, 5)):
 
         title = meta['title']
 
@@ -763,7 +782,8 @@ class plotter:
             title = "\n".join(textwrap.wrap(title))
             plt.suptitle(title)
 
-            ax1.fill_between(rbk, err_low, err_high, color='lightblue', alpha = 0.8)
+            if errbars:
+                ax1.fill_between(rbk, err_low, err_high, color='lightblue', alpha = 0.8)
             ax1.plot(rbk, Int, marker='.', label='width = {:.3f} um'.format(width*1000)) 
             ax1.plot(rbk, fit_curve)
 
@@ -788,10 +808,12 @@ class plotter:
             ax2 = ax1.twinx()
             
             lns1 = ax1.plot(rbk, Int1, label='width = {:.3f} um'.format(width1*1000), marker='.', color='blue')
-            ax1.fill_between(rbk, err_low1, err_high1, color='lightblue', alpha = 0.8)
+            if errbars:
+                ax1.fill_between(rbk, err_low1, err_high1, color='lightblue', alpha = 0.8)
 
             lns2 = ax2.plot(rbk, Int2, label='width = {:.3f} um'.format(width2*1000), marker='.', color='orange')
-            ax2.fill_between(rbk, err_low2, err_high2, color='navajowhite', alpha = 0.8)
+            if errbars:
+                ax2.fill_between(rbk, err_low2, err_high2, color='navajowhite', alpha = 0.8)
 
             ax1.set_ylabel('Diode1', color='blue')
             ax1.tick_params(axis='y', colors='blue')
@@ -932,7 +954,7 @@ class plotter:
         return fig, (ax1)
 
     @classmethod
-    def fluence_scans(self, data, meta, params=None, figsize=(12, 4)):
+    def fluence_scans(self, data, meta, params=None, errbars=True, figsize=(12, 4)):
 
         xlabel = meta.get('xlabel','')
         xunits = meta.get('units','')
@@ -974,9 +996,11 @@ class plotter:
                 title="Pump probe")
         ax2.legend()
         ax2.grid()
-
-        ax3.fill_between(intensity, r['pp']-r['err_pp'], r['pp']+r['err_pp'],color='lightgreen')
-        ax3.plot(intensity, r['pp'], color='green', marker='.', label='pump probe')
+        
+        if errbars:
+            ax3.fill_between(intensity, r['pp']-r['err_pp'], r['pp']+r['err_pp'],color='lightgreen')
+        ax3.fill_between(rbk, r['pp']-r['err_pp_boot'], r['pp']+r['err_pp_boot'], label='error of median',color='limegreen')
+        ax3.plot(intensity, r['pp'], color='darkgreen', marker='.', label='pump probe')
         
         ax3.set(xlabel="Pulse Energy (uJ)",
                 ylabel="DeltaXAS",
