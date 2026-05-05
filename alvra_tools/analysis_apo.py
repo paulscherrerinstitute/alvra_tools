@@ -224,86 +224,117 @@ def bootstrap_median_error(data, n_boot=1000):
         medians[j] = np.median(sample)
     return np.std(medians), medians
 
-
 def Rebin_with_scanvar_and_filter(data, quantile, signal, izero, TT, YAGscan=False, withTT=False, threshold=0):
 
-    print ('{}_pump'.format(izero), '{}_pump'.format(signal))
+    print("{}_pump".format(izero), "{}_pump".format(signal))
 
-    Izero_pump   = get_array(data, '{}_pump'.format(izero))
-    Izero_unpump = get_array(data, '{}_unpump'.format(izero))
-    pump         = get_array(data, '{}_pump'.format(signal))
-    unpump       = get_array(data, '{}_unpump'.format(signal))
-    arrTimes     = get_array(data, 'arrTimes{}_pump'.format(TT))
-    #scanvar_set  = get_array(data, 'scanvar')
-    scanvar      = get_array(data, 'scanvar')
+    Izero_pump   = get_array(data, "{}_pump".format(izero))
+    Izero_unpump = get_array(data, "{}_unpump".format(izero))
+    pump         = get_array(data, "{}_pump".format(signal))
+    unpump       = get_array(data, "{}_unpump".format(signal))
+    arrTimes     = get_array(data, "arrTimes{}_pump".format(TT))
+    scanvar      = get_array(data, "scanvar")
 
-    #ordered_set = np.argsort(np.asarray(scanvar_set))
-    #peaks,_ = find_peaks(np.diff(scanvar_set[ordered_set]))
+    ordered0 = np.argsort(scanvar)
+    scanvar_sorted = np.asarray(scanvar)[ordered0]
+    peaks, _ = find_peaks(np.diff(scanvar_sorted))
 
-    #scanvar = np.copy(scanvar_set)
+    # bin edges
+    edges = np.concatenate((
+        [scanvar_sorted[0]],
+        (scanvar_sorted[peaks] + scanvar_sorted[peaks + 1]) / 2,
+        [scanvar_sorted[-1]]
+    ))
+    nbins = len(edges) - 1
+
     if withTT:
-        #scanvar = scanvar_set + arrTimes
-        scanvar = scanvar + arrTimes
-    
-    ordered = np.argsort(np.asarray(scanvar))
-    peaks,_ = find_peaks(np.diff(scanvar[ordered]))
+        scanvar_corr = scanvar + arrTimes
+    else:
+        scanvar_corr = scanvar
 
-    Izero_pump = Izero_pump[ordered]
-    Izero_unpump = Izero_unpump[ordered]
-    pump = pump[ordered]
-    unpump = unpump[ordered]
-    scanvar = scanvar[ordered]
+    ordered = np.argsort(scanvar_corr)
+
+    scanvar_corr   = scanvar_corr[ordered]
+    pump           = pump[ordered]
+    unpump         = unpump[ordered]
+    Izero_pump     = Izero_pump[ordered]
+    Izero_unpump   = Izero_unpump[ordered]
+
 
     Izero_mask = (Izero_pump > threshold) & (Izero_unpump > threshold)
-    Izero_pump   = Izero_pump[Izero_mask]
-    Izero_unpump = Izero_unpump[Izero_mask]
-    pump         = pump[Izero_mask]
-    unpump       = unpump[Izero_mask]
-    scanvarf     = scanvar[Izero_mask]
+    scanvar_corr   = scanvar_corr[Izero_mask]
+    pump           = pump[Izero_mask]
+    unpump         = unpump[Izero_mask]
+    Izero_pump     = Izero_pump[Izero_mask]
+    Izero_unpump   = Izero_unpump[Izero_mask]
 
-    starts = np.concatenate(([0], peaks+1))
-    ends   = np.concatenate((peaks+1, [len(scanvarf)]))
-    nbins = len(starts)
+    # --- 5. Assign shots to bins using corrected scanvar ---
+    bin_indices = np.digitize(scanvar_corr, edges) - 1
 
-    GS, ES, pp, err_GS, err_ES, err_pp, err_pp_boot, scanvar_rebin = (np.empty(nbins) for _ in range(8))
+    # clip to valid range (safety)
+    bin_indices = np.clip(bin_indices, 0, nbins - 1)
+
+    GS = np.full(nbins, np.nan)
+    ES = np.full(nbins, np.nan)
+    pp = np.full(nbins, np.nan)
+
+    err_GS = np.full(nbins, np.nan)
+    err_ES = np.full(nbins, np.nan)
+    err_pp = np.full(nbins, np.nan)
+    err_pp_boot = np.full(nbins, np.nan)
+
+    scanvar_rebin = np.full(nbins, np.nan)
     howmany = []
-    
-    for i, (s, e) in enumerate(zip(starts, ends)):
-        pump_bin = pump[s:e]
-        unpump_bin = unpump[s:e]
-        Izero_pump_bin = Izero_pump[s:e]
-        Izero_unpump_bin = Izero_unpump[s:e]
-        #scanvar_bin = scanvar_set[s:e]
-        scanvar_bin = scanvar[s:e]
 
-        ratio_p = np.divide(pump_bin, Izero_pump_bin)
-        ratio_u = np.divide(unpump_bin, Izero_unpump_bin)
-    
+    for i in range(nbins):
+        mask = bin_indices == i
+
+        if not np.any(mask):
+            howmany.append(0)
+            continue
+
+        pump_bin         = pump[mask]
+        unpump_bin       = unpump[mask]
+        Izero_pump_bin   = Izero_pump[mask]
+        Izero_unpump_bin = Izero_unpump[mask]
+        scanvar_bin      = scanvar_corr[mask]
+
+        ratio_p = pump_bin / Izero_pump_bin
+        ratio_u = unpump_bin / Izero_unpump_bin
+
         correlation_mask = create_corr_condition(ratio_p, ratio_u, quantile)
-        pump_bin = pump_bin[correlation_mask]
-        unpump_bin = unpump_bin[correlation_mask]
-        Izero_pump_bin = Izero_pump_bin[correlation_mask]
+
+        pump_bin         = pump_bin[correlation_mask]
+        unpump_bin       = unpump_bin[correlation_mask]
+        Izero_pump_bin   = Izero_pump_bin[correlation_mask]
         Izero_unpump_bin = Izero_unpump_bin[correlation_mask]
-        scanvar_bin = scanvar_bin[correlation_mask]
+        scanvar_bin      = scanvar_bin[correlation_mask]
+
         howmany.append(len(scanvar_bin))
 
-        pp_bin = pump_bin/Izero_pump_bin - unpump_bin/Izero_unpump_bin
+        if len(scanvar_bin) == 0:
+            continue
+
         if YAGscan:
-            pp_bin = -np.log10(pump_bin/unpump_bin)/Izero_pump_bin
-        
-        scanvar_rebin[i] = np.average(scanvar_bin)
-        GS[i] = np.nanmedian(unpump_bin/Izero_unpump_bin)
-        ES[i] = np.nanmedian(pump_bin/Izero_pump_bin)
+            pp_bin = -np.log10(pump_bin / unpump_bin) / Izero_pump_bin
+        else:
+            pp_bin = pump_bin / Izero_pump_bin - unpump_bin / Izero_unpump_bin
+
+        GS[i] = np.nanmedian(unpump_bin / Izero_unpump_bin)
+        ES[i] = np.nanmedian(pump_bin / Izero_pump_bin)
         pp[i] = np.nanmedian(pp_bin)
 
-        err_GS[i] = median_abs_deviation(unpump_bin/Izero_unpump_bin)
-        err_ES[i] = median_abs_deviation(pump_bin/Izero_pump_bin)
+        scanvar_rebin[i] = np.nanmean(scanvar_bin)
+
+        err_GS[i] = median_abs_deviation(unpump_bin / Izero_unpump_bin)
+        err_ES[i] = median_abs_deviation(pump_bin / Izero_pump_bin)
         err_pp[i] = median_abs_deviation(pp_bin)
+
         err_pp_boot[i], _ = bootstrap_median_error(pp_bin)
-    
-    print ('{} shots out of {} survived'.format(np.sum(howmany), len(scanvar)))
-    results = {'GS': GS, 'ES':ES, 'pp': pp, 'err_GS': err_GS, 'err_ES': err_ES, 'err_pp': err_pp, 'err_pp_boot': err_pp_boot, 'scanvar_rebin': scanvar_rebin, 'howmany': howmany}   
-    return results
+
+    print("{} shots out of {} survived".format(np.sum(howmany), len(scanvar)))
+
+    return {"GS": GS, "ES": ES, "pp": pp, "err_GS": err_GS, "err_ES": err_ES, "err_pp": err_pp, "err_pp_boot": err_pp_boot, "scanvar_rebin": scanvar_rebin, "howmany": howmany}
 
 def Rebin_and_filter(data, binsize, minvalue, maxvalue, quantile, signal, izero, TT, diode='diode1', YAGscan=False, withTT=False, threshold=0, numbins=None):
 
@@ -337,7 +368,16 @@ def Rebin_and_filter(data, binsize, minvalue, maxvalue, quantile, signal, izero,
     unpump       = unpump[Izero_mask]
     scanvarf     = scanvar[Izero_mask]
 
-    GS, ES, pp, err_GS, err_ES, err_pp, err_pp_boot, scanvar_rebin = (np.empty(nbins) for _ in range(8))
+    GS = np.full(nbins, np.nan)
+    ES = np.full(nbins, np.nan)
+    pp = np.full(nbins, np.nan)
+
+    err_GS = np.full(nbins, np.nan)
+    err_ES = np.full(nbins, np.nan)
+    err_pp = np.full(nbins, np.nan)
+    err_pp_boot = np.full(nbins, np.nan)
+
+    scanvar_rebin = np.full(nbins, np.nan)
     howmany = []
 
     for i in range(len(bin_centres)):
