@@ -25,3 +25,4 @@ requirements:
         - scipy
         - sfdata
         - jungfrau_utils=3
+        - colorcet
