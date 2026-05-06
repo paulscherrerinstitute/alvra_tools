@@ -86,10 +86,13 @@ def merge_steps(pgroup, run, diode, offset):
                         offset_channels.add(key)
                     else:
                         d[key].extend(value)
+    d["scanvar"] = sv
     if offset != 0:
+        d["scanvar"] = [v + offset for v in d["scanvar"]]
+        offset_channels.add('scanvar')
         for key in offset_channels:
             print ("Run {}, {} offset by {} fs".format(run, key, offset))
-    d["scanvar"] = sv
+    
 
     return d, meta
 
