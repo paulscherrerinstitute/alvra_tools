@@ -11,7 +11,7 @@ log = logging.getLogger()
 
 
 def update_channels(fname=DEFAULT_FNAME):
-    cfg = ConfigFile(fname)
+    cfg = ConfigFile(fname, mode='r')
     globals().update(cfg)
     log.debug(f"Loaded channels from {fname}")
     return cfg
