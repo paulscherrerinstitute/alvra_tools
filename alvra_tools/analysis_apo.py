@@ -162,15 +162,28 @@ def plot_merged_data(data, meta, Signal, Izero, TT, withTT=False, bins=100, figs
     # 3. Delays
     axes[2].set_title('Delays')
     if len(delays) and not np.isnan(delays).all():
-        axes[2].hist(delays, bins=bins)
-        axes[2].set_xlim(np.nanmin(delays), np.nanmax(delays))
+        dmin = np.nanmin(delays)
+        dmax = np.nanmax(delays)
+        if dmin == dmax:
+            axes[2].hist(delays, bins=[dmin-0.5, dmin+0.5])
+        else:
+            axes[2].hist(delays, bins=bins)
+        axes[2].set_xlim(dmin, dmax)
     axes[2].grid(True)
 
     # 4. Energy
     axes[3].set_title('Energy')
+    tol = 0.05
     if len(energy) and not np.isnan(energy).all():
-        axes[3].hist(energy, bins=min(len(rbk), bins))
-        axes[3].set_xlim(np.nanmin(energy), np.nanmax(energy))
+        emin = np.nanmin(energy)
+        emax = np.nanmax(energy)
+        if np.allclose(energy, energy[0], atol=tol, equal_nan=True):
+            axes[3].hist(energy, bins=[np.nanmean(energy)-tol, np.nanmean(energy)+tol])
+            axes[3].set_xlim(np.nanmean(energy)-10*tol, np.nanmean(energy)+10*tol)
+        else:
+            axes[3].hist(energy, bins=min(len(rbk), bins))
+            axes[3].set_xlim(emin, emax)
+    axes[3].ticklabel_format(style='plain', axis='x', useOffset=False)
     axes[3].grid(True)
 
     # 5. Readbacks
@@ -182,7 +195,7 @@ def plot_merged_data(data, meta, Signal, Izero, TT, withTT=False, bins=100, figs
     axes[4].grid(True)
 
     # 6. Timetool
-    axes[5].set_title('TT')
+    axes[5].set_title('TT{}'.format(TT))
     if len(arr_times) and not np.isnan(arr_times).all():
         axes[5].hist(arr_times, bins=bins)
         axes[5].set_xlim(np.nanmin(arr_times), np.nanmax(arr_times))
