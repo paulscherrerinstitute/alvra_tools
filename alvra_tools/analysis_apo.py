@@ -478,7 +478,7 @@ def Rebin_and_filter_2Dscans(data, binsize, minvalue, maxvalue, quantile, signal
     GS, ES, pp, err_GS, err_ES, err_pp, err_pp_boot = (np.empty((nbinsX, nbinsY)) for _ in range(7))
     howmany = []
     
-    for i, (s, e) in enumerate(zip(starts, ends)):
+    for i, (s, e) in enumerate(tqdm(zip(starts, ends), total=len(starts))):
         pump_ebin = pump[s:e]
         unpump_ebin = unpump[s:e]
         Izero_pump_ebin = Izero_pump[s:e]
@@ -535,7 +535,7 @@ def Rebin_and_filter_2Dscans(data, binsize, minvalue, maxvalue, quantile, signal
             err_GS[i, j] = median_abs_deviation(unpump_tebin/Izero_unpump_tebin)
             err_ES[i, j] = median_abs_deviation(pump_tebin/Izero_pump_tebin)
             err_pp[i, j] = median_abs_deviation(pp_tebin)
-            err_pp_boot[i, j], _ = bootstrap_median_error(pp_tebin)
+            #err_pp_boot[i, j], _ = bootstrap_median_error(pp_tebin)
             
             #err_pp[i, j] = np.sqrt(err_GS[i, j]**2 + err_ES[i, j]**2)
 
