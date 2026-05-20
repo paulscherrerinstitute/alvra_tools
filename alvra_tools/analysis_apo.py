@@ -656,6 +656,28 @@ class plotter:
         return datadict, params
 
     @staticmethod
+    def doErrfunc_fit(datadict):
+        rbk = datadict['scanvar_rebin']
+        signal = datadict['pp']
+        err_signal = datadict['err_pp']
+
+        index = ~(np.isnan(rbk) | np.isnan(signal))
+        rbk = rbk[index]
+        signal=  signal[index]
+        err_signal = err_signal[index]
+        
+        datadict.update({'scanvar_rebin':rbk, 'pp': signal, 'err_pp': err_signal})
+
+        # Fit the curve
+        fit = Fit(errfunc_fwhm, estimate_errfunc_parameters)
+        fit.estimate(rbk, signal)
+        fit.p0 = better_p0(fit.p0, 0, 0)
+        fit.fit(rbk,signal, maxfev=200000)
+        sig_fit = fit.eval(rbk)
+
+        return datadict, sig_fit, fit.popt
+
+    @staticmethod
     def doGaussianfit_array(array, rbk):
         fit = Fit(gaussian, estimate_gaussian_parameters)
         fit.estimate(rbk, array)
@@ -1012,6 +1034,70 @@ class plotter:
         ax1.grid()
       
         return fig, (ax1)
+
+
+    @classmethod
+    def FFT(cls, data, meta, start, end, errbars=True, figsize=(10,4)):
+
+        xlabel = meta.get('xlabel','')
+        if xlabel in [None, "None"]:
+            xlabel = "pp delay - continuous"
+        xunits = meta.get('units','')
+        if xunits in [None, "None"]:
+            xunits = "fs"
+        title  = meta.get('title','')
+
+        r = data['results']
+        p = data.get('params', {})
+        w = data.get('which', None)
+        s = p.get(w,"")
+        title = title + ' --- ' + s
+        if 'binsize' in p:
+            title = title + ' --- ' +'binsize {} fs --- {} on/off pairs'.format(int(p['binsize']), np.sum(r['howmany']))
+
+        title = "\n".join(textwrap.wrap(title))
+
+        r, sig_fit, params_fit = cls.doErrfunc_fit(r)
+
+        rbk = r['scanvar_rebin']
+
+        index_point_start = int(np.argwhere(rbk > start)[0])
+        index_point_end = int(np.argwhere(rbk > end)[0])
+
+        t = r['pp'][index_point_start:index_point_end]
+        x = rbk[index_point_start:index_point_end]
+        f = sig_fit[index_point_start:index_point_end]
+
+        fitoutput = np.poly1d(np.polyfit(x, t, 3))
+        pows = fitoutput(x)
+        t2 = t-pows
+        vals = np.hstack((t2, np.zeros_like(t2))) # pad
+        power = np.abs(np.fft.fft(vals))**2
+        frequencies = np.arange(0,0.999999999,1/len(vals))*16678*(2/p['binsize'])
+
+        fig, (ax1, ax2) = plt.subplots(1, 2, figsize=figsize, constrained_layout=True)
+        plt.suptitle(title)
+
+        ax1.plot(start + np.arange(0, p['binsize']*len(t), p['binsize']), t2, '-')
+        ax1.axhline(y=0, color='black', linestyle='--')
+
+        ax1.set(
+            xlabel="{} ({})".format(xlabel, xunits),
+            xlim = (0, end),
+            title='Residuals')
+
+        ax2.plot(frequencies,power/np.max(power), '-', color='black')
+
+        ax2.set(
+            xlabel='frequency, cm$^{-1}$',
+            title='Power', 
+            xlim = (0, 1000), 
+            ylim = (-0.075, 1.075), 
+            yticks=[0,1])
+
+        return fig, (ax1, ax2)
+
+
 
     @classmethod
     def fluence_scans(self, data, meta, params=None, errbars=True, figsize=(12, 4)):
