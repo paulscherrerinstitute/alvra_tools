@@ -8,10 +8,15 @@ def Rebin_widget(data, Rebin_and_filter=Rebin_and_filter,
                        Rebin_and_filter_2Dscans=Rebin_and_filter_2Dscans):
 
     out = {
-        "results1": None, 
-        "results2": None, 
-        "params": None
+        "signal1": None, 
+        "signal2": None, 
     }
+
+    #out = {
+    #    "results1": None, 
+    #    "results2": None, 
+    #    "params": None
+    #}
 
     mode_w = widgets.ToggleButtons(
         options=[
@@ -116,6 +121,22 @@ def Rebin_widget(data, Rebin_and_filter=Rebin_and_filter,
                     "izero": izero_w.value, # you fill this in above already -- probably just remove
                     **kwargs
                 }
+
+                out["signal1"] = {
+                    "results": out["results1"],
+                    "params": out["params"],
+                    "which": "signal1"
+                }
+
+                if out["results2"] is not None:
+                    out["signal2"] = {
+                        "results": out["results2"],
+                        "params": out["params"],
+                        "which": "signal2"
+                    }
+
+                else:
+                    out["signal2"] = None            
         
                 print("Done!")
             except Exception as e:
