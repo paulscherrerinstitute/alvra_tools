@@ -1137,7 +1137,7 @@ class plotter:
         
         if errbars:       
             ax2.fill_between(rbk, r['pp']-r['err_pp'], r['pp']+r['err_pp'],color='lightgreen')
-        ax3.fill_between(rbk, r['pp']-r['err_pp_boot'], r['pp']+r['err_pp_boot'], label='error of median',color='limegreen')
+        ax2.fill_between(rbk, r['pp']-r['err_pp_boot'], r['pp']+r['err_pp_boot'], label='error of median',color='limegreen')
         ax2.plot(rbk, r['pp'], color='green', marker='.', label='MAD')
         
         ax2.set(xlabel="{} ({})".format(xlabel, xunits),
