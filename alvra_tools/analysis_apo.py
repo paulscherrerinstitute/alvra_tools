@@ -608,13 +608,15 @@ class plotter:
         rbk = datadict['scanvar_rebin']
         signal = datadict['pp']
         err_signal = datadict['err_pp']
+        err_boot = datadict['err_pp_boot']
 
         index = ~(np.isnan(rbk) | np.isnan(signal))
         rbk = rbk[index]
         signal=  signal[index]
         err_signal = err_signal[index]
+        err_boot = err_boot[index]
         
-        datadict.update({'scanvar_rebin':rbk, 'pp': signal, 'err_pp': err_signal})
+        datadict.update({'scanvar_rebin':rbk, 'pp': signal, 'err_pp': err_signal, 'err_boot': err_boot})
         
         # Fit the curve
         fit = Fit(conv_exp_gauss_heaviside, estimate_conv_exp_gauss_heaviside_parameters)
