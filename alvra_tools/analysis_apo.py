@@ -941,6 +941,12 @@ class plotter:
             t0_fit   = params_fit[0]
 
         rbk = r['scanvar_rebin']
+        
+        index = ~(np.isnan(rbk) | np.isnan(r['pp']))
+        rbk = rbk[index]
+        r['pp']=  r['pp'][index]
+        r['err_pp'] = r['err_pp'][index]
+        r['err_pp_boot'] = r['err_pp_boot'][index]
 
         fig, (ax1, ax2, ax3) = plt.subplots(1, 3, figsize=figsize, constrained_layout=True)
         plt.suptitle(title)
