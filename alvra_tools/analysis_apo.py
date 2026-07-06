@@ -1006,6 +1006,12 @@ class plotter:
 
         rbk = r['scanvar_rebin']
         
+        index = ~(np.isnan(rbk) | np.isnan(r['pp']))
+        rbk = rbk[index]
+        r['pp']=  r['pp'][index]
+        r['err_pp'] = r['err_pp'][index]
+        r['err_pp_boot'] = r['err_pp_boot'][index]
+        
         if p0 is None:
             p0 = get_default_p0(fitfunction)
         popt,_  = curve_fit(fitfunction, rbk, r['pp'], p0=p0, maxfev=40000)
@@ -1398,6 +1404,9 @@ class plotter:
 
 def SaveData(SaveDir, runlist, plot1=None, plot2=None, plot_both=None):
     import numbers
+    os.makedirs(SaveDir, mode=0o775, exist_ok=True)
+    os.chmod(SaveDir, 0o775)
+    print (SaveDir)
     savedir = SaveDir + '_singlerun/'
     if len(runlist) == 1:
         runname2save = 'run{:04d}'.format(runlist[0])
