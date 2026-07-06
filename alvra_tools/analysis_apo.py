@@ -941,7 +941,6 @@ class plotter:
             t0_fit   = params_fit[0]
 
         rbk = r['scanvar_rebin']
-        
         index = ~(np.isnan(rbk) | np.isnan(r['pp']))
         rbk = rbk[index]
         r['pp']=  r['pp'][index]
