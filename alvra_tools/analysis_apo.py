@@ -604,7 +604,7 @@ def average_two_diodes(data1, data2):
 class plotter:
 
     @staticmethod
-    def dofits(datadict):
+    def dofits(datadict, just_errfunc=False):
         rbk = datadict['scanvar_rebin']
         signal = datadict['pp']
         err_signal = datadict['err_pp']
@@ -619,9 +619,15 @@ class plotter:
         datadict.update({'scanvar_rebin':rbk, 'pp': signal, 'err_pp': err_signal, 'err_boot': err_boot})
         
         # Fit the curve
-        fit = Fit(conv_exp_gauss_heaviside, estimate_conv_exp_gauss_heaviside_parameters)
-        fit.estimate(rbk, signal)
-        fit.p0 = better_p0(fit.p0, 4, 200)
+        if just_errfunc:
+            fit = Fit(errfunc_fwhm, estimate_errfunc_parameters)
+            fit.estimate(rbk, signal)
+            fit.p0 = better_p0(fit.p0, 0, 0)
+        else:
+            fit = Fit(conv_exp_gauss_heaviside, estimate_conv_exp_gauss_heaviside_parameters)
+            fit.estimate(rbk, signal)
+            fit.p0 = better_p0(fit.p0, 4, 200)
+            
         fit.fit(rbk,signal, maxfev=200000)
         sig_fit = fit.eval(rbk)
 
@@ -910,7 +916,7 @@ class plotter:
             return fig, (ax1, ax2)
 
     @classmethod
-    def fit_risetime(cls, data, meta, fitflag=True, errbars=True, figsize=(10,4)):
+    def fit_risetime(cls, data, meta, fitflag=True, errbars=True, just_errfunc=False, figsize=(10,4)):
 
         xlabel = meta.get('xlabel','')
         if xlabel in [None, "None"]:
@@ -935,7 +941,7 @@ class plotter:
         _, sig_derivative, _, _, _, _ = cls.dofits(r)
         
         if fitflag:
-            r, sig_derivative, sig_fit, params_fit, params_gauss, out_voigt = cls.dofits(r)
+            r, sig_derivative, sig_fit, params_fit, params_gauss, out_voigt = cls.dofits(r, just_errfunc)
             t0_Voigt = out_voigt.params.get('center').value
             t0_Gauss = params_gauss[0]
             t0_fit   = params_fit[0]
