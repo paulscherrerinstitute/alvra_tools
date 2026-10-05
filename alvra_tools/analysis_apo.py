@@ -334,7 +334,8 @@ def Rebin_with_scanvar_and_filter(data, quantile, signal, izero, TT, YAGscan=Fal
         if YAGscan:
             pp_bin = -np.log10(pump_bin / unpump_bin) / Izero_pump_bin
         else:
-            pp_bin = pump_bin / Izero_pump_bin - unpump_bin / Izero_unpump_bin
+            #pp_bin = pump_bin / Izero_pump_bin - unpump_bin / Izero_unpump_bin
+            pp_bin = (pump_bin / Izero_pump_bin) / (unpump_bin / Izero_unpump_bin) - 1
 
         GS[i] = np.nanmedian(unpump_bin / Izero_unpump_bin)
         ES[i] = np.nanmedian(pump_bin / Izero_pump_bin)
@@ -419,7 +420,8 @@ def Rebin_and_filter(data, binsize, minvalue, maxvalue, quantile, signal, izero,
         scanvar_bin = scanvar_bin[correlation_mask]
         howmany.append(len(scanvar_bin))
 
-        pp_bin = pump_bin/Izero_pump_bin - unpump_bin/Izero_unpump_bin
+        #pp_bin = pump_bin/Izero_pump_bin - unpump_bin/Izero_unpump_bin
+        pp_bin = (pump_bin / Izero_pump_bin) / (unpump_bin / Izero_unpump_bin) - 1
         if YAGscan:
             pp_bin = -np.log10(pump_bin/unpump_bin)/Izero_pump_bin
 
@@ -525,7 +527,8 @@ def Rebin_and_filter_2Dscans(data, binsize, minvalue, maxvalue, quantile, signal
 
             howmany.append(len(scanvar_tebin))
     
-            pp_tebin = pump_tebin/Izero_pump_tebin - unpump_tebin/Izero_unpump_tebin
+            #pp_tebin = pump_tebin/Izero_pump_tebin - unpump_tebin/Izero_unpump_tebin
+            pp_tebin = (pump_tebin / Izero_pump_tebin) / (unpump_tebin / Izero_unpump_tebin)) - 1
 
             #delay_rebin[j] = np.average(scanvar_tebin)
 
