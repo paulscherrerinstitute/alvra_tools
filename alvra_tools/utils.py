@@ -296,3 +296,46 @@ def color_enumerate(iterable, start=0, cmap=cc.cm.rainbow):
         n += 1
 
 
+def curve_fit_fixed(fitfunction, x, y, p0, fixed_params=None, **kwargs):
+
+    p0 = np.asarray(p0, dtype=float)
+
+    if fixed_params is None:
+        fixed_params = {}
+
+    # Indices of parameters that are allowed to vary
+    free_indices = [i for i in range(len(p0)) if i not in fixed_params]
+
+    # Model seen by curve_fit:
+    # it only receives the FREE parameters
+    def wrapped_function(x, *free_params):
+
+        params = p0.copy()
+
+        # Set fixed parameters
+        for i, value in fixed_params.items():
+            params[i] = value
+
+        # Insert fitted free parameters
+        for i, value in zip(free_indices, free_params):
+            params[i] = value
+
+        return fitfunction(x, *params)
+
+    # Only free parameters go into curve_fit
+    p0_free = p0[free_indices]
+
+    popt_free, pcov_free = curve_fit(wrapped_function, x, y, p0=p0_free, **kwargs)
+
+    # Reconstruct complete parameter array
+    popt = p0.copy()
+
+    for i, value in fixed_params.items():
+        popt[i] = value
+
+    for i, value in zip(free_indices, popt_free):
+        popt[i] = value
+
+    return popt, pcov_free
+
+
