@@ -10,9 +10,9 @@ from scipy.optimize import curve_fit
 from scipy.stats import median_abs_deviation
 
 from alvra_tools.load_data import *
+from alvra_tools.utils import curve_fit_fixed, Fit
 from alvra_tools.utils import *
 from lmfit.models import PseudoVoigtModel
-
 
 def get_jsonfile_from_run(pgroup, run, path='raw'):
     import glob
@@ -298,9 +298,9 @@ def Rebin_with_scanvar_and_filter(data, quantile, signal, izero, TT, YAGscan=Fal
     err_GS = np.full(nbins, np.nan)
     err_ES = np.full(nbins, np.nan)
     err_pp_d = np.full(nbins, np.nan)
-    err_pp_boot_d = np.full(nbins, np.nan)
+    err_boot_pp_d = np.full(nbins, np.nan)
     err_pp_r = np.full(nbins, np.nan)
-    err_pp_boot_r = np.full(nbins, np.nan)
+    err_boot_pp_r = np.full(nbins, np.nan)
 
     scanvar_rebin = np.full(nbins, np.nan)
     howmany = []
@@ -352,16 +352,16 @@ def Rebin_with_scanvar_and_filter(data, quantile, signal, izero, TT, YAGscan=Fal
         err_pp_d[i] = median_abs_deviation(pp_bin_delta)
         err_pp_r[i] = median_abs_deviation(pp_bin_ratio)
 
-        err_pp_boot_d[i], _ = bootstrap_median_error(pp_bin_delta)
-        err_pp_boot_r[i], _ = bootstrap_median_error(pp_bin_ratio)
+        err_boot_pp_d[i], _ = bootstrap_median_error(pp_bin_delta)
+        err_boot_pp_r[i], _ = bootstrap_median_error(pp_bin_ratio)
 
     print("{} shots out of {} survived".format(np.sum(howmany), len(scanvar)))
 
     return {"GS": GS, "ES": ES, 
     "err_GS": err_GS, "err_ES": err_ES, 
     'pp_d': pp_d, 'pp_r': pp_r, 
-    "err_pp_d": err_pp_d, "err_pp_boot_d": err_pp_boot_d, 
-    "err_pp_r": err_pp_r, "err_pp_boot_r": err_pp_boot_r, 
+    "err_pp_d": err_pp_d, "err_boot_pp_d": err_boot_pp_d, 
+    "err_pp_r": err_pp_r, "err_boot_pp_r": err_boot_pp_r, 
     "scanvar_rebin": scanvar_rebin, "howmany": howmany}
 
 def Rebin_and_filter(data, binsize, minvalue, maxvalue, quantile, signal, izero, TT, diode='diode1', YAGscan=False, withTT=False, threshold=0, numbins=None):
@@ -404,9 +404,9 @@ def Rebin_and_filter(data, binsize, minvalue, maxvalue, quantile, signal, izero,
     err_GS = np.full(nbins, np.nan)
     err_ES = np.full(nbins, np.nan)
     err_pp_r = np.full(nbins, np.nan)
-    err_pp_boot_r = np.full(nbins, np.nan)
+    err_boot_pp_r = np.full(nbins, np.nan)
     err_pp_d = np.full(nbins, np.nan)
-    err_pp_boot_d = np.full(nbins, np.nan)
+    err_boot_pp_d = np.full(nbins, np.nan)
 
     scanvar_rebin = np.full(nbins, np.nan)
     howmany = []
@@ -448,16 +448,16 @@ def Rebin_and_filter(data, binsize, minvalue, maxvalue, quantile, signal, izero,
         err_GS[i] = median_abs_deviation(unpump_bin/Izero_unpump_bin)
         err_ES[i] = median_abs_deviation(pump_bin/Izero_pump_bin)
         err_pp_d[i] = median_abs_deviation(pp_bin_delta)
-        err_pp_boot_d[i], _ = bootstrap_median_error(pp_bin_delta)
+        err_boot_pp_d[i], _ = bootstrap_median_error(pp_bin_delta)
         err_pp_r[i] = median_abs_deviation(pp_bin_ratio)
-        err_pp_boot_r[i], _ = bootstrap_median_error(pp_bin_ratio)
+        err_boot_pp_r[i], _ = bootstrap_median_error(pp_bin_ratio)
         
     print ('{} shots out of {} survived'.format(np.sum(howmany), len(scanvar)))
     results = {'GS': GS, 'ES':ES,
     'err_GS': err_GS, 'err_ES': err_ES, 
     'pp_d': pp_d, 'pp_r': pp_r, 
-    'err_pp_d': err_pp_d, 'err_pp_boot_d': err_pp_boot_d, 
-    'err_pp_r': err_pp_r, 'err_pp_boot_r': err_pp_boot_r, 
+    'err_pp_d': err_pp_d, 'err_boot_pp_d': err_boot_pp_d, 
+    'err_pp_r': err_pp_r, 'err_boot_pp_r': err_boot_pp_r, 
     'scanvar_rebin': scanvar_rebin, 'howmany': howmany}   
     return results
 
@@ -499,7 +499,7 @@ def Rebin_and_filter_2Dscans(data, binsize, minvalue, maxvalue, quantile, signal
     nbinsX = len(starts)
     
     scanvar_rebin = np.empty(nbinsX)
-    GS, ES, pp_d, pp_r, err_GS, err_ES, err_pp_d, err_pp_boot_d, err_pp_r, err_pp_boot_r = (np.empty((nbinsX, nbinsY)) for _ in range(10))
+    GS, ES, pp_d, pp_r, err_GS, err_ES, err_pp_d, err_boot_pp_d, err_pp_r, err_boot_pp_r = (np.empty((nbinsX, nbinsY)) for _ in range(10))
     howmany = []
     
     for i, (s, e) in enumerate(tqdm(zip(starts, ends), total=len(starts))):
@@ -562,8 +562,8 @@ def Rebin_and_filter_2Dscans(data, binsize, minvalue, maxvalue, quantile, signal
             err_ES[i, j] = median_abs_deviation(pump_tebin/Izero_pump_tebin)
             err_pp_d[i, j] = median_abs_deviation(pp_tebin_delta)
             err_pp_r[i, j] = median_abs_deviation(pp_tebin_ratio)
-            #err_pp_boot_d[i, j], _ = bootstrap_median_error(pp_tebin_delta)
-            #err_pp_boot_r[i, j], _ = bootstrap_median_error(pp_tebin_ratio)
+            #err_boot_pp_d[i, j], _ = bootstrap_median_error(pp_tebin_delta)
+            #err_boot_pp_r[i, j], _ = bootstrap_median_error(pp_tebin_ratio)
             
             #err_pp[i, j] = np.sqrt(err_GS[i, j]**2 + err_ES[i, j]**2)
 
@@ -571,8 +571,8 @@ def Rebin_and_filter_2Dscans(data, binsize, minvalue, maxvalue, quantile, signal
     results = {'GS': GS, 'ES':ES, 
                'pp_d': pp_d, 'pp_r': pp_r, 
                'err_GS': err_GS, 'err_ES': err_ES, 
-               'err_pp_d': err_pp_d, 'err_pp_boot_d': err_pp_boot_d, 
-               'err_pp_r': err_pp_r, 'err_pp_boot_r': err_pp_boot_r, 
+               'err_pp_d': err_pp_d, 'err_boot_pp_d': err_boot_pp_d, 
+               'err_pp_r': err_pp_r, 'err_boot_pp_r': err_boot_pp_r, 
                'scanvar_rebin': scanvar_rebin, 'delay_rebin': delay_rebin, 'howmany': howmany}   
     return results 
 
@@ -620,7 +620,7 @@ def average_two_diodes(data1, data2):
                          d1['results']['err_ES'], d2['results']['err_ES'])
 
     pp_d, err_pp_d = combine(d1['results']['pp_d'], d2['results']['pp_d'],
-                         d1['results']['err_pp_d'], d2['results']['err_pp_d'])
+                         d1['results']['err_pp_r'], d2['results']['err_pp_r'])
                          
     pp_r, err_pp_r = combine(d1['results']['pp_r'], d2['results']['pp_r'],
                          d1['results']['err_pp_r'], d2['results']['err_pp_r'])
@@ -641,11 +641,11 @@ def average_two_diodes(data1, data2):
 class plotter:
 
     @staticmethod
-    def dofits(datadict, just_errfunc=False):
+    def dofits(datadict, just_errfunc=False, which_pp='pp_r'):
         rbk = datadict['scanvar_rebin']
-        signal = datadict['pp_r']
-        err_signal = datadict['err_pp_r']
-        err_boot = datadict['err_pp_boot_r']
+        signal = datadict[which_pp]
+        err_signal = datadict['err_{}'.format(which_pp)]
+        err_boot = datadict['err_boot_{}'.format(which_pp)]
 
         index = ~(np.isnan(rbk) | np.isnan(signal))
         rbk = rbk[index]
@@ -653,7 +653,9 @@ class plotter:
         err_signal = err_signal[index]
         err_boot = err_boot[index]
         
-        datadict.update({'scanvar_rebin':rbk, 'pp_r': signal, 'err_pp_r': err_signal, 'err_boot_r': err_boot})
+        datadict.update({'scanvar_rebin':rbk, which_pp: signal, 
+                         'err_{}'.format(which_pp): err_signal, 
+                         'err_boot_{}'.format(which_pp): err_boot})
         
         # Fit the curve
         if just_errfunc:
@@ -683,17 +685,19 @@ class plotter:
         return datadict, sig_derivative, sig_fit, fit.popt, params, out
 
     @staticmethod
-    def doGaussianfit(datadict, which_pp, which_errpp):
+    def doGaussianfit(datadict, which_pp='pp_r'):
         rbk = datadict['scanvar_rebin']
         signal = datadict[which_pp]
-        err_signal = datadict[which_errpp]
+        err_signal = datadict['err_{}'.format(which_pp)]
 
         index = ~(np.isnan(rbk) | np.isnan(signal))
         rbk = rbk[index]
         signal=  signal[index]
         err_signal = err_signal[index]
         
-        datadict.update({'scanvar_rebin':rbk, which_pp: signal, which_errpp: err_signal})
+        datadict.update({'scanvar_rebin':rbk, 
+                         which_pp: signal, 
+                         'err_{}'.format(which_pp): err_signal})
         
         # Fit derivative Gaussian [x0, amplitude, sigma, offset]
         params,_ = curve_fit(gaussian, rbk, signal, p0 = [rbk.mean(), -signal.max(), np.diff(rbk).mean(), signal.min()])
@@ -701,17 +705,19 @@ class plotter:
         return datadict, params
 
     @staticmethod
-    def doErrfunc_fit(datadict):
+    def doErrfunc_fit(datadict, which_pp='pp_r'):
         rbk = datadict['scanvar_rebin']
-        signal = datadict['pp_r']
-        err_signal = datadict['err_pp_r']
+        signal = datadict[which_pp]
+        err_signal = datadict['err_{}'.format(which_pp)]
 
         index = ~(np.isnan(rbk) | np.isnan(signal))
         rbk = rbk[index]
         signal=  signal[index]
         err_signal = err_signal[index]
         
-        datadict.update({'scanvar_rebin':rbk, 'pp_r': signal, 'err_pp_r': err_signal})
+        datadict.update({'scanvar_rebin':rbk, 
+                         which_pp: signal, 
+                         'err_{}'.format(which_pp): err_signal})
 
         # Fit the curve
         fit = Fit(errfunc_fwhm, estimate_errfunc_parameters)
@@ -782,10 +788,10 @@ class plotter:
                 title="XAS (fluo)")
         ax1.legend()
         ax1.grid()
-        
+                
         if errbars:
             ax2.fill_between(rbk, r['pp_r']-r['err_pp_r'], r['pp_r']+r['err_pp_r'], label='MAD',color='lightgreen')
-        ax2.fill_between(rbk, r['pp_r']-r['err_pp_boot_r'], r['pp_r']+r['err_pp_boot_r'], label='error of median',color='limegreen')
+        ax2.fill_between(rbk, r['pp_r']-r['err_boot_pp_r'], r['pp_r']+r['err_boot_pp_r'], label='error of median',color='limegreen')
         ax2.plot(rbk, r['pp_r'], color='darkgreen', marker='.')
         
         ax2.set(xlabel="{} ({})".format(xlabel, xunits),
@@ -796,7 +802,7 @@ class plotter:
         
         if errbars:
             ax3.fill_between(rbk, r['pp_d']-r['err_pp_d'], r['pp_d']+r['err_pp_d'], label='MAD',color='lightgreen')
-        ax3.fill_between(rbk, r['pp_d']-r['err_pp_boot_d'], r['pp_d']+r['err_pp_boot_d'], label='error of median',color='limegreen')
+        ax3.fill_between(rbk, r['pp_d']-r['err_boot_pp_d'], r['pp_d']+r['err_boot_pp_d'], label='error of median',color='limegreen')
         ax3.plot(rbk, r['pp_d'], color='darkgreen', marker='.')
         
         ax3.set(xlabel="{} ({})".format(xlabel, xunits),
@@ -843,7 +849,7 @@ class plotter:
         
         if errbars:
             ax2.fill_between(rbk, r['pp_r']-r['err_pp_r'], r['pp_r']+r['err_pp_r'], label='MAD',color='lightgreen')
-        ax2.fill_between(rbk, r['pp_r']-r['err_pp_boot_r'], r['pp_r']+r['err_pp_boot_r'], label='error of median',color='limegreen')
+        ax2.fill_between(rbk, r['pp_r']-r['err_boot_pp_r'], r['pp_r']+r['err_boot_pp_r'], label='error of median',color='limegreen')
         ax2.plot(rbk, r['pp_r'], color='darkgreen', marker='.')
         
         ax2.set(xlabel="{} ({})".format(xlabel, xunits),
@@ -854,7 +860,7 @@ class plotter:
         
         if errbars:
             ax3.fill_between(rbk, r['pp_d']-r['err_pp_d'], r['pp_d']+r['err_pp_d'], label='MAD',color='lightgreen')
-        ax3.fill_between(rbk, r['pp_d']-r['err_pp_boot_d'], r['pp_d']+r['err_pp_boot_d'], label='error of median',color='limegreen')
+        ax3.fill_between(rbk, r['pp_d']-r['err_boot_pp_d'], r['pp_d']+r['err_boot_pp_d'], label='error of median',color='limegreen')
         ax3.plot(rbk, r['pp_d'], color='darkgreen', marker='.')
         
         ax3.set(xlabel="{} ({})".format(xlabel, xunits),
@@ -866,7 +872,7 @@ class plotter:
         return fig, (ax1, ax2, ax3)
 
     @classmethod
-    def overlap_scans(cls, data, meta, errbars=True, figsize=(12, 4)):
+    def overlap_scans(cls, data, meta, errbars=True, which_pp='pp_r', figsize=(12, 4)):
         from matplotlib.ticker import MaxNLocator
 
         xlabel = meta.get('xlabel','')
@@ -879,13 +885,17 @@ class plotter:
         s = p.get(w,"")
         title = title + ' --- ' + s
         title = "\n".join(textwrap.wrap(title))
+        
+        #pp = 
 
-        r, params_gauss_d = cls.doGaussianfit(r, 'pp_d', 'err_pp_d')
-        r, params_gauss_r = cls.doGaussianfit(r, 'pp_r', 'err_pp_r')
+        r, params_gauss = cls.doGaussianfit(r, which_pp)
 
         rbk = r['scanvar_rebin']
+        pp = r[which_pp]
+        err_pp = r['err_{}'.format(which_pp)]
+        err_boot_pp = r['err_boot_{}'.format(which_pp)]
 
-        fig, (ax1, ax2, ax3) = plt.subplots(1, 3, figsize=figsize, constrained_layout=True)
+        fig, (ax1, ax2) = plt.subplots(1, 2, figsize=figsize, constrained_layout=True)
         plt.suptitle(title)
       
         ax1.fill_between(rbk, r['ES']-r['err_ES'], r['ES']+r['err_ES'], color='lightblue', alpha = 0.8)
@@ -901,32 +911,23 @@ class plotter:
         ax1.grid()
         
         if errbars:
-            ax2.fill_between(rbk, r['pp_r']-r['err_pp_r'], r['pp_r']+r['err_pp_r'], label='MAD',color='lightgreen')
-        ax2.fill_between(rbk, r['pp_r']-r['err_pp_boot_r'], r['pp_r']+r['err_pp_boot_r'], label='error of median',color='limegreen')
-        ax2.plot(rbk, r['pp_r'], color='darkgreen', marker='.')
-        ax2.plot(rbk, gaussian(rbk,*params_gauss_r), color='red', label = 'fit Gauss, w= {:.4f} {}'.format(np.abs(params_gauss_r[2]*2.355), xunits[0]))
+            ax2.fill_between(rbk, pp-err_pp, pp+err_pp, label='MAD',color='lightgreen')
+        ax2.fill_between(rbk, pp-err_boot_pp, pp+err_boot_pp, label='error of median',color='limegreen')
+        ax2.plot(rbk, pp, color='darkgreen', marker='.')
+        ax2.plot(rbk, gaussian(rbk,*params_gauss), color='red', label = 'fit Gauss, w= {:.4f} {}'.format(np.abs(params_gauss[2]*2.355), xunits[0]))
+        
+        label = 'Relative DeltaXAS'
+        if which_pp=='pp_d':
+            label = 'DeltaXAS'
         
         ax2.set(xlabel="{} ({})".format(xlabel, xunits),
-                ylabel="Relative DeltaXAS",
-                title='center = {:.4f} {}'.format(params_gauss_r[0], xunits[0]))
+                ylabel=label,
+                title='center = {:.4f} {}'.format(params_gauss[0], xunits[0]))
         ax2.xaxis.set_major_locator(MaxNLocator(nbins=7))
         ax2.legend()
         ax2.grid()
         
-        if errbars:
-            ax3.fill_between(rbk, r['pp_d']-r['err_pp_d'], r['pp_d']+r['err_pp_d'], label='MAD',color='lightgreen')
-        ax3.fill_between(rbk, r['pp_d']-r['err_pp_boot_d'], r['pp_d']+r['err_pp_boot_d'], label='error of median',color='limegreen')
-        ax3.plot(rbk, r['pp_d'], color='darkgreen', marker='.')
-        ax3.plot(rbk, gaussian(rbk,*params_gauss_d), color='red', label = 'fit Gauss, w= {:.4f} {}'.format(np.abs(params_gauss_d[2]*2.355), xunits[0]))
-        
-        ax3.set(xlabel="{} ({})".format(xlabel, xunits),
-                ylabel="DeltaXAS",
-                title='center = {:.4f} {}'.format(params_gauss_d[0], xunits[0]))
-        ax3.xaxis.set_major_locator(MaxNLocator(nbins=7))
-        ax3.legend()
-        ax3.grid()
-        
-        return fig, (ax1, ax2, ax3)
+        return fig, (ax1, ax2)
 
     @classmethod
     def jet_scans(cls, data, meta, rbk, twodiodes=False, errbars=True, figsize=(6, 5)):
@@ -990,7 +991,7 @@ class plotter:
             return fig, (ax1, ax2)
 
     @classmethod
-    def fit_risetime(cls, data, meta, fitflag=True, errbars=True, just_errfunc=False, figsize=(10,4)):
+    def fit_risetime(cls, data, meta, fitflag=True, errbars=True, just_errfunc=False, which_pp = 'pp_r', figsize=(10,4)):
 
         xlabel = meta.get('xlabel','')
         if xlabel in [None, "None"]:
@@ -1015,25 +1016,32 @@ class plotter:
         _, sig_derivative, _, _, _, _ = cls.dofits(r)
         
         if fitflag:
-            r, sig_derivative, sig_fit, params_fit, params_gauss, out_voigt = cls.dofits(r, just_errfunc)
+            r, sig_derivative, sig_fit, params_fit, params_gauss, out_voigt = cls.dofits(r, just_errfunc, which_pp)
             t0_Voigt = out_voigt.params.get('center').value
             t0_Gauss = params_gauss[0]
             t0_fit   = params_fit[0]
 
         rbk = r['scanvar_rebin']
+        pp = r[which_pp]
+        err_pp = r['err_{}'.format(which_pp)]
+        err_boot_pp = r['err_boot_{}'.format(which_pp)]
+        lab = 'ON/OFF'
+        if which_pp == 'pp_d':
+            lab = 'ON - OFF'
+        
         index = ~(np.isnan(rbk) | np.isnan(r['pp_r']))
         rbk = rbk[index]
-        r['pp_r']=  r['pp_r'][index]
-        r['err_pp_r'] = r['err_pp_r'][index]
-        r['err_pp_boot_r'] = r['err_pp_boot_r'][index]
+        pp = pp[index]
+        err_pp = err_pp[index]
+        err_boot_pp = err_boot_pp[index]
 
         fig, (ax1, ax2, ax3) = plt.subplots(1, 3, figsize=figsize, constrained_layout=True)
         plt.suptitle(title)
 
         if errbars:
-            ax1.fill_between(rbk, r['pp_r']-r['err_pp_r'], r['pp_r']+r['err_pp_r'],color='lightgreen')
-        ax1.fill_between(rbk, r['pp_r']-r['err_pp_boot_r'], r['pp_r']+r['err_pp_boot_r'],color='limegreen')
-        ax1.plot(rbk, r['pp_r'], color='darkgreen', marker='.', label='ON/OFF')
+            ax1.fill_between(rbk, pp-err_pp, pp+err_pp, color='lightgreen')
+        ax1.fill_between(rbk, pp-err_boot_pp, pp+err_boot_pp, color='limegreen')
+        ax1.plot(rbk, pp, color='darkgreen', marker='.', label=lab)
         if fitflag:
             ax1.plot(rbk, sig_fit, color='red', label = 'fit, w = {:.2f} fs'.format(np.abs(params_fit[2])))
 
@@ -1063,7 +1071,7 @@ class plotter:
         return fig, (ax1, ax2, ax3)
 
     @classmethod
-    def fit_decay(cls, data, meta, fitfunction, p0=None, errbars=True, figsize=(6,4)):
+    def fit_decay(cls, data, meta, fitfunction, p0=None, fixed_params=None, errbars=True, which_pp='pp_r', figsize=(6,4)):
         def get_default_p0(fitfunction):
             if fitfunction.__name__ == 'model_decay_1exp':
                        #x0, sigma, amp1, tau1,  C
@@ -1091,15 +1099,19 @@ class plotter:
 
         rbk = r['scanvar_rebin']
         
-        index = ~(np.isnan(rbk) | np.isnan(r['pp_r']))
+        index = ~(np.isnan(rbk) | np.isnan(r[which_pp]))
         rbk = rbk[index]
-        r['pp_r']=  r['pp_r'][index]
-        r['err_pp_r'] = r['err_pp_r'][index]
-        r['err_pp_boot_r'] = r['err_pp_boot_r'][index]
+        pp = r[which_pp][index]
+        err_pp = r['err_{}'.format(which_pp)][index]
+        err_boot_pp = r['err_boot_{}'.format(which_pp)][index]
+        lab = 'ON/OFF'
+        if which_pp == 'pp_d':
+            lab = 'ON - OFF'
         
         if p0 is None:
             p0 = get_default_p0(fitfunction)
-        popt,_  = curve_fit(fitfunction, rbk, r['pp_r'], p0=p0, maxfev=40000)
+        #popt,_  = curve_fit(fitfunction, rbk, r[which_pp], p0=p0, maxfev=40000)
+        popt,_  = curve_fit_fixed(fitfunction, rbk, pp, p0=p0, fixed_params=fixed_params, maxfev=40000)
         sig_fit = fitfunction(rbk, *popt)
 
         popt = np.pad(popt, (0, 7-len(popt)), 'constant', constant_values=np.nan)
@@ -1113,9 +1125,9 @@ class plotter:
         plt.suptitle(title)
         
         if errbars:
-            ax1.fill_between(rbk, r['pp_r']-r['err_pp_r'], r['pp_r']+r['err_pp_r'],color='lightgreen')
-        ax1.fill_between(rbk, r['pp_r']-r['err_pp_boot_r'], r['pp_r']+r['err_pp_boot_r'],color='limegreen')      
-        ax1.plot(rbk, r['pp_r'], color='darkgreen', marker='.', label='ON/OFF')
+            ax1.fill_between(rbk, pp-err_pp, pp+err_pp, color='lightgreen')
+        ax1.fill_between(rbk, pp-err_boot_pp, pp+err_boot_pp, color='limegreen')  
+        ax1.plot(rbk, pp, color='darkgreen', marker='.', label=lab)  
         ax1.plot(rbk, sig_fit, color='red', label = f'IRF = {IRF:.2f} {xunits}\n' \
                                                     f'tau1 = {tau1:.2f} {xunits}\n' \
                                                     f'tau2 = {tau2:.2f} {xunits}')
@@ -1127,10 +1139,10 @@ class plotter:
         ax1.grid()
       
         return fig, (ax1)
-
+        
 
     @classmethod
-    def FFT(cls, data, meta, start, end, errbars=True, figsize=(10,4)):
+    def FFT(cls, data, meta, start, end, errbars=True, which_pp='pp_r', figsize=(10,4)):
 
         xlabel = meta.get('xlabel','')
         if xlabel in [None, "None"]:
@@ -1157,7 +1169,7 @@ class plotter:
         index_point_start = int(np.argwhere(rbk > start)[0])
         index_point_end = int(np.argwhere(rbk > end)[0])
 
-        t = r['pp_r'][index_point_start:index_point_end]
+        t = r[which_pp][index_point_start:index_point_end]
         x = rbk[index_point_start:index_point_end]
         f = sig_fit[index_point_start:index_point_end]
 
@@ -1193,7 +1205,7 @@ class plotter:
 
 
     @classmethod
-    def fluence_scans(self, data, meta, params=None, errbars=True, figsize=(12, 4)):
+    def fluence_scans(self, data, meta, params=None, errbars=True, which_pp='pp_r', figsize=(12, 4)):
 
         xlabel = meta.get('xlabel','')
         xunits = meta.get('units','')
@@ -1208,6 +1220,13 @@ class plotter:
 
         rbk = r['scanvar_rebin']
         intensity = rbk.copy()
+        
+        pp = r[which_pp]
+        err_pp = r['err_{}'.format(which_pp)]
+        err_boot_pp = r['err_boot_{}'.format(which_pp)]
+        lab = 'ON/OFF'
+        if which_pp == 'pp_d':
+            lab = 'ON - OFF'
 
         if params is not None:
             p = np.poly1d(params)
@@ -1229,24 +1248,24 @@ class plotter:
         ax1.grid()
         
         if errbars:       
-            ax2.fill_between(rbk, r['pp_r']-r['err_pp_r'], r['pp_r']+r['err_pp_r'],color='lightgreen')
-        ax2.fill_between(rbk, r['pp_r']-r['err_pp_boot_r'], r['pp_r']+r['err_pp_boot_r'], label='error of median',color='limegreen')
-        ax2.plot(rbk, r['pp_r'], color='green', marker='.', label='MAD')
+            ax2.fill_between(rbk, pp-err_pp, pp+err_pp, color='lightgreen')
+        ax2.fill_between(rbk, pp-err_boot_pp, pp+err_boot_pp, label='error of median',color='limegreen')
+        ax2.plot(rbk, pp, color='green', marker='.', label='MAD')
         
         ax2.set(xlabel="{} ({})".format(xlabel, xunits),
-                ylabel="Relative DeltaXAS",
-                title="ON/OFF")
+                ylabel="DeltaXAS",
+                title=lab)
         ax2.legend()
         ax2.grid()
         
         if errbars:
-            ax3.fill_between(intensity, r['pp_r']-r['err_pp_r'], r['pp_r']+r['err_pp_r'],color='lightgreen')
-        ax3.fill_between(intensity, r['pp_r']-r['err_pp_boot_r'], r['pp_r']+r['err_pp_boot_r'], label='error of median',color='limegreen')
-        ax3.plot(intensity, r['pp_r'], color='darkgreen', marker='.', label='MAD')
+            ax3.fill_between(intensity, pp-err_pp, pp+err_pp,color='lightgreen')
+        ax3.fill_between(intensity, pp-err_boot_pp, pp+err_boot_pp, label='error of median',color='limegreen')
+        ax3.plot(intensity, pp, color='darkgreen', marker='.', label='MAD')
         
         ax3.set(xlabel="Pulse Energy (uJ)",
-                ylabel="Relative DeltaXAS",
-                title="ON/OFF")
+                ylabel="DeltaXAS",
+                title=lab)
         ax3.legend()
         ax3.grid()
         
