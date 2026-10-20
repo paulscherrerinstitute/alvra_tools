@@ -1,7 +1,8 @@
 import os, glob
 import ipywidgets as widgets
-from IPython.display import display
+from IPython.display import display, clear_output
 from alvra_tools.analysis_apo import Rebin_and_filter, Rebin_with_scanvar_and_filter, Rebin_and_filter_2Dscans
+from alvra_tools.utils import model_decay_1exp, model_decay_2exp
 
 def Rebin_widget(data, Rebin_and_filter=Rebin_and_filter, 
                        Rebin_with_scanvar_and_filter=Rebin_with_scanvar_and_filter,
@@ -363,11 +364,325 @@ def RunSelectorUI(LoadDir):
     selector.display()
     return selector
 
+##################################################
 
-##################################################3
+class DecayFitWidget:
+
+    def __init__(self, plotter, dataplot1, dataplot2, meta):
+
+        self.plotter = plotter
+        self.data = {
+            "dataplot1": dataplot1,
+            "dataplot2": dataplot2,
+        }
+        self.meta = meta
+
+        # -----------------------------
+        # Data selection
+        # -----------------------------
+        self.data_dropdown = widgets.Dropdown(
+            options=["dataplot1", "dataplot2"],
+            value="dataplot2",
+            description="Data:",
+            style={"description_width": "60px"},
+            layout=widgets.Layout(width="200px"),
+        )
+
+        self.which_pp_dropdown = widgets.Dropdown(
+            options=["pp_r", "pp_d"],
+            value="pp_r",
+            description="Signal:",
+            style={"description_width": "60px"},
+            layout=widgets.Layout(width="180px"),
+        )
+
+        # -----------------------------
+        # Function selection
+        # -----------------------------
+        self.function_dropdown = widgets.Dropdown(
+            options=[
+                "1-exp decay",
+                "2-exp decay",
+            ],
+            value="2-exp decay",
+            description="Function:",
+            style={"description_width": "80px"},
+            layout=widgets.Layout(width="300px"),
+        )
+
+        # -----------------------------
+        # Buttons
+        # -----------------------------
+        self.fit_button = widgets.Button(
+            description="Fit",
+            button_style="success",
+            icon="check",
+            layout=widgets.Layout(width="100px"),
+        )
+
+        self.reset_button = widgets.Button(
+            description="Reset",
+            icon="refresh",
+            layout=widgets.Layout(width="100px"),
+        )
+
+        # -----------------------------
+        # Parameter area
+        # -----------------------------
+        self.parameter_box = widgets.VBox()
+
+        # -----------------------------
+        # Plot output
+        # -----------------------------
+        self.plot_output = widgets.Output()
+
+        # General output for messages
+        self.output = widgets.Output()
+
+        # -----------------------------
+        # Connections
+        # -----------------------------
+        self.function_dropdown.observe(
+            self._function_changed,
+            names="value"
+        )
+
+        self.fit_button.on_click(self._fit)
+
+        self.reset_button.on_click(self._reset)
+
+        # Build initial parameters
+        self._build_parameter_widgets()
+
+        # -----------------------------
+        # Layout
+        # -----------------------------
+        self.widget = widgets.VBox([
+            widgets.HTML("<h4>Decay fit</h4>"),
+
+            # Data + signal on same line
+            widgets.HBox([
+                self.data_dropdown,
+                self.which_pp_dropdown,
+            ]),
+
+            # Function
+            self.function_dropdown,
+
+            widgets.HTML("<br><b>Parameters</b>"),
+
+            self.parameter_box,
+
+            widgets.HBox([
+                self.fit_button,
+                self.reset_button,
+            ]),
+
+            self.output,
+
+            # Plot appears here
+            self.plot_output,
+        ])
 
 
+    # ============================================================
+    # Parameter definitions
+    # ============================================================
+
+    def _get_function_info(self):
+
+        if self.function_dropdown.value == "1-exp decay":
+
+            return {
+                "function": model_decay_1exp,
+                "parameters": [
+                    ("x0", 0),
+                    ("sigma", 100),
+                    ("amp1", 0.1),
+                    ("tau1", 1000),
+                    ("C", 0),
+                ],
+            }
+
+        elif self.function_dropdown.value == "2-exp decay":
+
+            return {
+                "function": model_decay_2exp,
+                "parameters": [
+                    ("x0", 0),
+                    ("sigma", 100),
+                    ("amp1", 0.1),
+                    ("tau1", 1000),
+                    ("C", 0),
+                    ("amp2", 0.05),
+                    ("tau2", 1000),
+                ],
+            }
+            
+
+    # ============================================================
+    # Build parameter widgets
+    # ============================================================
+
+    def _build_parameter_widgets(self):
+
+        function_info = self._get_function_info()
+
+        self.parameter_widgets = []
+
+        rows = []
+
+        # Header
+        rows.append(
+            widgets.HBox([
+                widgets.Label("Parameter", layout=widgets.Layout(width="100px")),
+                widgets.Label("Initial value", layout=widgets.Layout(width="120px")),
+                widgets.Label("Fixed", layout=widgets.Layout(width="60px")),
+            ])
+        )
+
+        for name, default in function_info["parameters"]:
+
+            value_widget = widgets.FloatText(
+                value=default,
+                description="",
+                layout=widgets.Layout(width="120px"),
+            )
+
+            fixed_widget = widgets.Checkbox(
+                value=False,
+                description="",
+                indent=False,
+                layout=widgets.Layout(width="60px"),
+            )
+
+            row = widgets.HBox([
+                widgets.Label(
+                    name,
+                    layout=widgets.Layout(width="100px")
+                ),
+                value_widget,
+                fixed_widget,
+            ])
+
+            rows.append(row)
+
+            self.parameter_widgets.append({
+                "name": name,
+                "value": value_widget,
+                "fixed": fixed_widget,
+            })
+
+        self.parameter_box.children = rows
 
 
+    # ============================================================
+    # Function changed
+    # ============================================================
+
+    def _function_changed(self, change):
+
+        self._build_parameter_widgets()
+
+
+    # ============================================================
+    # Reset
+    # ============================================================
+
+    def _reset(self, button=None):
+
+        self._build_parameter_widgets()
+
+        with self.output:
+            clear_output()
+
+        with self.plot_output:
+            clear_output()
+
+
+    # ============================================================
+    # Get current settings
+    # ============================================================
+
+    def get_settings(self):
+
+        function_info = self._get_function_info()
+
+        p0 = []
+        fixed = {}
+
+        for i, p in enumerate(self.parameter_widgets):
+
+            value = p["value"].value
+
+            p0.append(value)
+
+            if p["fixed"].value:
+                fixed[i] = value
+
+        return {
+            "data": self.data[self.data_dropdown.value],
+            "data_name": self.data_dropdown.value,
+
+            "which_pp": self.which_pp_dropdown.value,
+
+            "fitfunction": function_info["function"],
+
+            "p0": p0,
+
+            "fixed": fixed,
+        }
+
+
+    # ============================================================
+    # Fit
+    # ============================================================
+
+    def _fit(self, button=None):
+
+        settings = self.get_settings()
+
+        with self.output:
+            clear_output()
+
+            print("Fitting...")
+            print(f"Data:     {settings['data_name']}")
+            print(f"Signal:   {settings['which_pp']}")
+            print(f"Function: {settings['fitfunction'].__name__}")
+            print(f"p0:       {settings['p0']}")
+            print(f"Fixed:    {settings['fixed']}")
+
+        # Remove previous plot
+        with self.plot_output:
+            clear_output()
+
+            try:
+
+                fig, axes = self.plotter.fit_decay(
+                    settings["data"],
+                    self.meta,
+                    fitfunction=settings["fitfunction"],
+                    p0=settings["p0"],
+                    fixed_params=settings["fixed"],
+                    which_pp=settings["which_pp"],
+                    errbars=True,
+                )
+
+                display(fig)
+                
+
+            except Exception as e:
+
+                print("Fit failed:")
+                print(e)
+
+
+    # ============================================================
+    # Display widget
+    # ============================================================
+
+    def display(self):
+
+        display(self.widget)
 
 
