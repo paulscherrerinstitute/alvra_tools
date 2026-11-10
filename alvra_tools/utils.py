@@ -8,18 +8,19 @@ import colorcet as cc
 
 class Fit:
     
-    def __init__(self, func, estim, p0=None, **kwargs):
+    def __init__(self, func, estim, p0=None, bounds=(-np.inf, np.inf), **kwargs):
         self.func = func
         self.estim = estim
         self.p0 = self.popt = p0
         self.pcov = None
+        self.bounds = bounds
         self.kwargs = kwargs
    
     def estimate(self, x, y):
         self.p0 = self.popt = self.estim(x,y)
 
     def fit(self, x, y, **kwargs):
-        self.popt, self.pcov = curve_fit(self.func, x, y, p0=self.p0, **self.kwargs, **kwargs)
+        self.popt, self.pcov = curve_fit(self.func, x, y, p0=self.p0, bounds=self.bounds, **self.kwargs, **kwargs)
     
     def eval(self, x):
         return self.func(x, *self.popt)
@@ -142,7 +143,7 @@ def gaussian(x, x0, amplitude, sigma, offset):
 
 def estimate_gaussian_parameters(x,y):
     x0 = x[np.argmax(np.abs(y))]
-    amplitude = np.max(np.abs(y))
+    amplitude = y[np.argmax(np.abs(y))] #np.max(np.abs(y))
     sigma =  np.diff(x).mean()
     offset = np.min(np.abs(y)) 
     return x0, amplitude, sigma, offset
