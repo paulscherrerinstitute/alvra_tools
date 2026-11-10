@@ -937,7 +937,6 @@ class plotter:
         if not twodiodes:
             Int, err_low, err_high = unwrap_data(data)
             fit_curve, center, width = cls.doGaussianfit_array(Int, rbk)
-
             fig, (ax1) = plt.subplots(1, 1, figsize=figsize, constrained_layout=True)
             title = title + ' --- center = {:.3f} um'.format(center)
             title = "\n".join(textwrap.wrap(title))
@@ -1272,34 +1271,41 @@ class plotter:
         return fig, (ax1, ax2, ax3)
 
     @classmethod
-    def KnifeEdge_scans(self, data, meta, rbk, figsize=(6, 5)):
+    def KnifeEdge_scans(cls, data, meta, rbk, figsize=(6, 8)):
         
         title = meta['title']
         Int, err_low, err_high = unwrap_data(data)
+        Der = np.gradient(Int,rbk)
 
         fit = Fit(errfunc_fwhm, estimate_errfunc_parameters)
         fit.estimate(rbk, Int)
         fit.fit(rbk,Int)
         sig_fit = fit.eval(rbk)
+        fit_curve, center, width = cls.doGaussianfit_array(Der, rbk)
 
         centerpos_mm = fit.popt[0]
         width_mm = np.abs(fit.popt[2])
         title = title + ' --- fwhm = {:.2f} um'.format(width_mm*1000)
         title = "\n".join(textwrap.wrap(title))
 
-        fig, (ax1) = plt.subplots(1, 1, figsize=figsize, constrained_layout=True)
+        fig, (ax1, ax2) = plt.subplots(2, 1, figsize=figsize, sharex=True, constrained_layout=True)
         plt.suptitle(title)
       
         ax1.fill_between(rbk, err_low, err_high, color='lightblue', alpha = 0.8)
         ax1.plot(rbk, Int, marker='.', label=meta['xlabel'])
         ax1.plot(rbk, sig_fit)
-
-        ax1.set(xlabel="{} ({})".format(meta['xlabel'], meta['units']),
-                ylabel="Intensity")
-        ax1.legend()
         ax1.grid()
+        ax1.legend()
+        ax1.set(ylabel="Intensity")
+        
+        ax2.plot(rbk, Der, marker='.', color='green',label=f"derivative, fwhm={1000*width:.4g} um")
+        ax2.plot(rbk, fit_curve, color = 'red')
+        ax2.set(xlabel="{} ({})".format(meta['xlabel'], meta['units']),
+                ylabel="Intensity")
+        ax2.legend()
+        ax2.grid()
 
-        return fig, (ax1)
+        return fig, (ax1, ax2)
 
 
     @classmethod
