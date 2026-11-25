@@ -1,6 +1,8 @@
 import numpy as np
 import json, glob
 import os, math
+from tqdm.notebook import tqdm
+import contextlib
 from matplotlib import pyplot as plt
 from matplotlib import gridspec as gridspec
 
@@ -16,43 +18,66 @@ from alvra_tools.timing_tool import *
 
 from sfdata import SFScanInfo
 
-def check_BSchannel(pgroup, runnumber, channel, acq=None, pp=True):
+def check_BSchannel(pgroup, runnumber, channel, acq=None, pp=False, scan=None):
     channels_pp  = [channel_Events] + channel
     channels_fel = channels_pp
-    jsonfile = glob.glob('/sf/alvra/data/{}/raw/*{:04d}*/meta/scan.json'.format(pgroup, runnumber))[0]
-    scan = SFScanInfo(jsonfile)
-    run_name = jsonfile.split('/')[-3]
+    if scan is None:
+        jsonfile = glob.glob('/sf/alvra/data/{}/raw/*{:04d}*/meta/scan.json'.format(pgroup, runnumber))[0]
+        scan = SFScanInfo(jsonfile)
+    run_name = scan.files[0][0].split('/')[-3]
     title = str( pgroup + ' --- ' +run_name)
 
     data = []
     
-    if acq!=None:
+    if acq is not None:
         title = title + str(' --- acq {}'.format(acq) )
         s = scan[acq-1]
         check_files_and_data(s)
         check = get_filesize_diff(s)
         if check:
             filename = scan.files[acq-1][0].split('/')[-1].split('.')[0]
-            print ('Processing: {}'.format(run_name))
-            print ('Acquisition: {}'.format(filename))
             resultsPP, results, _, _ = load_data_compact_pump_probe(channels_pp, channels_fel, s)
+            clear_output(wait=True)
+        else:
+            return None, title
     else:
-        for i, step in enumerate(scan):
-            check_files_and_data(step)
-            check = get_filesize_diff(step)
-            if check:
-                clear_output(wait=True)
-                filename = scan.files[i][0].split('/')[-1].split('.')[0]
-                print ('Processing: {}'.format(run_name))
-                print ('Step {} of {}: Processing {}'.format(i+1, len(scan.files), filename))
-                resultsPP, results , _, _ = load_data_compact_pump_probe(channels_pp, channels_fel, step)
+        raise ValueError("Specify an acquisition")
+        
     for ch in channel:
         if pp:
             data.append(resultsPP[ch].pump)
         else:
             data.append(results[ch])
     meta = [title, channel]
-    return data, meta
+    return data, title, channel
+
+def scan_run(pgroup, run, channel, acqs=None, pp=False):
+    jsonfile = glob.glob('/sf/alvra/data/{}/raw/*{:04d}*/meta/scan.json'.format(pgroup, run))[0]
+    scan = SFScanInfo(jsonfile)
+    if acqs is None:
+        acqs = range(1, len(scan.files) + 1)
+    results = []
+    for acq in tqdm(acqs, desc='Processing acquisitions'):
+        with open(os.devnull, 'w') as devnull:
+            with contextlib.redirect_stdout(devnull), contextlib.redirect_stderr(devnull):
+                #print ('Run {} | acquisition {}'.format(run, acq))
+                data, title, channel = check_BSchannel(pgroup, run, channel, acq, pp, scan=scan)
+        
+        if data is not None:
+            results.append({'run': run, 'acq': acq, 'data': data, 'title': title, 'channel': channel})
+    return results
+    
+def scan_runs(pgroup, runs, channel, acqs=None, pp=False):
+    all_results = []
+    bad_runs = []
+    for run in runs:
+        print ('\n ================ RUN {} ================'.format(run))
+        try:
+            results = scan_run(pgroup, run, channel, acqs=acqs, pp=pp)
+            all_results.extend(results)
+        except:
+            bad_runs.append(run)
+    return all_results, bad_runs
 
 def plot_checkedBSchannel(data, meta):
     data = np.asarray(data)
