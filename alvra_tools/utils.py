@@ -148,6 +148,18 @@ def estimate_gaussian_parameters(x,y):
     offset = np.min(np.abs(y)) 
     return x0, amplitude, sigma, offset
 
+def skewed_Gaussian(x, x0, amplitude, sigma, offset, alpha):
+    return offset + amplitude*skewnorm.pdf(x, alpha, loc=x0, scale=sigma)
+
+def estimate_skewed_gaussian_parameters(x,y):
+    x0 = x[np.argmax(np.abs(y))]
+    amplitude = y[np.argmax(np.abs(y))]
+    sigma = np.diff(x).mean()
+    offset = np.min(np.abs(y))
+    alpha = 0
+    return (x0, amplitude, sigma, offset, alpha)
+
+
 def three_gaussians(x, h1, c1, w1, h2, c2, w2, h3, c3, w3, offset):
     return (gaussian(x, h1, c1, w1, offset=0) +
         gaussian(x, h2, c2, w2, offset=0) +
